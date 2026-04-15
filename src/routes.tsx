@@ -10,8 +10,29 @@ import { DataExport } from "./pages/DataExport";
 import { WorkspaceSettings } from "./pages/settings/WorkspaceSettings";
 import { AccountSettings } from "./pages/settings/AccountSettings";
 import { NotFound } from "./pages/NotFound";
+// Onboarding – isolated module, no MainLayout dependency
+import { OnboardingLayout } from "./onboarding/components/OnboardingLayout";
+import { SignIn } from "./onboarding/pages/SignIn";
+import { SignUp } from "./onboarding/pages/SignUp";
+import { VerifyIdentity } from "./onboarding/pages/VerifyIdentity";
+import { ForgotPassword } from "./onboarding/pages/ForgotPassword";
+import { CreateNewPassword } from "./onboarding/pages/CreateNewPassword";
 
 export const router = createBrowserRouter([
+  // ── Onboarding (standalone, no MainLayout) ──────────────────────────────
+  {
+    path: "/auth/",
+    Component: OnboardingLayout,
+    children: [
+      { index: true, Component: SignIn },
+      { path: "sign-in", Component: SignIn },
+      { path: "sign-up", Component: SignUp },
+      { path: "verify", Component: VerifyIdentity },
+      { path: "forgot-password", Component: ForgotPassword },
+      { path: "reset-password", Component: CreateNewPassword },
+    ],
+  },
+  // ── Main app (existing – untouched) ─────────────────────────────────────
   {
     path: "/",
     Component: MainLayout,

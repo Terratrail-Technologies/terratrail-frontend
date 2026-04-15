@@ -1,0 +1,541 @@
+/* ============================================================
+   TerraTrail Onboarding – Fully Isolated CSS Module
+   Font: "Kamerik 105 Cyrillic" → system-ui fallback
+   Zero Tailwind / zero shared-theme dependency
+   ============================================================ */
+
+/* Font is loaded globally via src/styles/fonts.css */
+
+
+/* ─── Page shell ─────────────────────────────────────────────── */
+.page {
+  min-height: 100vh;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+  overflow: hidden;
+  font-family: "Kamerik 105 Cyrillic", "Inter", "Segoe UI", system-ui, sans-serif;
+}
+
+/* ─── Background: dark glass-building ────────────────────────── */
+.bg {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  /* Multi-layer gradient mimics a lit glass-and-steel façade */
+  background:
+    /* top-left warm reflection */
+    radial-gradient(ellipse 55% 45% at 18% 12%, rgba(42, 58, 130, 0.55) 0%, transparent 65%),
+    /* center-right cold highlight */
+    radial-gradient(ellipse 40% 60% at 85% 40%, rgba(20, 40, 95, 0.6) 0%, transparent 60%),
+    /* base deep navy */
+    linear-gradient(175deg, #0c1730 0%, #0a1528 35%, #071020 65%, #050c18 100%);
+}
+
+/* Vertical glass-panel lines */
+.bg::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    repeating-linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0.022) 0px,
+      rgba(255, 255, 255, 0.022) 1px,
+      transparent 1px,
+      transparent 44px
+    );
+}
+
+/* Horizontal floor lines */
+.bg::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    repeating-linear-gradient(
+      0deg,
+      rgba(255, 255, 255, 0.018) 0px,
+      rgba(255, 255, 255, 0.018) 1px,
+      transparent 1px,
+      transparent 64px
+    );
+}
+
+/* ─── Scroll container ───────────────────────────────────────── */
+.scrollArea {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 48px 16px 0;
+  flex: 1;
+}
+
+/* ─── Card ───────────────────────────────────────────────────── */
+.card {
+  background: #ffffff;
+  border-radius: 10px;
+  padding: 36px 32px 32px;
+  width: 100%;
+  max-width: 400px;
+  box-shadow:
+    0 2px 4px rgba(0, 0, 0, 0.18),
+    0 12px 48px rgba(0, 0, 0, 0.52),
+    0 0 0 1px rgba(255, 255, 255, 0.06);
+}
+
+/* ─── Logo ───────────────────────────────────────────────────── */
+.logoWrap {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-bottom: 24px;
+}
+
+.logoIcon {
+  width: 32px;
+  height: 32px;
+  border-radius: 7px;
+  background: linear-gradient(135deg, #1c2268 0%, #2a35c0 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 2px 8px rgba(28, 34, 104, 0.45);
+}
+
+.logoText {
+  font-size: 14.5px;
+  font-weight: 700;
+  color: #111827;
+  letter-spacing: -0.2px;
+  font-family: inherit;
+}
+
+/* ─── Typography ─────────────────────────────────────────────── */
+.heading {
+  font-size: 20px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0 0 5px 0;
+  letter-spacing: -0.35px;
+  line-height: 1.25;
+  font-family: inherit;
+}
+
+.subtext {
+  font-size: 13.5px;
+  font-weight: 500;
+  color: #64748b;
+  margin: 0 0 22px 0;
+  line-height: 1.55;
+  font-family: inherit;
+}
+
+/* ─── Form ───────────────────────────────────────────────────── */
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.fieldGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.label {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #374151;
+  letter-spacing: 0.1px;
+  font-family: inherit;
+}
+
+.input {
+  width: 100%;
+  height: 42px;
+  padding: 0 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #0f172a;
+  background: #f8fafc;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+  box-sizing: border-box;
+  font-family: inherit;
+}
+
+.input::placeholder {
+  color: #94a3b8;
+  font-size: 13px;
+}
+
+.input:focus {
+  border-color: #1c2268;
+  box-shadow: 0 0 0 3px rgba(28, 34, 104, 0.1);
+  background: #ffffff;
+}
+
+.input.inputError {
+  border-color: #ef4444;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.08);
+}
+
+/* ─── Password field ─────────────────────────────────────────── */
+.passwordWrap {
+  position: relative;
+}
+
+.passwordWrap .input {
+  padding-right: 38px;
+}
+
+.eyeBtn {
+  position: absolute;
+  right: 9px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  padding: 4px;
+  cursor: pointer;
+  color: #94a3b8;
+  display: flex;
+  align-items: center;
+  line-height: 1;
+  transition: color 0.15s;
+}
+
+.eyeBtn:hover { color: #475569; }
+
+/* ─── Error message ──────────────────────────────────────────── */
+.errorMsg {
+  font-size: 11px;
+  color: #ef4444;
+  margin-top: 2px;
+  font-family: inherit;
+}
+
+/* ─── Remember me + Forgot row ───────────────────────────────── */
+.rememberRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: -2px;
+}
+
+.checkLabel {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  cursor: pointer;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: #475569;
+  font-family: inherit;
+  user-select: none;
+}
+
+.checkbox {
+  width: 15px;
+  height: 15px;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 4px;
+  appearance: none;
+  -webkit-appearance: none;
+  background: #fff;
+  cursor: pointer;
+  flex-shrink: 0;
+  position: relative;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.checkbox:checked {
+  background: #1c2268;
+  border-color: #1c2268;
+}
+
+.checkbox:checked::after {
+  content: "";
+  position: absolute;
+  left: 3px;
+  top: 1px;
+  width: 5px;
+  height: 8px;
+  border: 1.5px solid #fff;
+  border-top: none;
+  border-left: none;
+  transform: rotate(45deg);
+}
+
+.forgotLink {
+  font-size: 12.5px;
+  color: #1c2268;
+  text-decoration: none;
+  font-weight: 600;
+  cursor: pointer;
+  background: none;
+  border: none;
+  padding: 0;
+  font-family: inherit;
+  transition: color 0.15s;
+}
+
+.forgotLink:hover { color: #2a35c0; text-decoration: underline; }
+
+/* ─── Primary button ─────────────────────────────────────────── */
+.btn {
+  width: 100%;
+  height: 44px;
+  background: #1c2268;
+  color: #ffffff;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  letter-spacing: 0.2px;
+  font-family: inherit;
+  transition: background 0.15s, box-shadow 0.15s, transform 0.1s;
+  margin-top: 2px;
+}
+
+.btn:hover:not(:disabled) {
+  background: #242d82;
+  box-shadow: 0 4px 16px rgba(28, 34, 104, 0.35);
+}
+
+.btn:active:not(:disabled) { transform: scale(0.985); }
+
+.btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.btnInner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+/* ─── Spinner ────────────────────────────────────────────────── */
+.spinner {
+  width: 15px;
+  height: 15px;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.65s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ─── Divider "Or" ───────────────────────────────────────────── */
+.divider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 11.5px;
+  color: #94a3b8;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  margin: 2px 0;
+  font-family: inherit;
+}
+
+.divider::before,
+.divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: #e2e8f0;
+}
+
+/* ─── Google button ──────────────────────────────────────────── */
+.googleBtn {
+  width: 100%;
+  height: 42px;
+  background: #ffffff;
+  color: #374151;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  transition: background 0.15s, box-shadow 0.15s;
+}
+
+.googleBtn:hover {
+  background: #f8fafc;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* ─── Footer ─────────────────────────────────────────────────── */
+.footer {
+  margin-top: 18px;
+  text-align: center;
+  font-size: 12.5px;
+  color: #64748b;
+  font-family: inherit;
+}
+
+.footerLink {
+  color: #1c2268;
+  font-weight: 600;
+  cursor: pointer;
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 12.5px;
+  font-family: inherit;
+  text-decoration: none;
+  transition: color 0.15s;
+}
+
+.footerLink:hover { color: #2a35c0; text-decoration: underline; }
+
+/* ─── Terms + security badge (sign-up) ───────────────────────── */
+.termsText {
+  font-size: 11px;
+  color: #94a3b8;
+  text-align: center;
+  line-height: 1.6;
+  margin-top: 10px;
+  font-family: inherit;
+}
+
+.termsText a {
+  color: #1c2268;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.securityBadge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  font-size: 11px;
+  color: #64748b;
+  margin-top: 10px;
+  font-family: inherit;
+}
+
+/* ─── OTP single input ───────────────────────────────────────── */
+.otpSingle {
+  width: 100%;
+  height: 44px;
+  padding: 0 14px;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  font-size: 15px;
+  font-weight: 500;
+  color: #0f172a;
+  background: #f8fafc;
+  outline: none;
+  letter-spacing: 4px;
+  text-align: center;
+  transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+  box-sizing: border-box;
+  font-family: inherit;
+}
+
+.otpSingle::placeholder {
+  letter-spacing: 2px;
+  color: #94a3b8;
+  font-size: 13px;
+}
+
+.otpSingle:focus {
+  border-color: #1c2268;
+  box-shadow: 0 0 0 3px rgba(28, 34, 104, 0.1);
+  background: #ffffff;
+}
+
+.resendRow {
+  margin-top: 14px;
+  text-align: center;
+  font-size: 12.5px;
+  color: #64748b;
+  font-family: inherit;
+}
+
+/* ─── Back link ──────────────────────────────────────────────── */
+.backLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12.5px;
+  color: #64748b;
+  cursor: pointer;
+  background: none;
+  border: none;
+  padding: 0;
+  font-family: inherit;
+  margin-bottom: 18px;
+  transition: color 0.15s;
+}
+
+.backLink:hover { color: #1c2268; }
+
+/* ─── Marketing block (below card) ───────────────────────────── */
+.marketing {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  max-width: 400px;
+  padding: 28px 32px 40px;
+  text-align: left;
+}
+
+.marketingHeading {
+  font-size: 19px;
+  font-weight: 800;
+  color: #ffffff;
+  margin: 0 0 8px 0;
+  letter-spacing: -0.3px;
+  line-height: 1.2;
+  font-family: inherit;
+}
+
+.marketingBody {
+  font-size: 13px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.7);
+  line-height: 1.65;
+  margin: 0;
+  font-family: inherit;
+}
+
+/* ─── Responsive ─────────────────────────────────────────────── */
+@media (max-width: 480px) {
+  .scrollArea { padding: 24px 12px 0; }
+
+  .card {
+    padding: 28px 22px 24px;
+    border-radius: 8px;
+  }
+
+  .heading { font-size: 18px; }
+
+  .marketing { padding: 20px 22px 32px; }
+
+  .marketingHeading { font-size: 16px; }
+}
+
+@media (max-width: 360px) {
+  .card { padding: 24px 16px 20px; }
+}

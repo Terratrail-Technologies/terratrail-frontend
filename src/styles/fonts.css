@@ -1,0 +1,75 @@
+/* ================================================================
+   Kamerik 105 Cyrillic – loaded from local font files
+   src/styles/fonts/Kamerik105Cyrillic-*.woff2
+   ================================================================ */
+
+@font-face {
+  font-family: 'Kamerik 105 Cyrillic';
+  src: url('./fonts/Kamerik105Cyrillic-Thin.woff2') format('woff2'),
+       url('./fonts/Kamerik105Cyrillic-Thin.woff') format('woff'),
+       url('./fonts/Kamerik105Cyrillic-Thin.ttf') format('truetype');
+  font-weight: 100;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Kamerik 105 Cyrillic';
+  src: url('./fonts/Kamerik105Cyrillic-Light.woff2') format('woff2'),
+       url('./fonts/Kamerik105Cyrillic-Light.woff') format('woff'),
+       url('./fonts/Kamerik105Cyrillic-Light.ttf') format('truetype');
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Kamerik 105 Cyrillic';
+  src: url('./fonts/Kamerik105Cyrillic-Book.woff2') format('woff2'),
+       url('./fonts/Kamerik105Cyrillic-Book.woff') format('woff'),
+       url('./fonts/Kamerik105Cyrillic-Book.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Kamerik 105 Cyrillic';
+  src: url('./fonts/Kamerik105Cyrillic-Bold.woff2') format('woff2'),
+       url('./fonts/Kamerik105Cyrillic-Bold.woff') format('woff'),
+       url('./fonts/Kamerik105Cyrillic-Bold.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Kamerik 105 Cyrillic';
+  src: url('./fonts/Kamerik105Cyrillic-Heavy.woff2') format('woff2'),
+       url('./fonts/Kamerik105Cyrillic-Heavy.woff') format('woff'),
+       url('./fonts/Kamerik105Cyrillic-Heavy.ttf') format('truetype');
+  font-weight: 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Oblique variants */
+@font-face {
+  font-family: 'Kamerik 105 Cyrillic';
+  src: url('./fonts/Kamerik105Cyrillic-BookOblique.woff2') format('woff2'),
+       url('./fonts/Kamerik105Cyrillic-BookOblique.woff') format('woff'),
+       url('./fonts/Kamerik105Cyrillic-BookOblique.ttf') format('truetype');
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Kamerik 105 Cyrillic';
+  src: url('./fonts/Kamerik105Cyrillic-BoldOblique.woff2') format('woff2'),
+       url('./fonts/Kamerik105Cyrillic-BoldOblique.woff') format('woff'),
+       url('./fonts/Kamerik105Cyrillic-BoldOblique.ttf') format('truetype');
+  font-weight: 700;
+  font-style: italic;
+  font-display: swap;
+}
