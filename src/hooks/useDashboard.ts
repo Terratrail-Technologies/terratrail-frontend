@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import { api, DashboardStats, DateRange } from '../services/api';
+import { api, DashboardStats, type DateRange } from '../services/api';
+export type { DateRange };
 import { format, subDays, startOfMonth, startOfYear, endOfMonth, endOfYear, subMonths } from 'date-fns';
 
 export type DatePreset = 'today' | '7d' | '30d' | 'this_month' | 'last_month' | 'this_year' | 'all_time' | 'custom';

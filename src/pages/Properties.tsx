@@ -1,6 +1,8 @@
+import { useState, useEffect } from "react";
 import { Link } from "react-router";
-import { Plus, Search, Filter, MapPin, CheckCircle2, Clock, Building as BuildingIcon } from "lucide-react";
-import { properties } from "../utils/mockData";
+import { Plus, Search, Filter, MapPin, CheckCircle2, Clock, Building as BuildingIcon, Loader2 } from "lucide-react";
+import { api } from "../services/api";
+import { properties as mockProperties } from "../utils/mockData";
 import { Badge } from "../components/ui/badge";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
@@ -10,23 +12,52 @@ import { EmptyState } from "../components/ui/empty-state";
 const container = {
   hidden: { opacity: 0 },
   show: { opacity: 1, transition: { staggerChildren: 0.08 } },
-};
+} as const;
 const item = {
   hidden: { opacity: 0, y: 14 },
   show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 320, damping: 26 } },
-};
+} as const;
 
 export function Properties() {
-  const fmt = (n: number) => `₦${n.toLocaleString("en-NG")}`;
+  const [properties, setProperties] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+
+  const fetchProperties = async () => {
+    setLoading(true);
+    try {
+      const data = await api.properties.list();
+      setProperties(data);
+    } catch (err) {
+      console.warn("Using mock properties fallback");
+      setProperties(mockProperties);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchProperties();
+  }, []);
+
+  const fmt = (n: number | string) => `₦${Number(n).toLocaleString("en-NG")}`;
+
+  const filtered = properties.filter(p => 
+    p.name.toLowerCase().includes(search.toLowerCase()) ||
+    p.type?.toLowerCase().includes(search.toLowerCase())
+  );
 
   return (
     <div className="flex flex-col min-h-[calc(100vh-60px)] w-full">
       {/* Page header */}
       <div className="bg-white border-b border-neutral-100 px-6 lg:px-8 py-5 hidden md:block">
         <div className="flex items-center justify-between gap-4">
-          <div>
-            <h1 className="text-[18px] font-semibold text-neutral-900 tracking-tight">Properties</h1>
-            <p className="text-[12.5px] text-neutral-400 mt-0.5">Property listing management</p>
+          <div className="flex items-center gap-3">
+            <div>
+              <h1 className="text-[18px] font-semibold text-neutral-900 tracking-tight">Properties</h1>
+              <p className="text-[12.5px] text-neutral-400 mt-0.5">Property listing management</p>
+            </div>
+            {loading && <Loader2 className="w-4 h-4 text-emerald-500 animate-spin" />}
           </div>
           <Button asChild
             className="h-8 gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-[12px] font-medium rounded-lg px-3 shadow-sm">
@@ -41,14 +72,23 @@ export function Properties() {
       <motion.div variants={container} initial="hidden" animate="show"
         className="p-4 sm:p-6 lg:p-8 space-y-5 flex-1">
 
-        {properties.length > 0 ? (
+        {loading && properties.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-20">
+            <Loader2 className="w-8 h-8 text-emerald-500 animate-spin" />
+            <p className="text-[13px] text-neutral-400 font-medium mt-3">Loading properties...</p>
+          </div>
+        ) : filtered.length > 0 ? (
           <>
             {/* Search + filter bar */}
             <motion.div variants={item} className="flex flex-col sm:flex-row items-center gap-2.5">
               <div className="relative w-full sm:w-80">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-neutral-400" />
-                <Input placeholder="Search properties…"
-                  className="h-9 pl-9 text-[13px] bg-white border-neutral-200 focus-visible:ring-1 focus-visible:ring-emerald-500/30 focus-visible:border-emerald-400 rounded-lg" />
+                <Input 
+                  placeholder="Search properties…"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="h-9 pl-9 text-[13px] bg-white border-neutral-200 focus-visible:ring-1 focus-visible:ring-emerald-500/30 focus-visible:border-emerald-400 rounded-lg" 
+                />
               </div>
               <Button variant="outline" size="sm"
                 className="h-9 gap-1.5 text-[12.5px] bg-white border-neutral-200 hover:bg-neutral-50 rounded-lg px-3">
@@ -60,7 +100,7 @@ export function Properties() {
             {/* Property grid */}
             <motion.div variants={item}
               className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
-              {properties.map((property) => (
+              {filtered.map((property) => (
                 <Link key={property.id} to={`/properties/${property.id}/edit`}
                   className="bg-white rounded-xl border border-neutral-100 overflow-hidden
                              shadow-[0_1px_3px_rgba(0,0,0,0.06)]
@@ -89,13 +129,13 @@ export function Properties() {
                           {property.type}
                         </span>
                       </div>
-                      <Badge variant={property.status === "published" ? "default" : "secondary"}
+                      <Badge variant={property.status === "published" || property.status === "PUBLISHED" ? "default" : "secondary"}
                         className={
-                          property.status === "published"
+                          (property.status === "published" || property.status === "PUBLISHED")
                             ? "bg-emerald-50 text-emerald-700 border-emerald-100 shrink-0 text-[11px] gap-1"
                             : "shrink-0 text-[11px] gap-1"
                         }>
-                        {property.status === "published"
+                        {(property.status === "published" || property.status === "PUBLISHED")
                           ? <><CheckCircle2 className="w-3 h-3" />Published</>
                           : <><Clock className="w-3 h-3" />Draft</>}
                       </Badge>
@@ -105,17 +145,18 @@ export function Properties() {
                     <div className="flex items-start gap-2 text-[12px] text-neutral-500 mb-5 bg-neutral-50 px-2.5 py-2 rounded-lg border border-neutral-100">
                       <MapPin className="w-3.5 h-3.5 mt-0.5 text-neutral-400 shrink-0" />
                       <span className="truncate">
-                        {property.location.address && `${property.location.address}, `}
-                        <span className="font-medium">{property.location.city}, {property.location.state}</span>
+                        {property.location?.address && `${property.location.address}, `}
+                        <span className="font-medium">{property.location?.city}, {property.location?.state}</span>
+                        {!property.location?.city && <span className="text-neutral-300 italic">No location provided</span>}
                       </span>
                     </div>
 
                     {/* Stats */}
                     <div className="grid grid-cols-3 gap-3 pt-4 border-t border-neutral-50 mt-auto">
                       {[
-                        { label: "SQM", value: property.totalSqm.toLocaleString() },
-                        { label: "Subs", value: String(property.subscriptions) },
-                        { label: "Revenue", value: fmt(property.revenue), highlight: true },
+                        { label: "SQM", value: property.totalSqm?.toLocaleString() ?? property.total_sqm?.toLocaleString() ?? "0" },
+                        { label: "Subs", value: String(property.subscriptions ?? property.subscription_count ?? "0") },
+                        { label: "Revenue", value: fmt(property.revenue ?? property.total_revenue ?? 0), highlight: true },
                       ].map((s) => (
                         <div key={s.label}>
                           <div className="text-[9.5px] font-semibold uppercase tracking-wider text-neutral-400 mb-0.5">{s.label}</div>
@@ -135,12 +176,12 @@ export function Properties() {
             <EmptyState
               icon={BuildingIcon}
               title="No properties yet"
-              description="Get started by adding your first property to the platform."
+              description={search ? "Adjust your search to find what you're looking for." : "Get started by adding your first property to the platform."}
               action={
                 <Button asChild className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white">
                   <Link to="/properties/new">
                     <Plus className="w-4 h-4" />
-                    Add Your First Property
+                    {search ? "Clear Search" : "Add Your First Property"}
                   </Link>
                 </Button>
               }

@@ -1,9 +1,9 @@
 import * as React from "react";
 import { cn } from "./utils";
-import { motion } from "motion/react";
+import { motion, HTMLMotionProps } from "motion/react";
 import { LucideIcon } from "lucide-react";
 
-interface EmptyStateProps extends React.HTMLAttributes<HTMLDivElement> {
+interface EmptyStateProps extends HTMLMotionProps<"div"> {
   icon?: LucideIcon;
   title: string;
   description?: React.ReactNode;

@@ -21,8 +21,11 @@ const GoogleIcon = () => (
   </svg>
 );
 
+import { useAuth } from "../../hooks/useAuth";
+
 export function SignIn() {
   const navigate = useNavigate();
+  const { login } = useAuth();
   const [loading, setLoading] = useState(false);
 
   const { register, handleSubmit, formState: { errors } } = useForm<SignInForm>({
@@ -32,12 +35,17 @@ export function SignIn() {
   const onSubmit = async (data: SignInForm) => {
     setLoading(true);
     try {
-      await new Promise((r) => setTimeout(r, 1100));
-      console.log("Sign in payload:", data);
+      await login({ email: data.email, password: data.password });
       toast.success("Welcome back!");
-      navigate("/onboarding/verify", { state: { email: data.email, flow: "signin" } });
-    } catch {
-      toast.error("Invalid credentials. Please try again.");
+      navigate("/");
+    } catch (err: any) {
+      // If OTP is required, login might throw an error or we might need to handle it.
+      // Assuming simple login for now, or handling "OTP required" error if backend sends it.
+      if (err.message.includes("OTP")) {
+        navigate("/auth/verify", { state: { email: data.email, flow: "signin" } });
+      } else {
+        toast.error(err.message || "Invalid credentials. Please try again.");
+      }
     } finally {
       setLoading(false);
     }

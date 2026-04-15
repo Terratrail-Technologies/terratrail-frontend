@@ -30,8 +30,11 @@ const LockIcon = () => (
   </svg>
 );
 
+import { useAuth } from "../../hooks/useAuth";
+
 export function SignUp() {
   const navigate = useNavigate();
+  const { register: authRegister } = useAuth();
   const [loading, setLoading] = useState(false);
 
   const { register, handleSubmit, formState: { errors } } = useForm<SignUpForm>({
@@ -41,12 +44,21 @@ export function SignUp() {
   const onSubmit = async (data: SignUpForm) => {
     setLoading(true);
     try {
-      await new Promise((r) => setTimeout(r, 1100));
-      console.log("Sign up payload:", data);
+      const [first_name, ...last_parts] = data.fullName.split(" ");
+      const last_name = last_parts.join(" ") || "User";
+
+      await authRegister({
+        first_name,
+        last_name,
+        email: data.email,
+        password: data.password,
+        workspace_name: data.companyName,
+      });
+
       toast.success("Workspace created! Please verify your email.");
       navigate("/auth/verify", { state: { email: data.email, flow: "signup" } });
-    } catch {
-      toast.error("Something went wrong. Please try again.");
+    } catch (err: any) {
+      toast.error(err.message || "Something went wrong. Please try again.");
     } finally {
       setLoading(false);
     }

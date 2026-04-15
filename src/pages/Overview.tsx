@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router";
 import {
-  Building2, Users, FileText,
+  Users, FileText,
   TrendingUp, TrendingDown,
   Plus, UserPlus, LayoutDashboard,
   Eye, EyeOff, Loader2,
@@ -10,14 +10,13 @@ import { motion } from "motion/react";
 import { DateRangeFilter } from "../components/ui/DateRangeFilter";
 import {
   useDashboard,
-  presetToRange,
   type DatePreset,
   type DateRange,
 } from "../hooks/useDashboard";
 
 // ─── Animation variants ────────────────────────────────────────────
-const container = { hidden: { opacity: 0 }, show: { opacity: 1, transition: { staggerChildren: 0.06 } } };
-const item = { hidden: { opacity: 0, y: 14 }, show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 320, damping: 26 } } };
+const container = { hidden: { opacity: 0 }, show: { opacity: 1, transition: { staggerChildren: 0.06 } } } as const;
+const item = { hidden: { opacity: 0, y: 14 }, show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 320, damping: 26 } } } as const;
 
 // ─── Helpers ──────────────────────────────────────────────────────
 const fmt = (n: number) => `₦${n.toLocaleString("en-NG")}`;
@@ -29,6 +28,7 @@ const rankColors = [
   "bg-neutral-100 text-neutral-500",
   "bg-neutral-100 text-neutral-500",
 ];
+const DEFAULT_RANGE: DateRange = { from: null, to: null };
 
 export function Overview() {
   // ── Date filter state ──────────────────────────────────────────
@@ -44,7 +44,6 @@ export function Overview() {
 
   // ── Visibility toggle ──────────────────────────────────────────
   const [valuesHidden, setValuesHidden] = useState(false);
-  const mask = (n: number) => (valuesHidden ? HIDDEN : fmt(n));
 
   // ── Data ───────────────────────────────────────────────────────
   const { 
@@ -53,11 +52,9 @@ export function Overview() {
     revenueBreakdown, 
     propertyLeaderboard, 
     customerLeaderboard, 
-    loading, 
-    isFiltered 
-  } = useDashboard(range || { from: null, to: null });
-
-  const statLabel = isFiltered ? "New" : "Total";
+    loading,
+    isFiltered
+  } = useDashboard(range || DEFAULT_RANGE);
 
   // Loading state overlay or similar could be handled here
   if (!stats && loading) {

@@ -8,11 +8,14 @@ interface VerifyForm {
   code: string;
 }
 
+import { useAuth } from "../../hooks/useAuth";
+
 export function VerifyIdentity() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { otpVerify, otpRequest } = useAuth();
   const state = location.state as { email?: string; flow?: string } | null;
-  const email = state?.email ?? "your email";
+  const email = state?.email ?? "";
   const flow  = state?.flow  ?? "signin";
 
   const [loading, setLoading]             = useState(false);
@@ -21,33 +24,41 @@ export function VerifyIdentity() {
   const { register, handleSubmit, formState: { errors } } = useForm<VerifyForm>();
 
   const onSubmit = async (data: VerifyForm) => {
+    if (!email) {
+      toast.error("Missing email. Please go back and try again.");
+      return;
+    }
     setLoading(true);
     try {
-      await new Promise((r) => setTimeout(r, 1000));
-      console.log("Verification code:", data.code, "| flow:", flow);
+      await otpVerify({ email, code: data.code });
       toast.success("Identity verified!");
       if (flow === "reset") {
         navigate("/auth/reset-password");
       } else {
         navigate("/");
       }
-    } catch {
-      toast.error("Invalid code. Please try again.");
+    } catch (err: any) {
+      toast.error(err.message || "Invalid code. Please try again.");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleResend = () => {
-    if (resendCooldown > 0) return;
-    toast.success("A new code has been sent.");
-    setResendCooldown(30);
-    const timer = setInterval(() => {
-      setResendCooldown((prev) => {
-        if (prev <= 1) { clearInterval(timer); return 0; }
-        return prev - 1;
-      });
-    }, 1000);
+  const handleResend = async () => {
+    if (resendCooldown > 0 || !email) return;
+    try {
+      await otpRequest({ email });
+      toast.success("A new code has been sent.");
+      setResendCooldown(30);
+      const timer = setInterval(() => {
+        setResendCooldown((prev) => {
+          if (prev <= 1) { clearInterval(timer); return 0; }
+          return prev - 1;
+        });
+      }, 1000);
+    } catch (err: any) {
+      toast.error(err.message || "Failed to resend code.");
+    }
   };
 
   return (

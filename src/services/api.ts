@@ -31,6 +31,29 @@ export interface DateRange {
   to: string | null;
 }
 
+export interface User {
+  id: string;
+  email: string;
+  first_name: string;
+  last_name: string;
+  phone?: string;
+  title?: string;
+  gender?: string;
+  date_of_birth?: string;
+  occupation?: string;
+  address?: string;
+  country?: string;
+  state?: string;
+}
+
+export interface AuthResponse {
+  user: User;
+  tokens: {
+    access: string;
+    refresh: string;
+  };
+}
+
 // ─── HTTP Helpers ────────────────────────────────────────────────
 
 function getTokens() {
@@ -46,7 +69,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const tokens = getTokens();
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
-    "X-Workspace-Slug": getWorkspaceSlug(),
+    "X-Workspace": getWorkspaceSlug(),
     ...(options.headers as Record<string, string>),
   };
 
@@ -64,8 +87,6 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
     throw new Error(errorData.message || `HTTP ${response.status}`);
   }
 
-  // Some endpoints return the data directly, some wrap it.
-  // Based on API_DOCS.md success response: { "...resource fields..." }
   return response.json();
 }
 
@@ -125,7 +146,44 @@ export const api = {
     get: (id: string) => request<any>(`/customers/${id}/`),
   },
 
+  salesReps: {
+    list: () => request<any[]>("/sales-reps/"),
+    getStats: () => request<any>("/sales-reps/stats/"),
+  },
+
   auth: {
-    me: () => request<any>("/auth/me/"),
+    register: (data: any) => 
+      request<any>("/auth/register/", { method: "POST", body: JSON.stringify(data) }),
+    
+    login: (data: any) => 
+      request<AuthResponse>("/auth/login/", { method: "POST", body: JSON.stringify(data) }),
+    
+    refresh: (refresh: string) => 
+      request<{ access: string }>("/auth/token/refresh/", { 
+        method: "POST", 
+        body: JSON.stringify({ refresh }) 
+      }),
+
+    me: () => request<User>("/auth/me/"),
+    
+    updateMe: (data: Partial<User>) => 
+      request<User>("/auth/me/", { method: "PATCH", body: JSON.stringify(data) }),
+
+    otpRequest: (data: { email?: string; phone?: string }) => 
+      request<any>("/auth/otp/request/", { method: "POST", body: JSON.stringify(data) }),
+
+    otpVerify: (data: { email?: string; phone?: string; code: string }) => 
+      request<AuthResponse>("/auth/otp/verify/", { method: "POST", body: JSON.stringify(data) }),
+
+    forgotPassword: (data: { email: string }) => 
+      request<any>("/auth/otp/request/", { method: "POST", body: JSON.stringify(data) }),
+
+    resetPassword: (data: any) => 
+      request<any>("/auth/password/reset/", { method: "POST", body: JSON.stringify(data) }),
+
+    listMembers: () => request<any[]>("/auth/members/"),
+    
+    addMember: (data: { email: string; role: string }) => 
+      request<any>("/auth/members/add/", { method: "POST", body: JSON.stringify(data) }),
   }
 };

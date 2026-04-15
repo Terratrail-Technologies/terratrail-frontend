@@ -1,5 +1,7 @@
-import { Search, Filter, Plus, MoreVertical, FileText, CheckCircle2, Users as UsersIcon } from "lucide-react";
-import { customers } from "../utils/mockData";
+import { useState, useEffect } from "react";
+import { Search, Filter, Plus, MoreVertical, FileText, CheckCircle2, Users as UsersIcon, Loader2 } from "lucide-react";
+import { api } from "../services/api";
+import { customers as mockCustomers } from "../utils/mockData";
 import { Badge } from "../components/ui/badge";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
@@ -9,11 +11,11 @@ import { EmptyState } from "../components/ui/empty-state";
 const container = {
   hidden: { opacity: 0 },
   show: { opacity: 1, transition: { staggerChildren: 0.07 } },
-};
+} as const;
 const item = {
   hidden: { opacity: 0, y: 10 },
   show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 320, damping: 26 } },
-};
+} as const;
 
 // Deterministic avatar color from name
 const avatarColors = [
@@ -28,16 +30,45 @@ const avatarColor = (name: string) =>
   avatarColors[name.charCodeAt(0) % avatarColors.length];
 
 export function Customers() {
-  const fmt = (n: number) => `₦${n.toLocaleString("en-NG")}`;
+  const [customers, setCustomers] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+
+  const fetchCustomers = async () => {
+    setLoading(true);
+    try {
+      const data = await api.customers.list();
+      setCustomers(data);
+    } catch (err) {
+      console.warn("Using mock customers fallback");
+      setCustomers(mockCustomers);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchCustomers();
+  }, []);
+
+  const fmt = (n: number | string) => `₦${Number(n).toLocaleString("en-NG")}`;
+
+  const filtered = customers.filter(c => 
+    c.name.toLowerCase().includes(search.toLowerCase()) ||
+    c.email?.toLowerCase().includes(search.toLowerCase())
+  );
 
   return (
     <div className="flex flex-col min-h-[calc(100vh-60px)] w-full">
       {/* Page header */}
       <div className="bg-white border-b border-neutral-100 px-6 lg:px-8 py-5 hidden md:block">
         <div className="flex items-center justify-between gap-4">
-          <div>
-            <h1 className="text-[18px] font-semibold text-neutral-900 tracking-tight">Customers</h1>
-            <p className="text-[12.5px] text-neutral-400 mt-0.5">Customer and subscription management</p>
+          <div className="flex items-center gap-3">
+            <div>
+              <h1 className="text-[18px] font-semibold text-neutral-900 tracking-tight">Customers</h1>
+              <p className="text-[12.5px] text-neutral-400 mt-0.5">Customer and subscription management</p>
+            </div>
+            {loading && <Loader2 className="w-4 h-4 text-emerald-500 animate-spin" />}
           </div>
           <Button className="h-8 gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-[12px] font-medium rounded-lg px-3 shadow-sm">
             <Plus className="w-3.5 h-3.5" />
@@ -49,16 +80,24 @@ export function Customers() {
       <motion.div variants={container} initial="hidden" animate="show"
         className="p-4 sm:p-6 lg:p-8 space-y-5 flex-1">
 
-        {customers.length === 0 ? (
+        {loading && customers.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-20">
+            <Loader2 className="w-8 h-8 text-emerald-500 animate-spin" />
+            <p className="text-[13px] text-neutral-400 font-medium mt-3">Loading customers...</p>
+          </div>
+        ) : filtered.length === 0 ? (
           <motion.div variants={item}>
             <EmptyState
               icon={UsersIcon}
-              title="No customers yet"
-              description="Add your first customer to start tracking subscriptions and revenue."
+              title={search ? "No matching customers" : "No customers yet"}
+              description={search ? "Adjust your search to find what you're looking for." : "Add your first customer to start tracking subscriptions and revenue."}
               action={
-                <Button className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white">
+                <Button 
+                  onClick={() => search ? setSearch("") : null}
+                  className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white"
+                >
                   <Plus className="w-4 h-4" />
-                  Add New Customer
+                  {search ? "Clear Search" : "Add New Customer"}
                 </Button>
               }
             />
@@ -69,8 +108,12 @@ export function Customers() {
             <motion.div variants={item} className="flex flex-col sm:flex-row items-center gap-2.5">
               <div className="relative w-full sm:w-80">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-neutral-400" />
-                <Input placeholder="Search by name or email…"
-                  className="h-9 pl-9 text-[13px] bg-white border-neutral-200 focus-visible:ring-1 focus-visible:ring-emerald-500/30 focus-visible:border-emerald-400 rounded-lg" />
+                <Input 
+                  placeholder="Search by name or email…"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="h-9 pl-9 text-[13px] bg-white border-neutral-200 focus-visible:ring-1 focus-visible:ring-emerald-500/30 focus-visible:border-emerald-400 rounded-lg" 
+                />
               </div>
               <Button variant="outline" size="sm"
                 className="h-9 gap-1.5 text-[12.5px] bg-white border-neutral-200 hover:bg-neutral-50 rounded-lg px-3">
@@ -102,8 +145,9 @@ export function Customers() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-neutral-50">
-                    {customers.map((customer) => {
+                    {filtered.map((customer) => {
                       const [bgCls, txtCls] = avatarColor(customer.name);
+                      const status = (customer.status || "active").toLowerCase();
                       return (
                         <tr key={customer.id}
                           className="hover:bg-neutral-50/60 transition-colors group">
@@ -117,7 +161,7 @@ export function Customers() {
                               <div>
                                 <div className="text-[13px] font-semibold text-neutral-900">{customer.name}</div>
                                 <div className="text-[11px] text-neutral-400 mt-0.5 sm:hidden">{customer.email}</div>
-                                <div className="text-[11px] text-neutral-400 mt-0.5 hidden sm:block">Joined {customer.joinedAt}</div>
+                                <div className="text-[11px] text-neutral-400 mt-0.5 hidden sm:block">Joined {customer.joinedAt || "N/A"}</div>
                               </div>
                             </div>
                           </td>
@@ -135,44 +179,44 @@ export function Customers() {
                                 <FileText className="w-3.5 h-3.5 text-neutral-400" />
                               </div>
                               <div>
-                                <div className="text-[12.5px] font-semibold text-neutral-900">{customer.subscriptions} total</div>
-                                <div className="text-[11px] text-neutral-400">{customer.activeSubscriptions} active</div>
+                                <div className="text-[12.5px] font-semibold text-neutral-900">{customer.subscriptions ?? customer.subscription_count ?? 0} total</div>
+                                <div className="text-[11px] text-neutral-400">{customer.activeSubscriptions ?? customer.active_subscription_count ?? 0} active</div>
                               </div>
                             </div>
                           </td>
 
                           {/* Status */}
                           <td className="px-5 py-3.5 whitespace-nowrap">
-                            <Badge variant={customer.status === "active" ? "default" : "secondary"}
+                            <Badge variant={status === "active" ? "default" : "secondary"}
                               className={
-                                customer.status === "active"
+                                status === "active"
                                   ? "bg-emerald-50 text-emerald-700 border-emerald-100 text-[11px] gap-1.5"
-                                  : customer.status === "completed"
+                                  : status === "completed"
                                   ? "bg-blue-50 text-blue-700 border-blue-100 text-[11px] gap-1.5"
                                   : "text-[11px] gap-1.5"
                               }>
-                              {customer.status === "active" && (
+                              {status === "active" && (
                                 <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full" />
                               )}
-                              {customer.status === "completed" && (
+                              {status === "completed" && (
                                 <CheckCircle2 className="w-3 h-3" />
                               )}
-                              <span className="capitalize">{customer.status}</span>
+                              <span className="capitalize">{status}</span>
                             </Badge>
                           </td>
 
                           {/* Revenue */}
                           <td className="px-5 py-3.5 whitespace-nowrap hidden lg:table-cell">
-                            <div className="text-[13px] font-semibold text-neutral-900">{fmt(customer.totalRevenue)}</div>
+                            <div className="text-[13px] font-semibold text-neutral-900">{fmt(customer.totalRevenue ?? customer.total_revenue ?? 0)}</div>
                           </td>
 
                           {/* Rep */}
                           <td className="px-5 py-3.5 whitespace-nowrap hidden xl:table-cell">
                             <div className="flex items-center gap-1.5 text-[12.5px] text-neutral-600">
                               <div className="w-5 h-5 rounded-full bg-neutral-200 flex items-center justify-center text-[9px] font-bold text-neutral-500">
-                                {customer.customerRep?.substring(0, 1)}
+                                {(customer.customerRep || customer.rep_name || "U").substring(0, 1)}
                               </div>
-                              {customer.customerRep}
+                              {customer.customerRep || customer.rep_name || "N/A"}
                             </div>
                           </td>
 

@@ -15,8 +15,11 @@ const BackArrow = () => (
   </svg>
 );
 
+import { useAuth } from "../../hooks/useAuth";
+
 export function ForgotPassword() {
   const navigate = useNavigate();
+  const { otpRequest } = useAuth();
   const [loading, setLoading] = useState(false);
 
   const { register, handleSubmit, formState: { errors } } = useForm<ForgotForm>();
@@ -24,12 +27,11 @@ export function ForgotPassword() {
   const onSubmit = async (data: ForgotForm) => {
     setLoading(true);
     try {
-      await new Promise((r) => setTimeout(r, 1000));
-      console.log("Reset request for:", data.email);
-      toast.success("Reset link sent! Check your inbox.");
+      await otpRequest({ email: data.email });
+      toast.success("Verification code sent! Check your inbox.");
       navigate("/auth/verify", { state: { email: data.email, flow: "reset" } });
-    } catch {
-      toast.error("Something went wrong. Please try again.");
+    } catch (err: any) {
+      toast.error(err.message || "Something went wrong. Please try again.");
     } finally {
       setLoading(false);
     }

@@ -10,21 +10,31 @@ interface NewPasswordForm {
   confirmPassword: string;
 }
 
+import { useAuth } from "../../hooks/useAuth";
+import { useLocation } from "react-router";
+
 export function CreateNewPassword() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const { resetPassword } = useAuth();
   const [loading, setLoading] = useState(false);
 
   const { register, handleSubmit, watch, formState: { errors } } = useForm<NewPasswordForm>();
   const newPassword = watch("newPassword");
 
-  const onSubmit = async (_data: NewPasswordForm) => {
+  const onSubmit = async (data: NewPasswordForm) => {
     setLoading(true);
     try {
-      await new Promise((r) => setTimeout(r, 1000));
+      // In a real flow, this might need an 'otp' from state or URL
+      await resetPassword({
+        password: data.newPassword,
+        email: (location.state as any)?.email,
+        otp: (location.state as any)?.otp, // or however it is passed
+      });
       toast.success("Password updated successfully! You can now log in.");
       navigate("/auth/sign-in");
-    } catch {
-      toast.error("Something went wrong. Please try again.");
+    } catch (err: any) {
+      toast.error(err.message || "Something went wrong. Please try again.");
     } finally {
       setLoading(false);
     }
