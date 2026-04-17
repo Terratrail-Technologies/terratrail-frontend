@@ -1,7 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
+import { usePolling } from "../hooks/usePolling";
 import { Search, Filter, Plus, MoreVertical, FileText, CheckCircle2, Users as UsersIcon, Loader2 } from "lucide-react";
+import { Skeleton } from "../components/ui/skeleton";
 import { api } from "../services/api";
-import { customers as mockCustomers } from "../utils/mockData";
 import { Badge } from "../components/ui/badge";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
@@ -40,21 +41,18 @@ export function Customers() {
       const data = await api.customers.list();
       setCustomers(data);
     } catch (err) {
-      console.warn("Using mock customers fallback");
-      setCustomers(mockCustomers);
+      console.error("Failed to load customers:", err);
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    fetchCustomers();
-  }, []);
+  usePolling(fetchCustomers, 30_000);
 
   const fmt = (n: number | string) => `₦${Number(n).toLocaleString("en-NG")}`;
 
   const filtered = customers.filter(c => 
-    c.name.toLowerCase().includes(search.toLowerCase()) ||
+    (c.full_name ?? c.name ?? "").toLowerCase().includes(search.toLowerCase()) ||
     c.email?.toLowerCase().includes(search.toLowerCase())
   );
 
@@ -81,10 +79,38 @@ export function Customers() {
         className="p-4 sm:p-6 lg:p-8 space-y-5 flex-1">
 
         {loading && customers.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20">
-            <Loader2 className="w-8 h-8 text-emerald-500 animate-spin" />
-            <p className="text-[13px] text-neutral-400 font-medium mt-3">Loading customers...</p>
-          </div>
+          /* Skeleton — mirrors the customers table layout */
+          <>
+            <div className="flex flex-col sm:flex-row items-center gap-2.5">
+              <Skeleton className="h-9 w-full sm:w-80 rounded-lg bg-neutral-100" />
+              <Skeleton className="h-9 w-24 rounded-lg bg-neutral-100" />
+            </div>
+            <div className="bg-white rounded-xl border border-neutral-100 overflow-hidden shadow-[0_1px_3px_rgba(0,0,0,0.06)]">
+              {/* Table head */}
+              <div className="bg-neutral-50/70 border-b border-neutral-100 px-5 py-3 flex gap-4">
+                {[140, 120, 80, 60, 100, 70].map((w, i) => (
+                  <Skeleton key={i} className={`h-3 rounded bg-neutral-200`} style={{ width: w }} />
+                ))}
+              </div>
+              {/* Table rows */}
+              {Array.from({ length: 7 }).map((_, i) => (
+                <div key={i} className="px-5 py-3.5 flex items-center gap-4 border-b border-neutral-50 last:border-0">
+                  <div className="flex items-center gap-3 flex-1">
+                    <Skeleton className="h-8 w-8 rounded-full bg-neutral-100 shrink-0" />
+                    <div className="space-y-1.5">
+                      <Skeleton className="h-3.5 w-32 bg-neutral-100" />
+                      <Skeleton className="h-3 w-24 bg-neutral-100" />
+                    </div>
+                  </div>
+                  <Skeleton className="h-3.5 w-24 bg-neutral-100 hidden sm:block" />
+                  <Skeleton className="h-3.5 w-16 bg-neutral-100 hidden md:block" />
+                  <Skeleton className="h-5 w-16 rounded-full bg-neutral-100" />
+                  <Skeleton className="h-3.5 w-20 bg-neutral-100 hidden lg:block" />
+                  <Skeleton className="h-7 w-7 rounded-lg bg-neutral-100 ml-auto" />
+                </div>
+              ))}
+            </div>
+          </>
         ) : filtered.length === 0 ? (
           <motion.div variants={item}>
             <EmptyState

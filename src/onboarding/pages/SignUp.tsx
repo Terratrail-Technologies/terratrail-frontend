@@ -4,14 +4,14 @@ import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { FormInput } from "../components/FormInput";
 import { PasswordInput } from "../components/PasswordInput";
+import { useAuth } from "../../hooks/useAuth";
 import s from "../styles/onboarding.module.css";
 
 interface SignUpForm {
-  fullName: string;
+  first_name: string;
+  last_name: string;
   email: string;
-  companyName: string;
   password: string;
-  rememberMe: boolean;
 }
 
 const GoogleIcon = () => (
@@ -30,32 +30,23 @@ const LockIcon = () => (
   </svg>
 );
 
-import { useAuth } from "../../hooks/useAuth";
-
 export function SignUp() {
   const navigate = useNavigate();
   const { register: authRegister } = useAuth();
   const [loading, setLoading] = useState(false);
 
-  const { register, handleSubmit, formState: { errors } } = useForm<SignUpForm>({
-    defaultValues: { rememberMe: false },
-  });
+  const { register, handleSubmit, formState: { errors } } = useForm<SignUpForm>();
 
   const onSubmit = async (data: SignUpForm) => {
     setLoading(true);
     try {
-      const [first_name, ...last_parts] = data.fullName.split(" ");
-      const last_name = last_parts.join(" ") || "User";
-
       await authRegister({
-        first_name,
-        last_name,
+        first_name: data.first_name.trim(),
+        last_name: data.last_name.trim(),
         email: data.email,
         password: data.password,
-        workspace_name: data.companyName,
       });
-
-      toast.success("Workspace created! Please verify your email.");
+      toast.success("Account created! Please verify your email.");
       navigate("/auth/verify", { state: { email: data.email, flow: "signup" } });
     } catch (err: any) {
       toast.error(err.message || "Something went wrong. Please try again.");
@@ -66,22 +57,32 @@ export function SignUp() {
 
   return (
     <>
-      <h1 className={s.heading}>Welcome to TerraTrail</h1>
-      <p className={s.subtext}>Log in to manage your estate portfolio.</p>
+      <h1 className={s.heading}>Create your account</h1>
+      <p className={s.subtext}>Join TerraTrail to manage your estate portfolio.</p>
 
       <form className={s.form} onSubmit={handleSubmit(onSubmit)} noValidate>
-        <FormInput
-          label="Full Name"
-          placeholder="Enter your full name"
-          autoComplete="name"
-          error={errors.fullName?.message}
-          {...register("fullName", { required: "Full name is required" })}
-        />
+        {/* Name row */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+          <FormInput
+            label="First Name"
+            placeholder="Praise"
+            autoComplete="given-name"
+            error={errors.first_name?.message}
+            {...register("first_name", { required: "Required" })}
+          />
+          <FormInput
+            label="Last Name"
+            placeholder="Adebayo"
+            autoComplete="family-name"
+            error={errors.last_name?.message}
+            {...register("last_name", { required: "Required" })}
+          />
+        </div>
 
         <FormInput
-          label="Email"
+          label="Work/Personal Email"
           type="email"
-          placeholder="enter your work email"
+          placeholder="you@company.com"
           autoComplete="email"
           error={errors.email?.message}
           {...register("email", {
@@ -90,16 +91,8 @@ export function SignUp() {
           })}
         />
 
-        <FormInput
-          label="Company Name"
-          placeholder="Enter your company's name"
-          autoComplete="organization"
-          error={errors.companyName?.message}
-          {...register("companyName", { required: "Company name is required" })}
-        />
-
         <PasswordInput
-          label="Create Password"
+          label="Password"
           placeholder="At least 8 characters"
           autoComplete="new-password"
           error={errors.password?.message}
@@ -109,25 +102,10 @@ export function SignUp() {
           })}
         />
 
-        {/* Remember me + Forgot */}
-        <div className={s.rememberRow}>
-          <label className={s.checkLabel}>
-            <input type="checkbox" className={s.checkbox} {...register("rememberMe")} />
-            Remember me
-          </label>
-          <button
-            type="button"
-            className={s.forgotLink}
-            onClick={() => navigate("/auth/forgot-password")}
-          >
-            Forgotten Password?
-          </button>
-        </div>
-
         <button type="submit" className={s.btn} disabled={loading}>
           <span className={s.btnInner}>
             {loading && <span className={s.spinner} />}
-            {loading ? "Creating workspace…" : "Create My Workspace"}
+            {loading ? "Creating account…" : "Create My Account"}
           </span>
         </button>
 
@@ -145,11 +123,7 @@ export function SignUp() {
 
       <p className={s.footer}>
         Already have an account?{" "}
-        <button
-          type="button"
-          className={s.footerLink}
-          onClick={() => navigate("/auth/sign-in")}
-        >
+        <button type="button" className={s.footerLink} onClick={() => navigate("/auth/sign-in")}>
           Log in here
         </button>
       </p>
@@ -162,7 +136,7 @@ export function SignUp() {
 
       <div className={s.securityBadge}>
         <LockIcon />
-        Data encrypted with bank grade security
+        Data encrypted with bank-grade security
       </div>
     </>
   );

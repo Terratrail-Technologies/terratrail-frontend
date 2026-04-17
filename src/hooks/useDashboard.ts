@@ -74,40 +74,9 @@ export function useDashboard(dateRange: DateRange) {
       setPropertyLeaderboard(propertiesData);
       setCustomerLeaderboard(customersData);
     } catch (err: any) {
-      console.warn('Failed to fetch dashboard data, using mock fallback', err);
-      setError(err.message);
-      
-      // Fallback to mock data if API fails
-      setStats({
-        revenue: "5420000.00",
-        net_revenue: "5120000.00",
-        outstanding_balance: "12400000.00",
-        potential_revenue: "28000000.00",
-        commission_earned: "300000.00",
-        commission_pending: "120000.00",
-        commission_potential: "420000.00",
-        active_subscriptions: 52,
-        total_customers: 68,
-        overdue_installments: 5,
-        pending_payments: 2,
-        filters: { date_from: dateRange.from, date_to: dateRange.to }
-      });
-      setLeaderboard([
-        { id: '1', name: 'James Wilson', tier: 'LEGEND', total_earned: '150000', total_pending: '25000', total_referrals: 12 },
-        { id: '2', name: 'Sarah Miller', tier: 'SENIOR', total_earned: '95000', total_pending: '12000', total_referrals: 8 },
-      ]);
-      setRevenueBreakdown([
-        { property: 'Green Valley Estate', total_revenue: '3000000.00', payment_count: 24 },
-        { property: 'Hillview Gardens', total_revenue: '2420000.00', payment_count: 18 },
-      ]);
-      setPropertyLeaderboard({
-        top_by_subscriptions: [{ id: '1', name: 'Green Valley', subscription_count: 15 }],
-        top_by_revenue: [{ id: '1', name: 'Green Valley', total_revenue: '3000000.00' }]
-      });
-      setCustomerLeaderboard({
-        top_by_revenue: [{ id: '1', full_name: 'John Doe', total_paid: '500000' }],
-        top_by_subscriptions: [{ id: '1', full_name: 'Jane Smith', subscription_count: 2 }]
-      });
+      // Surface the error — let the UI decide how to handle it.
+      // auth:logout events (401/session expiry) are handled by the API client.
+      setError(err.message ?? "Failed to load dashboard data");
     } finally {
       setLoading(false);
     }
@@ -115,6 +84,11 @@ export function useDashboard(dateRange: DateRange) {
 
   useEffect(() => {
     fetchDashboardData();
+    // Auto-refresh every 30s + on tab focus
+    const interval = setInterval(fetchDashboardData, 30_000);
+    const onFocus  = () => fetchDashboardData();
+    window.addEventListener("focus", onFocus);
+    return () => { clearInterval(interval); window.removeEventListener("focus", onFocus); };
   }, [fetchDashboardData]);
 
   return {

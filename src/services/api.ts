@@ -1,12 +1,24 @@
 /**
  * TerraTrail API Client
- * Matches documentation in API_DOCS.md
- * Base URL: http://localhost:8000/api/v1
+ * Base URL: configurable via VITE_API_URL env var, defaults to localhost for dev.
+ *
+ * Security features:
+ *  - Automatic JWT token refresh on 401
+ *  - Dispatches "auth:logout" CustomEvent when refresh fails (session expired)
+ *  - Clears all auth/workspace cache on forced logout
+ *  - 403 responses surface as thrown errors (not silent)
  */
 
-const BASE_URL = "http://localhost:8000/api/v1";
+export const BASE_URL = (import.meta.env.VITE_API_URL as string | undefined) ?? "http://localhost:8000/api/v1";
 
-// ─── Interfaces ──────────────────────────────────────────────────
+// ─── One-time localStorage sanitisation ─────────────────────────────────────
+["tt_auth", "tt_user", "tt_workspace_slug", "tt_workspace"].forEach((k) => {
+  if (localStorage.getItem(k) === "undefined" || localStorage.getItem(k) === "null") {
+    localStorage.removeItem(k);
+  }
+});
+
+// ─── Interfaces ──────────────────────────────────────────────────────────────
 
 export interface DashboardStats {
   revenue: string;
@@ -54,136 +66,290 @@ export interface AuthResponse {
   };
 }
 
-// ─── HTTP Helpers ────────────────────────────────────────────────
+// ─── Auth token helpers ──────────────────────────────────────────────────────
 
-function getTokens() {
-  const stored = localStorage.getItem("tt_auth");
-  return stored ? JSON.parse(stored) : null;
+export function getTokens(): { access: string; refresh: string } | null {
+  try {
+    const stored = localStorage.getItem("tt_auth");
+    if (!stored || stored === "undefined" || stored === "null") return null;
+    const parsed = JSON.parse(stored);
+    if (!parsed?.access) return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function saveTokens(tokens: { access: string; refresh?: string }) {
+  const current = getTokens();
+  const merged = { ...current, ...tokens };
+  localStorage.setItem("tt_auth", JSON.stringify(merged));
+}
+
+/** Wipes all session data and broadcasts the logout event. */
+export function forceLogout(reason = "session_expired") {
+  localStorage.removeItem("tt_auth");
+  localStorage.removeItem("tt_user");
+  localStorage.removeItem("tt_workspace");
+  // Keep workspace_slug so the sign-in page can pre-fill the workspace
+  window.dispatchEvent(new CustomEvent("auth:logout", { detail: { reason } }));
 }
 
 function getWorkspaceSlug() {
-  return localStorage.getItem("tt_workspace_slug") || "my-estate-company";
+  return localStorage.getItem("tt_workspace_slug") ?? "";
 }
 
-async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
+// Paths that don't need (or can't use) X-Workspace-Slug / Authorization
+const AUTH_PATHS = [
+  "/auth/login/",
+  "/auth/register/",
+  "/auth/otp/",
+  "/auth/token/",
+  "/workspaces/mine/",
+  "/workspaces/create/",
+  "/workspaces/check-slug/",
+];
+
+// ─── Token refresh queue ─────────────────────────────────────────────────────
+// Ensures only one refresh is in-flight at a time; queues parallel callers.
+
+let refreshPromise: Promise<string> | null = null;
+
+async function refreshAccessToken(): Promise<string> {
+  if (refreshPromise) return refreshPromise;
+
+  refreshPromise = (async () => {
+    const tokens = getTokens();
+    if (!tokens?.refresh) throw new Error("no_refresh_token");
+
+    const res = await fetch(`${BASE_URL}/auth/token/refresh/`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ refresh: tokens.refresh }),
+    });
+
+    if (!res.ok) throw new Error("refresh_failed");
+
+    const json = await res.json();
+    const newAccess: string =
+      json?.data?.access ?? json?.access;
+    if (!newAccess) throw new Error("refresh_no_access");
+
+    saveTokens({ access: newAccess });
+    return newAccess;
+  })().finally(() => {
+    refreshPromise = null;
+  });
+
+  return refreshPromise;
+}
+
+// ─── Core HTTP helper ─────────────────────────────────────────────────────────
+
+async function request<T>(path: string, options: RequestInit = {}, retry = true): Promise<T> {
   const tokens = getTokens();
+  const isAuthPath = AUTH_PATHS.some((p) => path.startsWith(p));
+
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
-    "X-Workspace": getWorkspaceSlug(),
     ...(options.headers as Record<string, string>),
   };
+
+  if (!isAuthPath) {
+    headers["X-Workspace-Slug"] = getWorkspaceSlug();
+  }
 
   if (tokens?.access) {
     headers["Authorization"] = `Bearer ${tokens.access}`;
   }
 
-  const response = await fetch(`${BASE_URL}${path}`, {
-    ...options,
-    headers,
-  });
+  const response = await fetch(`${BASE_URL}${path}`, { ...options, headers });
+
+  // ── 401 Unauthorized → try token refresh once ────────────────────────────
+  if (response.status === 401 && retry && !isAuthPath) {
+    try {
+      await refreshAccessToken();
+      return request<T>(path, options, false /* no further retry */);
+    } catch {
+      // Refresh also failed — the session is truly expired
+      forceLogout("token_expired");
+      throw new Error("Session expired. Please sign in again.");
+    }
+  }
+
+  // ── 403 Forbidden ────────────────────────────────────────────────────────
+  if (response.status === 403) {
+    throw new Error("You don't have permission to perform this action.");
+  }
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.message || `HTTP ${response.status}`);
+    throw new Error(
+      (errorData as any)?.message ||
+      (errorData as any)?.detail ||
+      `HTTP ${response.status}`
+    );
   }
 
-  return response.json();
+  const json = await response.json();
+  // Unwrap standard envelope: { status, data: <payload> }
+  return (json && typeof json === "object" && "data" in json ? json.data : json) as T;
 }
 
-function buildParams(params: Record<string, any>): string {
+function buildParams(params: Record<string, unknown>): string {
   const searchParams = new URLSearchParams();
   Object.entries(params).forEach(([key, value]) => {
     if (value !== null && value !== undefined) {
-      searchParams.append(key, value);
+      searchParams.append(key, String(value));
     }
   });
   const str = searchParams.toString();
   return str ? `?${str}` : "";
 }
 
-// ─── API Methods ─────────────────────────────────────────────────
+// ─── Pagination helper ────────────────────────────────────────────────────────
+function unwrapList<T>(data: unknown): T[] {
+  if (Array.isArray(data)) return data as T[];
+  if (data && typeof data === "object" && Array.isArray((data as any).results))
+    return (data as any).results as T[];
+  return [];
+}
+
+// ─── API Methods ──────────────────────────────────────────────────────────────
 
 export const api = {
+  // ── Health ────────────────────────────────────────────────────────────────
+  health: {
+    ping: () =>
+      fetch(`${BASE_URL}/health/`).then((r) => r.json()).catch(() => ({ status: "offline" })),
+  },
+
+  // ── Dashboard ─────────────────────────────────────────────────────────────
   dashboard: {
     getStats: (range: DateRange) =>
-      request<DashboardStats>(`/notifications/dashboard/${buildParams({
-        date_from: range.from,
-        date_to: range.to
-      })}`),
-
+      request<DashboardStats>(
+        `/notifications/dashboard/${buildParams({ date_from: range.from, date_to: range.to })}`
+      ),
     getLeaderboard: (range: DateRange) =>
-      request<any>(`/notifications/dashboard/leaderboard/${buildParams({
-        date_from: range.from,
-        date_to: range.to
-      })}`),
-
+      request<any>(
+        `/notifications/dashboard/leaderboard/${buildParams({ date_from: range.from, date_to: range.to })}`
+      ),
     getRevenueBreakdown: (range: DateRange) =>
-      request<any>(`/notifications/dashboard/revenue/${buildParams({
-        date_from: range.from,
-        date_to: range.to
-      })}`),
-
+      request<any>(
+        `/notifications/dashboard/revenue/${buildParams({ date_from: range.from, date_to: range.to })}`
+      ),
     getProperties: (range: DateRange) =>
-      request<any>(`/notifications/dashboard/properties/${buildParams({
-        date_from: range.from,
-        date_to: range.to
-      })}`),
-
+      request<any>(
+        `/notifications/dashboard/properties/${buildParams({ date_from: range.from, date_to: range.to })}`
+      ),
     getCustomers: (range: DateRange) =>
-      request<any>(`/notifications/dashboard/customers/${buildParams({
-        date_from: range.from,
-        date_to: range.to
-      })}`),
+      request<any>(
+        `/notifications/dashboard/customers/${buildParams({ date_from: range.from, date_to: range.to })}`
+      ),
   },
 
+  // ── Properties ────────────────────────────────────────────────────────────
   properties: {
-    list: () => request<any[]>("/properties/"),
+    list: () => request<any>("/properties/").then(unwrapList),
     get: (id: string) => request<any>(`/properties/${id}/`),
+    create: (data: any) =>
+      request<any>("/properties/", { method: "POST", body: JSON.stringify(data) }),
+    update: (id: string, data: any) =>
+      request<any>(`/properties/${id}/`, { method: "PATCH", body: JSON.stringify(data) }),
+    delete: (id: string) =>
+      request<void>(`/properties/${id}/`, { method: "DELETE" }),
   },
 
+  // ── Customers ─────────────────────────────────────────────────────────────
   customers: {
-    list: () => request<any[]>("/customers/"),
+    list: () => request<any>("/customers/").then(unwrapList),
     get: (id: string) => request<any>(`/customers/${id}/`),
+    create: (data: any) =>
+      request<any>("/customers/", { method: "POST", body: JSON.stringify(data) }),
+    update: (id: string, data: any) =>
+      request<any>(`/customers/${id}/`, { method: "PATCH", body: JSON.stringify(data) }),
   },
 
+  // ── Site Inspections ─────────────────────────────────────────────────────
+  siteInspections: {
+    list: (status?: string) =>
+      request<any>(`/customers/site-inspections/${status ? `?status=${status}` : ""}`).then(unwrapList),
+    get: (id: string) => request<any>(`/customers/site-inspections/${id}/`),
+    create: (data: any) =>
+      request<any>("/customers/site-inspections/", { method: "POST", body: JSON.stringify(data) }),
+    update: (id: string, data: any) =>
+      request<any>(`/customers/site-inspections/${id}/`, { method: "PATCH", body: JSON.stringify(data) }),
+    delete: (id: string) =>
+      request<void>(`/customers/site-inspections/${id}/`, { method: "DELETE" }),
+  },
+
+  // ── Sales Reps / Commissions ──────────────────────────────────────────────
   salesReps: {
-    list: () => request<any[]>("/sales-reps/"),
-    getStats: () => request<any>("/sales-reps/stats/"),
+    list: () => request<any>("/commissions/reps/").then(unwrapList),
+    getStats: (range?: DateRange) =>
+      request<any>(
+        `/notifications/dashboard/leaderboard/${buildParams({
+          date_from: range?.from,
+          date_to: range?.to,
+        })}`
+      ),
   },
 
+  // ── Workspaces ────────────────────────────────────────────────────────────
+  workspaces: {
+    create: (data: {
+      name: string;
+      slug?: string;
+      timezone?: string;
+      region?: string;
+      support_email?: string;
+      support_whatsapp?: string;
+    }) => request<any>("/workspaces/create/", { method: "POST", body: JSON.stringify(data) }),
+    checkSlug: (slug: string) =>
+      request<{ slug: string; available: boolean; suggestions: string[] }>(
+        `/workspaces/check-slug/?slug=${encodeURIComponent(slug)}`
+      ),
+    detail: () => request<any>("/workspaces/detail/"),
+    updateDetail: (data: any) =>
+      request<any>("/workspaces/detail/", { method: "PATCH", body: JSON.stringify(data) }),
+    getSettings: () => request<any>("/workspaces/settings/"),
+    updateSettings: (data: any) =>
+      request<any>("/workspaces/settings/", { method: "PATCH", body: JSON.stringify(data) }),
+    listMembers: () => request<any>("/workspaces/members/").then(unwrapList),
+    invite: (data: { email: string; role: string }) =>
+      request<any>("/workspaces/invites/", { method: "POST", body: JSON.stringify(data) }),
+    activity: (page = 1) => request<any>(`/workspaces/activity/${buildParams({ page })}`),
+    billingPlans: () => request<any[]>("/workspaces/billing/plans/"),
+    billingUsage: () => request<any>("/workspaces/billing/usage/"),
+    selectPlan: (data: { plan: string }) =>
+      request<any>("/workspaces/billing/select/", { method: "POST", body: JSON.stringify(data) }),
+    mine: () => request<any[]>("/workspaces/mine/"),
+  },
+
+  // ── Auth ──────────────────────────────────────────────────────────────────
   auth: {
-    register: (data: any) => 
+    register: (data: any) =>
       request<any>("/auth/register/", { method: "POST", body: JSON.stringify(data) }),
-    
-    login: (data: any) => 
+    login: (data: any) =>
       request<AuthResponse>("/auth/login/", { method: "POST", body: JSON.stringify(data) }),
-    
-    refresh: (refresh: string) => 
-      request<{ access: string }>("/auth/token/refresh/", { 
-        method: "POST", 
-        body: JSON.stringify({ refresh }) 
+    refresh: (refresh: string) =>
+      request<{ access: string }>("/auth/token/refresh/", {
+        method: "POST",
+        body: JSON.stringify({ refresh }),
       }),
-
     me: () => request<User>("/auth/me/"),
-    
-    updateMe: (data: Partial<User>) => 
+    updateMe: (data: Partial<User>) =>
       request<User>("/auth/me/", { method: "PATCH", body: JSON.stringify(data) }),
-
-    otpRequest: (data: { email?: string; phone?: string }) => 
+    otpRequest: (data: { email?: string; phone?: string }) =>
       request<any>("/auth/otp/request/", { method: "POST", body: JSON.stringify(data) }),
-
-    otpVerify: (data: { email?: string; phone?: string; code: string }) => 
+    otpVerify: (data: { email?: string; phone?: string; code: string }) =>
       request<AuthResponse>("/auth/otp/verify/", { method: "POST", body: JSON.stringify(data) }),
-
-    forgotPassword: (data: { email: string }) => 
+    forgotPassword: (data: { email: string }) =>
       request<any>("/auth/otp/request/", { method: "POST", body: JSON.stringify(data) }),
-
-    resetPassword: (data: any) => 
-      request<any>("/auth/password/reset/", { method: "POST", body: JSON.stringify(data) }),
-
+    resetPassword: (data: any) =>
+      request<any>("/auth/otp/verify/", { method: "POST", body: JSON.stringify(data) }),
     listMembers: () => request<any[]>("/auth/members/"),
-    
-    addMember: (data: { email: string; role: string }) => 
+    addMember: (data: { email: string; role: string }) =>
       request<any>("/auth/members/add/", { method: "POST", body: JSON.stringify(data) }),
-  }
+  },
 };

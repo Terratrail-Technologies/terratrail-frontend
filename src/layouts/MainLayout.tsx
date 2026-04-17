@@ -1,4 +1,7 @@
-import { Outlet, Link, useLocation } from "react-router";
+import { useState, useRef, useEffect, useCallback } from "react";
+import { Outlet, Link, useLocation, useNavigate } from "react-router";
+import { useCurrentUser } from "../hooks/useCurrentUser";
+import { useWorkspace } from "../hooks/useWorkspace";
 import {
   LayoutDashboard,
   Building2,
@@ -34,6 +37,83 @@ import {
 import { Button } from "../components/ui/button";
 import { motion, AnimatePresence } from "motion/react";
 
+// ── Navbar user dropdown ──────────────────────────────────────────────────────
+function NavbarUserMenu() {
+  const navigate = useNavigate();
+  const { displayName, initials, user } = useCurrentUser();
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  // Close on outside click
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  const handleLogout = () => {
+    localStorage.removeItem("tt_auth");
+    localStorage.removeItem("tt_user");
+    localStorage.removeItem("tt_workspace_slug");
+    navigate("/auth/sign-in");
+  };
+
+  return (
+    <div ref={ref} style={{ position: "relative" }}>
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className="flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-neutral-50 transition-colors"
+        title={displayName}
+      >
+        <div className="h-7 w-7 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center text-[11px] font-bold text-white shrink-0 shadow-sm select-none">
+          {initials}
+        </div>
+        <span className="hidden md:block text-[12px] font-semibold text-neutral-700 max-w-[120px] truncate">
+          {displayName}
+        </span>
+        <ChevronRight className={cn("hidden md:block size-3 text-neutral-400 transition-transform duration-150", open && "rotate-90")} />
+      </button>
+
+      {open && (
+        <div className="absolute right-0 top-full mt-1.5 w-[200px] rounded-xl border border-neutral-100 bg-white shadow-lg shadow-neutral-900/10 z-50 overflow-hidden">
+          {/* User info */}
+          <div className="px-3 py-2.5 border-b border-neutral-50">
+            <p className="text-[12px] font-semibold text-neutral-800 truncate">{displayName}</p>
+            <p className="text-[11px] text-neutral-400 truncate">{user?.email ?? ""}</p>
+          </div>
+          {/* Actions */}
+          <div className="py-1">
+            <button
+              onClick={() => { setOpen(false); navigate("/account"); }}
+              className="w-full flex items-center gap-2.5 px-3 py-2 text-[12px] font-medium text-neutral-700 hover:bg-neutral-50 transition-colors"
+            >
+              <User className="size-3.5 text-neutral-400" />
+              My Profile
+            </button>
+            <button
+              onClick={() => { setOpen(false); navigate("/settings"); }}
+              className="w-full flex items-center gap-2.5 px-3 py-2 text-[12px] font-medium text-neutral-700 hover:bg-neutral-50 transition-colors"
+            >
+              <Settings className="size-3.5 text-neutral-400" />
+              Workspace Settings
+            </button>
+            <div className="my-1 border-t border-neutral-50" />
+            <button
+              onClick={handleLogout}
+              className="w-full flex items-center gap-2.5 px-3 py-2 text-[12px] font-semibold text-red-600 hover:bg-red-50 transition-colors"
+            >
+              <LogOut className="size-3.5" />
+              Log out
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 const mainNavItems = [
   { icon: LayoutDashboard, label: "Overview",        href: "/" },
   { icon: Building2,       label: "Properties",      href: "/properties" },
@@ -51,7 +131,17 @@ const bottomNavItems = [
 
 function NavContent() {
   const location = useLocation();
+  const navigate = useNavigate();
   const { setOpenMobile } = useSidebar();
+  const { displayName, initials, user } = useCurrentUser();
+  const { name: workspaceName, domain } = useWorkspace();
+
+  const handleLogout = () => {
+    localStorage.removeItem("tt_auth");
+    localStorage.removeItem("tt_user");
+    localStorage.removeItem("tt_workspace_slug");
+    navigate("/auth/sign-in");
+  };
 
   const isActive = (href: string) =>
     href === "/" ? location.pathname === "/" : location.pathname.startsWith(href);
@@ -64,12 +154,12 @@ function NavContent() {
           <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-emerald-600 shadow-sm">
             <Building2 className="size-[14px] text-white" />
           </div>
-          <div className="flex flex-col leading-tight">
-            <span className="text-[13px] font-semibold tracking-tight text-neutral-900">
-              TerraTrail
+          <div className="flex flex-col leading-tight min-w-0">
+            <span className="text-[13px] font-semibold tracking-tight text-neutral-900 truncate">
+              {workspaceName}
             </span>
-            <span className="text-[10px] font-semibold text-neutral-400 tracking-wide">
-              Tehillah Estate
+            <span className="text-[10px] font-semibold text-neutral-400 tracking-wide truncate">
+              {domain || "terratrail.co"}
             </span>
           </div>
         </div>
@@ -166,15 +256,18 @@ function NavContent() {
 
       {/* ── User footer ──────────────────────────────────────────── */}
       <SidebarFooter className="border-t border-sidebar-border p-3">
-        <SidebarMenuButton className="w-full h-10 justify-start gap-2.5 px-2.5 rounded-lg hover:bg-neutral-50 transition-colors">
+        <SidebarMenuButton
+          onClick={() => { setOpenMobile(false); navigate("/account"); }}
+          className="w-full h-10 justify-start gap-2.5 px-2.5 rounded-lg hover:bg-neutral-50 transition-colors group"
+          title="Account profile"
+        >
           <div className="h-7 w-7 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center text-[11px] font-bold text-white shrink-0 shadow-sm">
-            AU
+            {initials}
           </div>
           <div className="flex flex-col items-start leading-tight gap-0.5 min-w-0">
-            <span className="text-[12px] font-semibold text-neutral-800 truncate">Admin User</span>
-            <span className="text-[10px] text-neutral-400 truncate">admin@terra.com</span>
+            <span className="text-[12px] font-semibold text-neutral-800 truncate">{displayName}</span>
+            <span className="text-[10px] text-neutral-400 truncate">{user?.email ?? ""}</span>
           </div>
-          <LogOut className="ml-auto size-3.5 text-neutral-300 shrink-0" />
         </SidebarMenuButton>
       </SidebarFooter>
     </>
@@ -183,11 +276,27 @@ function NavContent() {
 
 export function MainLayout() {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { name: workspaceName } = useWorkspace();
 
+  // ── Global auth event: redirect to sign-in on session expiry / forced logout
+  const handleAuthLogout = useCallback(() => {
+    navigate("/auth/sign-in", { replace: true });
+  }, [navigate]);
+
+  useEffect(() => {
+    window.addEventListener("auth:logout", handleAuthLogout);
+    return () => window.removeEventListener("auth:logout", handleAuthLogout);
+  }, [handleAuthLogout]);
+
+  // Page title from route
   const pageTitle =
     location.pathname === "/"
       ? "Overview"
       : location.pathname.split("/")[1].replace(/-/g, " ");
+
+  // Pretty-print "settings/people" → "Settings"
+  const displayTitle = pageTitle.split("/")[0];
 
   return (
     <SidebarProvider>
@@ -203,9 +312,9 @@ export function MainLayout() {
               <SidebarTrigger className="-ml-1 text-neutral-400 hover:text-neutral-700" />
               <div className="h-4 w-px bg-neutral-100 hidden md:block" />
               <div className="hidden md:flex items-center gap-1.5 text-[12px] text-neutral-400">
-                <span>TerraTrail</span>
+                <span className="font-medium">{workspaceName}</span>
                 <ChevronRight className="size-3" />
-                <span className="capitalize font-semibold text-neutral-700">{pageTitle}</span>
+                <span className="capitalize font-semibold text-neutral-700">{displayTitle}</span>
               </div>
             </div>
 
@@ -214,7 +323,9 @@ export function MainLayout() {
               <Button
                 variant="ghost"
                 size="icon"
+                onClick={() => navigate("/settings/activity")}
                 className="relative h-8 w-8 text-neutral-400 hover:text-neutral-700 hover:bg-neutral-50 rounded-lg"
+                title="View activity"
               >
                 <Bell className="size-[15px]" />
                 <span className="absolute top-1.5 right-1.5 h-1.5 w-1.5 rounded-full bg-red-500 ring-1 ring-white" />
@@ -222,14 +333,20 @@ export function MainLayout() {
 
               <div className="h-5 w-px bg-neutral-100 mx-0.5" />
 
-              {/* CTA */}
+              {/* Add Property CTA */}
               <Button
                 size="sm"
+                onClick={() => navigate("/properties/new")}
                 className="h-8 gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-[12px] font-semibold rounded-lg px-3 shadow-sm transition-all hover:shadow-emerald-600/20 hover:shadow-md"
               >
                 <Plus className="size-3.5" />
                 <span className="hidden sm:inline">Add Property</span>
               </Button>
+
+              <div className="h-5 w-px bg-neutral-100 mx-0.5" />
+
+              {/* User avatar + logout dropdown */}
+              <NavbarUserMenu />
             </div>
           </header>
 

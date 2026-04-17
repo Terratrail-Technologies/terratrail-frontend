@@ -10,6 +10,7 @@ import { DataExport } from "./pages/DataExport";
 import { WorkspaceSettings } from "./pages/settings/WorkspaceSettings";
 import { AccountSettings } from "./pages/settings/AccountSettings";
 import { NotFound } from "./pages/NotFound";
+import { ProtectedRoute } from "./components/ProtectedRoute";
 // Onboarding – isolated module, no MainLayout dependency
 import { OnboardingLayout } from "./onboarding/components/OnboardingLayout";
 import { SignIn } from "./onboarding/pages/SignIn";
@@ -17,6 +18,8 @@ import { SignUp } from "./onboarding/pages/SignUp";
 import { VerifyIdentity } from "./onboarding/pages/VerifyIdentity";
 import { ForgotPassword } from "./onboarding/pages/ForgotPassword";
 import { CreateNewPassword } from "./onboarding/pages/CreateNewPassword";
+import { WorkspaceSetup } from "./onboarding/pages/WorkspaceSetup";
+import { SelectPlan } from "./onboarding/pages/SelectPlan";
 
 export const router = createBrowserRouter([
   // ── Onboarding (standalone, no MainLayout) ──────────────────────────────
@@ -30,24 +33,31 @@ export const router = createBrowserRouter([
       { path: "verify", Component: VerifyIdentity },
       { path: "forgot-password", Component: ForgotPassword },
       { path: "reset-password", Component: CreateNewPassword },
+      { path: "workspace-setup", Component: WorkspaceSetup },
+      { path: "select-plan", Component: SelectPlan },
     ],
   },
-  // ── Main app (existing – untouched) ─────────────────────────────────────
+  // ── Main app (protected – redirect to /auth/sign-in if not logged in) ──
   {
-    path: "/",
-    Component: MainLayout,
+    Component: ProtectedRoute,
     children: [
-      { index: true, Component: Overview },
-      { path: "properties", Component: Properties },
-      { path: "properties/new", Component: PropertyWizard },
-      { path: "properties/:id/edit", Component: PropertyWizard },
-      { path: "customers", Component: Customers },
-      { path: "sales-reps", Component: SalesReps },
-      { path: "site-inspection", Component: SiteInspection },
-      { path: "data-export", Component: DataExport },
-      { path: "settings/*", Component: WorkspaceSettings },
-      { path: "account", Component: AccountSettings },
-      { path: "*", Component: NotFound },
+      {
+        path: "/",
+        Component: MainLayout,
+        children: [
+          { index: true, Component: Overview },
+          { path: "properties", Component: Properties },
+          { path: "properties/new", Component: PropertyWizard },
+          { path: "properties/:id/edit", Component: PropertyWizard },
+          { path: "customers", Component: Customers },
+          { path: "sales-reps", Component: SalesReps },
+          { path: "site-inspection", Component: SiteInspection },
+          { path: "data-export", Component: DataExport },
+          { path: "settings/*", Component: WorkspaceSettings },
+          { path: "account", Component: AccountSettings },
+          { path: "*", Component: NotFound },
+        ],
+      },
     ],
   },
 ]);

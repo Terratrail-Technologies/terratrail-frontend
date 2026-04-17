@@ -7,6 +7,7 @@ import {
   Eye, EyeOff, Loader2,
 } from "lucide-react";
 import { motion } from "motion/react";
+import { Skeleton } from "../components/ui/skeleton";
 import { DateRangeFilter } from "../components/ui/DateRangeFilter";
 import {
   useDashboard,
@@ -56,13 +57,87 @@ export function Overview() {
     isFiltered
   } = useDashboard(range || DEFAULT_RANGE);
 
-  // Loading state overlay or similar could be handled here
+  // Skeleton scaffold — shown on first load before any data arrives
   if (!stats && loading) {
     return (
-      <div className="flex items-center justify-center h-screen bg-[#f8f9fb]">
-        <div className="flex flex-col items-center gap-3">
-          <Loader2 className="w-8 h-8 text-emerald-500 animate-spin" />
-          <p className="text-[13px] text-neutral-500 font-medium">Loading analytics...</p>
+      <div className="flex flex-col min-h-[calc(100vh-60px)] w-full">
+        {/* Header skeleton */}
+        <div className="bg-white border-b border-neutral-100 px-6 lg:px-8 py-4 hidden md:block">
+          <div className="flex items-center justify-between">
+            <div className="space-y-1.5">
+              <Skeleton className="h-5 w-28 bg-neutral-100" />
+              <Skeleton className="h-3.5 w-40 bg-neutral-100" />
+            </div>
+            <Skeleton className="h-8 w-52 rounded-lg bg-neutral-100" />
+          </div>
+        </div>
+
+        <div className="p-4 sm:p-6 lg:p-8 space-y-6 flex-1">
+          {/* 4 stat cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="bg-white rounded-xl border border-neutral-100 p-5 shadow-[0_1px_3px_rgba(0,0,0,0.06)]">
+                <div className="flex items-start justify-between">
+                  <div className="space-y-2 flex-1">
+                    <Skeleton className="h-3.5 w-28 bg-neutral-100" />
+                    <Skeleton className="h-8 w-16 bg-neutral-100" />
+                    <Skeleton className="h-3 w-20 bg-neutral-100" />
+                  </div>
+                  <Skeleton className="w-10 h-10 rounded-xl bg-neutral-100 shrink-0" />
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Financial panel skeleton */}
+          <div className="rounded-xl p-6 sm:p-8" style={{ background: "linear-gradient(135deg,#0f172a,#1e293b,#0f172a)" }}>
+            <Skeleton className="h-3.5 w-40 mb-6 bg-slate-700" />
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="space-y-2">
+                  <Skeleton className="h-3 w-24 bg-slate-700" />
+                  <Skeleton className="h-7 w-32 bg-slate-700" />
+                  <Skeleton className="h-2.5 w-28 bg-slate-800" />
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* 4 commission cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="bg-white rounded-xl border border-neutral-100 p-5 shadow-[0_1px_3px_rgba(0,0,0,0.06)]">
+                <Skeleton className="h-3.5 w-32 mb-2 bg-neutral-100" />
+                <Skeleton className="h-6 w-28 mb-3 bg-neutral-100" />
+                <Skeleton className="h-5 w-20 rounded-md bg-neutral-100" />
+              </div>
+            ))}
+          </div>
+
+          {/* 2 leaderboard panels */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="bg-white rounded-xl border border-neutral-100 shadow-[0_1px_3px_rgba(0,0,0,0.06)] overflow-hidden">
+                <div className="px-5 py-3.5 border-b border-neutral-50">
+                  <Skeleton className="h-4 w-40 bg-neutral-100" />
+                </div>
+                <div className="p-3 space-y-1">
+                  {Array.from({ length: 4 }).map((_, j) => (
+                    <div key={j} className="flex items-center justify-between px-2 py-2">
+                      <div className="flex items-center gap-3">
+                        <Skeleton className="w-6 h-6 rounded-full bg-neutral-100 shrink-0" />
+                        <div className="space-y-1">
+                          <Skeleton className="h-3.5 w-28 bg-neutral-100" />
+                          <Skeleton className="h-3 w-16 bg-neutral-100" />
+                        </div>
+                      </div>
+                      <Skeleton className="h-3.5 w-20 bg-neutral-100" />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     );
@@ -204,7 +279,7 @@ export function Overview() {
                 <div className="text-[10.5px] text-slate-500">From paid subscriptions</div>
               </div>
  
-              {/* Outstanding Balance – NOT filtered, NOT hideable */}
+              {/* Outstanding Balance – NOT filtered, HIDEABLE */}
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
                   <div className="text-[11.5px] font-medium text-slate-400">Outstanding Balance</div>
@@ -213,12 +288,12 @@ export function Overview() {
                   </div>
                 </div>
                 <div className="text-xl sm:text-2xl font-bold text-amber-400 tracking-tight leading-none">
-                  {fmt(fmtNum(safeStats.outstanding_balance))}
+                  {maskStr(safeStats.outstanding_balance)}
                 </div>
                 <div className="text-[10.5px] text-slate-500">Unpaid installments</div>
               </div>
- 
-              {/* Potential Revenue – NOT filtered, NOT hideable */}
+
+              {/* Potential Revenue – NOT filtered, HIDEABLE */}
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
                   <div className="text-[11.5px] font-medium text-slate-400">Potential Revenue</div>
@@ -227,7 +302,7 @@ export function Overview() {
                   </div>
                 </div>
                 <div className="text-xl sm:text-2xl font-bold text-blue-400 tracking-tight leading-none">
-                  {fmt(fmtNum(safeStats.potential_revenue))}
+                  {maskStr(safeStats.potential_revenue)}
                 </div>
                 <div className="text-[10.5px] text-slate-500">If all subscriptions complete</div>
               </div>
@@ -249,49 +324,44 @@ export function Overview() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {[
             {
-              label: "Commission Earned",
-              value: safeStats.commission_earned,
-              badge: { text: "Paid out", color: "bg-emerald-50 text-emerald-700" },
+              label: "Approved Referral Payments",
+              value: String(fmtNum(safeStats.commission_earned) + fmtNum(safeStats.commission_pending)),
+              badge: { text: "Approved", color: "bg-emerald-50 text-emerald-700" },
               badgeIcon: TrendingUp,
-              hideable: true,
+              footer: "Total from approved payments",
             },
             {
-              label: "Commission Pending",
+              label: "Payouts",
+              value: safeStats.commission_earned,
+              badge: { text: "Disbursed", color: "bg-blue-50 text-blue-700" },
+              footer: "Paid to realtors",
+            },
+            {
+              label: "Pending Payouts",
               value: safeStats.commission_pending,
-              footer: "Earned but not paid",
-              hideable: true,
+              badge: { text: "Awaiting payout", color: "bg-amber-50 text-amber-700" },
+              footer: "Earned but not yet paid",
             },
             {
-              label: "Commission Potential",
+              label: "Potential Referral Payments",
               value: safeStats.commission_potential,
-              badge: { text: "Combined", color: "bg-blue-50 text-blue-700" },
-              hideable: true,
-            },
-            {
-              label: "Unpaid Potential",
-              value: fmtNum(safeStats.commission_potential) - fmtNum(safeStats.commission_earned), // Mock drift
-              footer: "Future earnings",
-              hideable: false,
+              badge: { text: "All subs complete", color: "bg-violet-50 text-violet-700" },
+              footer: "If all subscriptions complete",
             },
           ].map((c) => (
             <motion.div key={c.label} variants={item}
               className="bg-white rounded-xl border border-neutral-100 p-5 shadow-[0_1px_3px_rgba(0,0,0,0.06)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.08)] transition-shadow duration-200">
               <div className="text-[12px] font-medium text-neutral-400 mb-2 leading-snug">{c.label}</div>
               <div className="text-[20px] font-bold text-neutral-900 tracking-tight leading-none">
-                {c.hideable ? maskStr(c.value) : fmt(fmtNum(c.value))}
+                {maskStr(c.value)}
               </div>
-              {"badge" in c && c.badge && (
-                <div className={`inline-flex items-center gap-1.5 mt-3 text-[11px] font-medium ${c.badge.color} px-2 py-1 rounded-md`}>
-                  {"pulse" in c.badge && (c.badge as any).pulse && <div className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />}
-                  {"badgeIcon" in c && c.badgeIcon && <c.badgeIcon className="w-3 h-3" />}
-                  {c.badge.text}
-                </div>
-              )}
-              {"footer" in c && c.footer && (
-                <div className="text-[11px] text-neutral-400 mt-3 pt-3 border-t border-dashed border-neutral-100">
-                  {c.footer}
-                </div>
-              )}
+              <div className={`inline-flex items-center gap-1.5 mt-3 text-[11px] font-medium ${c.badge.color} px-2 py-1 rounded-md`}>
+                {"badgeIcon" in c && c.badgeIcon && <c.badgeIcon className="w-3 h-3" />}
+                {c.badge.text}
+              </div>
+              <div className="text-[11px] text-neutral-400 mt-2">
+                {c.footer}
+              </div>
             </motion.div>
           ))}
         </div>

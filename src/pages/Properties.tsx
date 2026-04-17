@@ -1,8 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
+import { usePolling } from "../hooks/usePolling";
 import { Link } from "react-router";
 import { Plus, Search, Filter, MapPin, CheckCircle2, Clock, Building as BuildingIcon, Loader2 } from "lucide-react";
+import { Skeleton } from "../components/ui/skeleton";
 import { api } from "../services/api";
-import { properties as mockProperties } from "../utils/mockData";
 import { Badge } from "../components/ui/badge";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
@@ -29,16 +30,13 @@ export function Properties() {
       const data = await api.properties.list();
       setProperties(data);
     } catch (err) {
-      console.warn("Using mock properties fallback");
-      setProperties(mockProperties);
+      console.error("Failed to load properties:", err);
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    fetchProperties();
-  }, []);
+  usePolling(fetchProperties, 30_000);
 
   const fmt = (n: number | string) => `₦${Number(n).toLocaleString("en-NG")}`;
 
@@ -73,10 +71,40 @@ export function Properties() {
         className="p-4 sm:p-6 lg:p-8 space-y-5 flex-1">
 
         {loading && properties.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20">
-            <Loader2 className="w-8 h-8 text-emerald-500 animate-spin" />
-            <p className="text-[13px] text-neutral-400 font-medium mt-3">Loading properties...</p>
-          </div>
+          /* Skeleton grid — matches the property card layout */
+          <>
+            <div className="flex flex-col sm:flex-row items-center gap-2.5">
+              <Skeleton className="h-9 w-full sm:w-80 rounded-lg bg-neutral-100" />
+              <Skeleton className="h-9 w-24 rounded-lg bg-neutral-100" />
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className="bg-white rounded-xl border border-neutral-100 overflow-hidden shadow-[0_1px_3px_rgba(0,0,0,0.06)]">
+                  {/* Cover */}
+                  <Skeleton className="h-40 w-full rounded-none bg-neutral-100" />
+                  {/* Info */}
+                  <div className="p-5 space-y-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="space-y-1.5 flex-1">
+                        <Skeleton className="h-4 w-40 bg-neutral-100" />
+                        <Skeleton className="h-5 w-20 rounded-md bg-neutral-100" />
+                      </div>
+                      <Skeleton className="h-5 w-20 rounded-full bg-neutral-100 shrink-0" />
+                    </div>
+                    <Skeleton className="h-9 w-full rounded-lg bg-neutral-100" />
+                    <div className="grid grid-cols-3 gap-3 pt-3 border-t border-neutral-50">
+                      {Array.from({ length: 3 }).map((_, j) => (
+                        <div key={j} className="space-y-1">
+                          <Skeleton className="h-2.5 w-8 bg-neutral-100" />
+                          <Skeleton className="h-4 w-12 bg-neutral-100" />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
         ) : filtered.length > 0 ? (
           <>
             {/* Search + filter bar */}

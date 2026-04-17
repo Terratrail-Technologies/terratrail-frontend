@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useCallback } from "react";
 import { useNavigate, useParams } from "react-router";
 import {
   ArrowLeft,
@@ -15,6 +15,7 @@ import {
   CreditCard,
   X,
   AlertCircle,
+  Image as ImageIcon,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "../components/ui/badge";
@@ -24,878 +25,1093 @@ import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Textarea } from "../components/ui/textarea";
 
+// ─── Step definitions ────────────────────────────────────────────────────────
 const steps = [
-  { id: 1, name: "Basic Information", icon: FileText },
-  { id: 2, name: "Property Gallery", icon: Upload },
-  { id: 3, name: "Location Details", icon: MapPin },
-  { id: 4, name: "Property Amenities", icon: Check },
-  { id: 5, name: "Property Documents", icon: FileText },
-  { id: 6, name: "Pricing & Payment Plans", icon: DollarSign },
+  { id: 1, name: "Basic Info", icon: FileText },
+  { id: 2, name: "Gallery", icon: Upload },
+  { id: 3, name: "Location", icon: MapPin },
+  { id: 4, name: "Amenities", icon: Check },
+  { id: 5, name: "Documents", icon: FileText },
+  { id: 6, name: "Pricing Plans", icon: DollarSign },
   { id: 7, name: "Payment Methods", icon: CreditCard },
 ];
+
+// ─── Types ───────────────────────────────────────────────────────────────────
+interface Amenity { id: string; name: string; status: string; description: string; }
+interface Doc { id: string; name: string; file: File | null; fileName: string; }
+interface PricingPlan {
+  id: string; name: string; landSize: string; currency: string;
+  totalPrice: string; paymentType: "outright" | "installment";
+  initialPayment: string; duration: string; spreadMethod: "separate" | "first_month";
+  active: boolean;
+}
+interface PaymentMethod { id: string; bankName: string; accountName: string; accountNumber: string; active: boolean; }
+
+const NIGERIAN_STATES = [
+  "Abia","Adamawa","Akwa Ibom","Anambra","Bauchi","Bayelsa","Benue","Borno",
+  "Cross River","Delta","Ebonyi","Edo","Ekiti","Enugu","FCT","Gombe","Imo",
+  "Jigawa","Kaduna","Kano","Katsina","Kebbi","Kogi","Kwara","Lagos","Nasarawa",
+  "Niger","Ogun","Ondo","Osun","Oyo","Plateau","Rivers","Sokoto","Taraba",
+  "Yobe","Zamfara",
+];
+
+// ─── Validation rules per step ───────────────────────────────────────────────
+function validateStep(step: number, state: Record<string, any>): string | null {
+  if (step === 1) {
+    if (!state.propertyName.trim()) return "Property Name is required.";
+    if (!state.totalSqms.trim()) return "Total SQMs is required.";
+  }
+  if (step === 3) {
+    if (!state.city.trim()) return "City is required.";
+    if (!state.state.trim()) return "State is required.";
+  }
+  return null;
+}
 
 export function PropertyWizard() {
   const navigate = useNavigate();
   const { id } = useParams();
-  const [currentStep, setCurrentStep] = useState(1);
-  const [propertyName, setPropertyName] = useState(id ? "Tehillah Estate Phase 1" : "");
-  const [showAmenityModal, setShowAmenityModal] = useState(false);
-  const [showDocumentModal, setShowDocumentModal] = useState(false);
-  const [showPricingModal, setShowPricingModal] = useState(false);
-  const [showPaymentModal, setShowPaymentModal] = useState(false);
-
-  const [amenities, setAmenities] = useState(
-    id
-      ? [
-          { id: "1", name: "Perimeter Fencing", status: "Not Started", description: "" },
-          { id: "2", name: "Street Lights", status: "In Progress", description: "" },
-        ]
-      : []
-  );
-
-  const [documents, setDocuments] = useState(
-    id ? [{ id: "1", name: "Survey Plan", file: "survey-plan.pdf" }] : []
-  );
-
-  const [pricingPlans, setPricingPlans] = useState(
-    id
-      ? [
-          {
-            id: "1",
-            name: "Pre-launch Price",
-            pricePerUnit: 5000,
-            currency: "NGN",
-            active: true,
-            paymentPlans: 3,
-          },
-        ]
-      : []
-  );
-
-  const [paymentMethods, setPaymentMethods] = useState(
-    id
-      ? [
-          {
-            id: "1",
-            type: "Bank Transfer",
-            bankName: "First Bank",
-            accountName: "Tehillah Estate Ltd",
-            accountNumber: "1234567890",
-            active: true,
-          },
-        ]
-      : []
-  );
-
   const isEditing = !!id;
 
-  const handleSave = () => {
-    toast.success(
-      currentStep === steps.length && documents.length > 0 ? "Property published successfully!" : "Progress saved"
+  // ── Step ──────────────────────────────────────────────────────────────────
+  const [currentStep, setCurrentStep] = useState(1);
+
+  // ── Step 1 state ─────────────────────────────────────────────────────────
+  const [propertyName, setPropertyName]     = useState(isEditing ? "Tehillah Estate Phase 1" : "");
+  const [propertyType, setPropertyType]     = useState("RESIDENTIAL_LAND");
+  const [description, setDescription]       = useState(isEditing ? "Premium residential land in the heart of Lekki." : "");
+  const [totalSqms, setTotalSqms]           = useState(isEditing ? "50000" : "");
+
+  // ── Step 2 state ─────────────────────────────────────────────────────────
+  const [coverImage, setCoverImage]         = useState<File | null>(null);
+  const [coverPreview, setCoverPreview]     = useState<string | null>(null);
+  const [galleryImages, setGalleryImages]   = useState<{ file: File; preview: string }[]>([]);
+  const coverRef   = useRef<HTMLInputElement>(null);
+  const galleryRef = useRef<HTMLInputElement>(null);
+
+  // ── Step 3 state ─────────────────────────────────────────────────────────
+  const [streetAddress, setStreetAddress]   = useState(isEditing ? "Lekki-Epe Expressway" : "");
+  const [city, setCity]                     = useState(isEditing ? "Lagos" : "");
+  const [state, setState]                   = useState(isEditing ? "Lagos" : "");
+  const [postalCode, setPostalCode]         = useState("");
+  const [landmark, setLandmark]             = useState("");
+  const [latitude,  setLatitude]            = useState("");
+  const [longitude, setLongitude]           = useState("");
+  const [geoLoading, setGeoLoading]         = useState(false);
+
+  // ── Step 4 state ─────────────────────────────────────────────────────────
+  const [amenities, setAmenities]           = useState<Amenity[]>(
+    isEditing ? [
+      { id: "1", name: "Perimeter Fencing", status: "Not Started", description: "" },
+      { id: "2", name: "Street Lights", status: "In Progress", description: "" },
+    ] : []
+  );
+  const [showAmenityModal, setShowAmenityModal] = useState(false);
+  const [editingAmenityId, setEditingAmenityId] = useState<string | null>(null);
+  const [amenityForm, setAmenityForm]           = useState({ name: "", status: "Not Started" });
+
+  // ── Step 5 state ─────────────────────────────────────────────────────────
+  const [documents, setDocuments]           = useState<Doc[]>(
+    isEditing ? [{ id: "1", name: "Survey Plan", file: null, fileName: "survey-plan.pdf" }] : []
+  );
+  const [showDocModal, setShowDocModal]     = useState(false);
+  const [docForm, setDocForm]               = useState({ name: "", file: null as File | null, fileName: "" });
+  const docFileRef = useRef<HTMLInputElement>(null);
+
+  // ── Step 6 state ─────────────────────────────────────────────────────────
+  const [pricingPlans, setPricingPlans]     = useState<PricingPlan[]>(
+    isEditing ? [{
+      id: "1", name: "Pre-launch Price", landSize: "300", currency: "NGN",
+      totalPrice: "1500000", paymentType: "installment",
+      initialPayment: "250000", duration: "6", spreadMethod: "separate", active: true,
+    }] : []
+  );
+  const [showPricingModal, setShowPricingModal] = useState(false);
+  const [editingPlanId, setEditingPlanId]       = useState<string | null>(null);
+  const [pricingForm, setPricingForm]           = useState<Omit<PricingPlan, "id" | "active">>({
+    name: "", landSize: "", currency: "NGN", totalPrice: "",
+    paymentType: "outright", initialPayment: "", duration: "", spreadMethod: "separate",
+  });
+
+  // ── Step 7 state ─────────────────────────────────────────────────────────
+  const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>(
+    isEditing ? [{
+      id: "1", bankName: "First Bank", accountName: "Tehillah Estate Ltd",
+      accountNumber: "1234567890", active: true,
+    }] : []
+  );
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [editingPaymentId, setEditingPaymentId] = useState<string | null>(null);
+  const [paymentForm, setPaymentForm]           = useState({ bankName: "", accountName: "", accountNumber: "" });
+
+  // ── Helpers ───────────────────────────────────────────────────────────────
+  const monthlyInstallment = useCallback((p: Omit<PricingPlan, "id" | "active">) => {
+    const total  = Number(p.totalPrice) || 0;
+    const init   = Number(p.initialPayment) || 0;
+    const dur    = Number(p.duration) || 1;
+    if (p.paymentType !== "installment") return null;
+    return p.spreadMethod === "separate"
+      ? (total - init) / dur
+      : (total - init) / (dur - 1 || 1);
+  }, []);
+
+  // ── Geolocation ───────────────────────────────────────────────────────────
+  const handleUseLocation = () => {
+    if (!navigator.geolocation) { toast.error("Geolocation not supported."); return; }
+    setGeoLoading(true);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setLatitude(pos.coords.latitude.toFixed(6));
+        setLongitude(pos.coords.longitude.toFixed(6));
+        setGeoLoading(false);
+        toast.success("Location detected successfully.");
+      },
+      (err) => {
+        setGeoLoading(false);
+        const msg: Record<number, string> = {
+          1: "Location access denied. Allow location in browser settings.",
+          2: "Location unavailable. Enter coordinates manually.",
+          3: "Location request timed out.",
+        };
+        toast.error(msg[err.code] ?? "Could not detect location.");
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
     );
+  };
+
+  // ── File upload handlers ──────────────────────────────────────────────────
+  const handleCoverChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setCoverImage(file);
+    setCoverPreview(URL.createObjectURL(file));
+  };
+
+  const handleGalleryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files ?? []);
+    const newImages = files.map((f) => ({ file: f, preview: URL.createObjectURL(f) }));
+    setGalleryImages((prev) => [...prev, ...newImages].slice(0, 10));
+  };
+
+  const handleDocFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setDocForm((d) => ({ ...d, file, fileName: file.name }));
+  };
+
+  // ── Amenity CRUD ─────────────────────────────────────────────────────────
+  const openAddAmenity = () => {
+    setEditingAmenityId(null);
+    setAmenityForm({ name: "", status: "Not Started" });
+    setShowAmenityModal(true);
+  };
+
+  const openEditAmenity = (a: Amenity) => {
+    setEditingAmenityId(a.id);
+    setAmenityForm({ name: a.name, status: a.status });
+    setShowAmenityModal(true);
+  };
+
+  const saveAmenity = () => {
+    if (!amenityForm.name.trim()) { toast.error("Amenity name is required."); return; }
+    if (editingAmenityId) {
+      setAmenities((prev) =>
+        prev.map((a) => a.id === editingAmenityId ? { ...a, ...amenityForm } : a)
+      );
+      toast.success("Amenity updated.");
+    } else {
+      setAmenities((prev) => [...prev, { id: Date.now().toString(), description: "", ...amenityForm }]);
+      toast.success("Amenity added.");
+    }
+    setShowAmenityModal(false);
+  };
+
+  // ── Document CRUD ─────────────────────────────────────────────────────────
+  const openAddDoc = () => {
+    setDocForm({ name: "", file: null, fileName: "" });
+    setShowDocModal(true);
+  };
+
+  const saveDoc = () => {
+    if (!docForm.name.trim()) { toast.error("Document name is required."); return; }
+    setDocuments((prev) => [...prev, { id: Date.now().toString(), ...docForm }]);
+    toast.success("Document added.");
+    setShowDocModal(false);
+  };
+
+  // ── Pricing Plan CRUD ─────────────────────────────────────────────────────
+  const openAddPricing = () => {
+    setEditingPlanId(null);
+    setPricingForm({ name: "", landSize: "", currency: "NGN", totalPrice: "", paymentType: "outright", initialPayment: "", duration: "", spreadMethod: "separate" });
+    setShowPricingModal(true);
+  };
+
+  const openEditPricing = (p: PricingPlan) => {
+    setEditingPlanId(p.id);
+    setPricingForm({ name: p.name, landSize: p.landSize, currency: p.currency, totalPrice: p.totalPrice, paymentType: p.paymentType, initialPayment: p.initialPayment, duration: p.duration, spreadMethod: p.spreadMethod });
+    setShowPricingModal(true);
+  };
+
+  const savePricing = () => {
+    if (!pricingForm.name.trim() || !pricingForm.totalPrice) { toast.error("Plan name and total price are required."); return; }
+    if (editingPlanId) {
+      setPricingPlans((prev) => prev.map((p) => p.id === editingPlanId ? { ...p, ...pricingForm } : p));
+      toast.success("Pricing plan updated.");
+    } else {
+      setPricingPlans((prev) => [...prev, { id: Date.now().toString(), active: true, ...pricingForm }]);
+      toast.success("Pricing plan created.");
+    }
+    setShowPricingModal(false);
+  };
+
+  // ── Payment Method CRUD ───────────────────────────────────────────────────
+  const openAddPayment = () => {
+    setEditingPaymentId(null);
+    setPaymentForm({ bankName: "", accountName: "", accountNumber: "" });
+    setShowPaymentModal(true);
+  };
+
+  const openEditPayment = (m: PaymentMethod) => {
+    setEditingPaymentId(m.id);
+    setPaymentForm({ bankName: m.bankName, accountName: m.accountName, accountNumber: m.accountNumber });
+    setShowPaymentModal(true);
+  };
+
+  const savePayment = () => {
+    if (!paymentForm.bankName.trim() || !paymentForm.accountName.trim() || paymentForm.accountNumber.length < 10) {
+      toast.error("Bank name, account name, and a valid account number are required.");
+      return;
+    }
+    if (editingPaymentId) {
+      setPaymentMethods((prev) => prev.map((m) => m.id === editingPaymentId ? { ...m, ...paymentForm } : m));
+      toast.success("Payment method updated.");
+    } else {
+      setPaymentMethods((prev) => [...prev, { id: Date.now().toString(), active: true, ...paymentForm }]);
+      toast.success("Payment method added.");
+    }
+    setShowPaymentModal(false);
+  };
+
+  // ── Navigation ────────────────────────────────────────────────────────────
+  const handleBack = () => {
+    if (currentStep > 1) setCurrentStep(currentStep - 1);
+    else navigate("/properties");
+  };
+
+  const handleNext = () => {
+    const err = validateStep(currentStep, { propertyName, totalSqms, city, state });
+    if (err) { toast.error(err); return; }
     if (currentStep < steps.length) {
       setCurrentStep(currentStep + 1);
-    } else if (documents.length > 0) {
-      navigate("/properties");
-    }
-  };
-
-  const handleBack = () => {
-    if (currentStep > 1) {
-      setCurrentStep(currentStep - 1);
     } else {
+      toast.success(isEditing ? "Property updated!" : "Property created!");
       navigate("/properties");
     }
   };
 
-  const addAmenity = () => {
-    const newAmenity = {
-      id: Date.now().toString(),
-      name: "New Amenity",
-      status: "Not Started",
-      description: "",
-    };
-    setAmenities([...amenities, newAmenity]);
-    setShowAmenityModal(false);
-    toast.success("Amenity added successfully");
-  };
+  const fmt = (n: number) => `₦${n.toLocaleString("en-NG")}`;
 
-  const addDocument = () => {
-    const newDocument = {
-      id: Date.now().toString(),
-      name: "Document",
-      file: "document.pdf",
-    };
-    setDocuments([...documents, newDocument]);
-    setShowDocumentModal(false);
-    toast.success("Document added successfully");
-  };
-
-  const addPricingPlan = () => {
-    const newPlan = {
-      id: Date.now().toString(),
-      name: "New Pricing Plan",
-      pricePerUnit: 0,
-      currency: "NGN",
-      active: true,
-      paymentPlans: 0,
-    };
-    setPricingPlans([...pricingPlans, newPlan]);
-    setShowPricingModal(false);
-    toast.success("Pricing plan created");
-  };
-
-  const addPaymentMethod = () => {
-    const newMethod = {
-      id: Date.now().toString(),
-      type: "Bank Transfer",
-      bankName: "Bank Name",
-      accountName: "Account Name",
-      accountNumber: "0000000000",
-      active: true,
-    };
-    setPaymentMethods([...paymentMethods, newMethod]);
-    setShowPaymentModal(false);
-    toast.success("Payment method added");
-  };
-
+  // ─────────────────────────────────────────────────────────────────────────
   return (
     <div className="flex flex-col min-h-[calc(100vh-64px)] w-full bg-neutral-50/50">
-      {/* Header */}
-      <div className="bg-white border-b border-neutral-200 px-4 sm:px-6 lg:px-8 py-4 sm:py-6 sticky top-0 z-10 hidden md:block">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+
+      {/* ── Header ── */}
+      <div className="bg-white border-b border-neutral-200 px-4 sm:px-6 lg:px-8 py-4 sticky top-0 z-10 hidden md:block">
+        <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-4">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleBack}
-              className="hover:bg-neutral-100 rounded-lg transition-colors"
-              title="Back"
-            >
+            <Button variant="ghost" size="icon" onClick={handleBack}
+              className="hover:bg-neutral-100 rounded-lg">
               <ArrowLeft className="w-5 h-5 text-neutral-600" />
             </Button>
             <div>
               <h1 className="text-2xl font-semibold text-neutral-900">
-                {isEditing ? `Edit Property: ${propertyName}` : "Create Property"}
+                {isEditing ? `Edit: ${propertyName || "Property"}` : "Create Property"}
               </h1>
-              <p className="text-sm text-neutral-500 mt-1">
-                Step {currentStep} of {steps.length}: {steps[currentStep - 1].name}
+              <p className="text-sm text-neutral-500 mt-0.5">
+                Step {currentStep} of {steps.length} — {steps[currentStep - 1].name}
               </p>
             </div>
           </div>
-          {isEditing && currentStep === 1 && (
-            <div className="flex gap-2">
-              <button className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-neutral-300 text-neutral-700 rounded-md hover:bg-neutral-50 transition-colors">
-                Manage Commission
-              </button>
-              <button className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-neutral-300 text-neutral-700 rounded-md hover:bg-neutral-50 transition-colors">
-                Open Booking Form
-              </button>
-            </div>
-          )}
         </div>
 
-        {/* Step Indicator */}
-        <div className="mt-6 flex items-center gap-2">
-          {steps.map((step, index) => (
-            <div key={step.id} className="flex items-center flex-1">
-              <button
-                onClick={() => setCurrentStep(step.id)}
-                className={cn(
-                  "flex items-center gap-2 px-3 py-2 rounded-md text-sm flex-1 transition-colors",
-                  currentStep === step.id
-                    ? "bg-emerald-50 text-emerald-700 font-medium"
-                    : currentStep > step.id
-                    ? "bg-neutral-100 text-neutral-600"
-                    : "bg-white text-neutral-500"
+        {/* Step indicator */}
+        <div className="mt-5 flex items-center gap-1.5">
+          {steps.map((step, index) => {
+            const done    = currentStep > step.id;
+            const active  = currentStep === step.id;
+            return (
+              <div key={step.id} className="flex items-center flex-1 min-w-0">
+                <button
+                  onClick={() => {
+                    if (step.id < currentStep) setCurrentStep(step.id);
+                  }}
+                  title={step.name}
+                  className={cn(
+                    "flex items-center gap-1.5 px-2.5 py-2 rounded-md text-xs font-medium flex-1 min-w-0 transition-colors truncate",
+                    active  ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                            : done  ? "bg-neutral-100 text-neutral-600 cursor-pointer hover:bg-neutral-200"
+                                    : "bg-white text-neutral-400 border border-neutral-100 cursor-default"
+                  )}
+                >
+                  {done ? (
+                    <span className="w-4 h-4 rounded-full bg-emerald-500 flex items-center justify-center shrink-0">
+                      <Check className="w-2.5 h-2.5 text-white" />
+                    </span>
+                  ) : (
+                    <span className={cn(
+                      "w-4 h-4 rounded-full flex items-center justify-center shrink-0 text-[10px] font-bold",
+                      active ? "bg-emerald-500 text-white" : "bg-neutral-200 text-neutral-500"
+                    )}>{step.id}</span>
+                  )}
+                  <span className="truncate hidden lg:inline">{step.name}</span>
+                </button>
+                {index < steps.length - 1 && (
+                  <div className={cn("w-3 h-0.5 shrink-0 mx-0.5", done ? "bg-emerald-300" : "bg-neutral-200")} />
                 )}
-              >
-                {currentStep > step.id ? (
-                  <Check className="w-4 h-4" />
-                ) : (
-                  <span className="w-4 h-4 flex items-center justify-center text-xs">{step.id}</span>
-                )}
-                <span className="hidden xl:inline">{step.name}</span>
-              </button>
-              {index < steps.length - 1 && <div className="w-2" />}
-            </div>
-          ))}
+              </div>
+            );
+          })}
         </div>
       </div>
 
+      {/* ── Content ── */}
       <div className="p-4 sm:p-6 lg:p-8 flex-1">
-        <div className="max-w-4xl mx-auto">
-          {/* Main animated container */}
+        <div className="max-w-3xl mx-auto">
           <AnimatePresence mode="wait">
             <motion.div
               key={currentStep}
-              initial={{ opacity: 0, y: 15 }}
+              initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -15 }}
-              transition={{ duration: 0.3 }}
+              exit={{ opacity: 0, y: -12 }}
+              transition={{ duration: 0.22 }}
             >
-              {/* Step 1: Basic Information */}
-          {currentStep === 1 && (
-            <div className="bg-white rounded-lg border border-neutral-200 p-8 space-y-6">
-              <div>
-                <label className="block text-sm font-medium text-neutral-700 mb-2">
-                  Property Name <span className="text-red-500">*</span>
-                </label>
-                <Input
-                  type="text"
-                  value={propertyName}
-                  onChange={(e) => setPropertyName(e.target.value)}
-                  placeholder="e.g. TehillahEstate"
-                  className="bg-white"
-                />
-              </div>
 
-              <div>
-                <label className="block text-sm font-medium text-neutral-700 mb-2">
-                  Property Type <span className="text-red-500">*</span>
-                </label>
-                <select className="flex h-10 w-full items-center justify-between rounded-md border border-neutral-200 bg-white px-3 py-2 text-sm ring-offset-white placeholder:text-neutral-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50">
-                  <option>Residential Land</option>
-                  <option>Farm Land</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-neutral-700 mb-2">
-                  Description <span className="text-red-500">*</span>
-                </label>
-                <Textarea
-                  rows={6}
-                  placeholder="Describe your property..."
-                  className="bg-white resize-y min-h-[120px]"
-                  defaultValue={
-                    id
-                      ? "Premium residential land in the heart of Lekki with excellent infrastructure and proximity to major landmarks."
-                      : ""
-                  }
-                />
-                <p className="text-xs text-neutral-500 mt-2">Supports Markdown & HTML</p>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-neutral-700 mb-2">
-                  Total SQMs <span className="text-red-500">*</span>
-                </label>
-                <Input
-                  type="number"
-                  placeholder="e.g. 100"
-                  defaultValue={id ? "50000" : ""}
-                  className="bg-white"
-                />
-              </div>
-
-              {isEditing && (
-                <div>
-                  <label className="block text-sm font-medium text-neutral-700 mb-2">Brochure (PDF)</label>
-                  <div className="border-2 border-dashed border-neutral-300 rounded-md p-6 text-center hover:border-emerald-500 transition-colors cursor-pointer">
-                    <Upload className="w-8 h-8 text-neutral-400 mx-auto mb-2" />
-                    <p className="text-sm text-neutral-600">Click to upload or drag and drop</p>
-                    <p className="text-xs text-neutral-500 mt-1">PDF (max. 10MB)</p>
+              {/* ── Step 1: Basic Info ── */}
+              {currentStep === 1 && (
+                <div className="bg-white rounded-xl border border-neutral-200 p-6 sm:p-8 space-y-6">
+                  <div>
+                    <label className="block text-sm font-medium text-neutral-700 mb-1.5">
+                      Property Name <span className="text-red-500">*</span>
+                    </label>
+                    <Input value={propertyName} onChange={(e) => setPropertyName(e.target.value)}
+                      placeholder="e.g. Tehillah Estate Phase 1" className="bg-white" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-neutral-700 mb-1.5">
+                      Property Type <span className="text-red-500">*</span>
+                    </label>
+                    <select value={propertyType} onChange={(e) => setPropertyType(e.target.value)}
+                      className="flex h-10 w-full rounded-md border border-neutral-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                      <option value="RESIDENTIAL_LAND">Residential Land</option>
+                      <option value="FARM_LAND">Farm Land</option>
+                      <option value="COMMERCIAL">Commercial</option>
+                      <option value="MIXED_USE">Mixed Use</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-neutral-700 mb-1.5">Description</label>
+                    <Textarea rows={5} value={description} onChange={(e) => setDescription(e.target.value)}
+                      placeholder="Describe your property…" className="bg-white resize-y min-h-[100px]" />
+                    <p className="text-xs text-neutral-400 mt-1">Supports Markdown & HTML</p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-neutral-700 mb-1.5">
+                      Total SQMs <span className="text-red-500">*</span>
+                    </label>
+                    <Input type="number" value={totalSqms} onChange={(e) => setTotalSqms(e.target.value)}
+                      placeholder="e.g. 50000" className="bg-white" />
                   </div>
                 </div>
               )}
-            </div>
-          )}
 
-          {/* Step 2: Property Gallery */}
-          {currentStep === 2 && (
-            <div className="bg-white rounded-lg border border-neutral-200 p-8 space-y-6">
-              <div>
-                <label className="block text-sm font-medium text-neutral-700 mb-2">
-                  Cover Image <span className="text-red-500">*</span>
-                </label>
-                <div className="border-2 border-dashed border-neutral-300 rounded-md p-12 text-center hover:border-emerald-500 transition-colors cursor-pointer">
-                  <Upload className="w-12 h-12 text-neutral-400 mx-auto mb-3" />
-                  <p className="text-sm text-neutral-600">Click to upload or drag and drop</p>
-                  <p className="text-xs text-neutral-500 mt-1">PNG, JPG up to 10MB</p>
-                </div>
-              </div>
+              {/* ── Step 2: Gallery ── */}
+              {currentStep === 2 && (
+                <div className="bg-white rounded-xl border border-neutral-200 p-6 sm:p-8 space-y-6">
+                  {/* Hidden inputs */}
+                  <input ref={coverRef} type="file" accept="image/*" className="hidden" onChange={handleCoverChange} />
+                  <input ref={galleryRef} type="file" accept="image/*" multiple className="hidden" onChange={handleGalleryChange} />
 
-              <div>
-                <label className="block text-sm font-medium text-neutral-700 mb-2">
-                  Gallery Images <span className="text-neutral-500">(Up to 10 images)</span>
-                </label>
-                <div className="border-2 border-dashed border-neutral-300 rounded-md p-8 text-center hover:border-emerald-500 transition-colors cursor-pointer">
-                  <Plus className="w-8 h-8 text-neutral-400 mx-auto mb-2" />
-                  <p className="text-sm text-neutral-600">Add gallery images</p>
-                  <p className="text-xs text-neutral-500 mt-1">Drag to reorder</p>
-                </div>
-                <div className="text-sm text-neutral-500 mt-4 text-center">
-                  No gallery images added yet — Upload images using the button above
-                </div>
-              </div>
-            </div>
-          )}
+                  <div>
+                    <label className="block text-sm font-medium text-neutral-700 mb-1.5">
+                      Cover Image <span className="text-red-500">*</span>
+                    </label>
+                    <div
+                      onClick={() => coverRef.current?.click()}
+                      className="border-2 border-dashed border-neutral-300 rounded-lg p-10 text-center hover:border-emerald-500 hover:bg-emerald-50/30 transition-colors cursor-pointer"
+                    >
+                      {coverPreview ? (
+                        <div className="relative inline-block">
+                          <img src={coverPreview} alt="Cover preview"
+                            className="max-h-48 rounded-md mx-auto object-cover" />
+                          <button
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); setCoverImage(null); setCoverPreview(null); }}
+                            className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </div>
+                      ) : (
+                        <>
+                          <Upload className="w-10 h-10 text-neutral-400 mx-auto mb-3" />
+                          <p className="text-sm font-medium text-neutral-700">Click to upload cover image</p>
+                          <p className="text-xs text-neutral-400 mt-1">PNG, JPG up to 10 MB</p>
+                        </>
+                      )}
+                    </div>
+                  </div>
 
-          {/* Step 3: Location Details */}
-          {currentStep === 3 && (
-            <div className="bg-white rounded-lg border border-neutral-200 p-8 space-y-6">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-sm font-medium text-neutral-700 mb-2">Street Address</label>
-                  <Input
-                    type="text"
-                    placeholder="Enter street address"
-                    defaultValue={id ? "Lekki-Epe Expressway" : ""}
-                    className="bg-white"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-neutral-700 mb-2">
-                    City <span className="text-red-500">*</span>
-                  </label>
-                  <Input
-                    type="text"
-                    placeholder="Enter city"
-                    defaultValue={id ? "Lagos" : ""}
-                    className="bg-white"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-neutral-700 mb-2">
-                    State <span className="text-red-500">*</span>
-                  </label>
-                  <select
-                    defaultValue={id ? "Lagos" : ""}
-                    className="flex h-10 w-full items-center justify-between rounded-md border border-neutral-200 bg-white px-3 py-2 text-sm ring-offset-white placeholder:text-neutral-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    <option>Lagos</option>
-                    <option>Abuja</option>
-                    <option>Rivers</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-neutral-700 mb-2">Country</label>
-                  <select
-                    defaultValue="Nigeria"
-                    className="flex h-10 w-full items-center justify-between rounded-md border border-neutral-200 bg-white px-3 py-2 text-sm ring-offset-white placeholder:text-neutral-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    <option>Nigeria</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-neutral-700 mb-2">Latitude</label>
-                  <Input
-                    type="text"
-                    placeholder="Auto-fills via location"
-                    className="bg-white"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-neutral-700 mb-2">Longitude</label>
-                  <Input
-                    type="text"
-                    placeholder="Auto-fills via location"
-                    className="bg-white"
-                  />
-                </div>
-              </div>
-
-              <div className="flex gap-2">
-                <button className="px-4 py-2 bg-emerald-600 text-white rounded-md hover:bg-emerald-700 transition-colors">
-                  Use Current Location
-                </button>
-                <button className="px-4 py-2 bg-white border border-neutral-300 text-neutral-700 rounded-md hover:bg-neutral-50 transition-colors">
-                  Location Finder
-                </button>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-neutral-700 mb-2">Map Preview</label>
-                <div className="h-64 bg-neutral-100 rounded-md flex items-center justify-center border border-neutral-300">
-                  <div className="text-center text-neutral-500">
-                    <MapPin className="w-12 h-12 mx-auto mb-2" />
-                    <p>Map preview will appear here</p>
+                  <div>
+                    <label className="block text-sm font-medium text-neutral-700 mb-1.5">
+                      Gallery Images <span className="text-neutral-400">(Up to 10)</span>
+                    </label>
+                    <div
+                      onClick={() => galleryRef.current?.click()}
+                      className="border-2 border-dashed border-neutral-300 rounded-lg p-6 text-center hover:border-emerald-500 hover:bg-emerald-50/30 transition-colors cursor-pointer"
+                    >
+                      <ImageIcon className="w-8 h-8 text-neutral-400 mx-auto mb-2" />
+                      <p className="text-sm text-neutral-600">Click to add gallery images</p>
+                      <p className="text-xs text-neutral-400 mt-1">{galleryImages.length}/10 added</p>
+                    </div>
+                    {galleryImages.length > 0 && (
+                      <div className="grid grid-cols-4 gap-3 mt-4">
+                        {galleryImages.map((img, i) => (
+                          <div key={i} className="relative aspect-square rounded-md overflow-hidden bg-neutral-100">
+                            <img src={img.preview} alt="" className="w-full h-full object-cover" />
+                            <button
+                              onClick={() => setGalleryImages((prev) => prev.filter((_, idx) => idx !== i))}
+                              className="absolute top-1 right-1 bg-black/60 text-white rounded-full w-5 h-5 flex items-center justify-center hover:bg-red-600"
+                            >
+                              <X className="w-3 h-3" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
-              </div>
-            </div>
-          )}
+              )}
 
-          {/* Step 4: Property Amenities */}
-          {currentStep === 4 && (
-            <div className="bg-white rounded-lg border border-neutral-200 p-8">
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="font-medium text-neutral-900">Property Amenities</h3>
-                <button
-                  onClick={() => setShowAmenityModal(true)}
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-md hover:bg-emerald-700 transition-colors"
-                >
-                  <Plus className="w-4 h-4" />
-                  Add Amenity
-                </button>
-              </div>
+              {/* ── Step 3: Location ── */}
+              {currentStep === 3 && (
+                <div className="bg-white rounded-xl border border-neutral-200 p-6 sm:p-8 space-y-6">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                    <div className="sm:col-span-2">
+                      <label className="block text-sm font-medium text-neutral-700 mb-1.5">Street Address</label>
+                      <Input value={streetAddress} onChange={(e) => setStreetAddress(e.target.value)}
+                        placeholder="Enter street address" className="bg-white" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-neutral-700 mb-1.5">
+                        City <span className="text-red-500">*</span>
+                      </label>
+                      <Input value={city} onChange={(e) => setCity(e.target.value)}
+                        placeholder="e.g. Lagos" className="bg-white" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-neutral-700 mb-1.5">
+                        State <span className="text-red-500">*</span>
+                      </label>
+                      <select value={state} onChange={(e) => setState(e.target.value)}
+                        className="flex h-10 w-full rounded-md border border-neutral-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                        <option value="">Select state</option>
+                        {NIGERIAN_STATES.map((s) => <option key={s} value={s}>{s}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-neutral-700 mb-1.5">Postal Code</label>
+                      <Input value={postalCode} onChange={(e) => setPostalCode(e.target.value)}
+                        placeholder="e.g. 101001" className="bg-white" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-neutral-700 mb-1.5">Nearest Landmark</label>
+                      <Input value={landmark} onChange={(e) => setLandmark(e.target.value)}
+                        placeholder="e.g. Near Shoprite" className="bg-white" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-neutral-700 mb-1.5">Latitude</label>
+                      <Input value={latitude} onChange={(e) => setLatitude(e.target.value)}
+                        placeholder="e.g. 6.524379" className="bg-white" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-neutral-700 mb-1.5">Longitude</label>
+                      <Input value={longitude} onChange={(e) => setLongitude(e.target.value)}
+                        placeholder="e.g. 3.379206" className="bg-white" />
+                    </div>
+                  </div>
 
-              {amenities.length > 0 ? (
-                <div className="space-y-3">
-                  {amenities.map((amenity) => (
-                    <div key={amenity.id} className="flex items-center justify-between p-4 border border-neutral-200 rounded-md">
-                      <div className="flex items-center gap-3">
-                        <div>
-                          <div className="font-medium text-neutral-900">{amenity.name}</div>
-                          <Badge variant="secondary" className="mt-1">
-                            {amenity.status}
-                          </Badge>
+                  <div className="flex gap-2">
+                    <button type="button" onClick={handleUseLocation} disabled={geoLoading}
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-md hover:bg-emerald-700 transition-colors disabled:opacity-60">
+                      {geoLoading ? (
+                        <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
+                        </svg>
+                      ) : <MapPin className="w-4 h-4" />}
+                      {geoLoading ? "Detecting…" : "Use Current Location"}
+                    </button>
+                    {(latitude || longitude) && (
+                      <button type="button" onClick={() => { setLatitude(""); setLongitude(""); }}
+                        className="px-4 py-2 bg-white border border-neutral-300 text-neutral-500 rounded-md text-sm hover:bg-neutral-50">
+                        Clear
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Map preview — OpenStreetMap, no API key needed */}
+                  <div>
+                    <label className="block text-sm font-medium text-neutral-700 mb-1.5">Map Preview</label>
+                    {latitude && longitude ? (
+                      <div className="h-64 rounded-lg border border-neutral-200 overflow-hidden">
+                        <iframe
+                          title="Map preview"
+                          width="100%" height="100%"
+                          style={{ border: 0 }}
+                          loading="lazy"
+                          src={`https://www.openstreetmap.org/export/embed.html?bbox=${(Number(longitude) - 0.01).toFixed(6)},${(Number(latitude) - 0.01).toFixed(6)},${(Number(longitude) + 0.01).toFixed(6)},${(Number(latitude) + 0.01).toFixed(6)}&layer=mapnik&marker=${latitude},${longitude}`}
+                        />
+                      </div>
+                    ) : (
+                      <div className="h-64 bg-neutral-100 rounded-lg flex items-center justify-center border border-neutral-200">
+                        <div className="text-center text-neutral-400">
+                          <MapPin className="w-10 h-10 mx-auto mb-2 opacity-40" />
+                          <p className="text-sm">Use current location or enter coordinates above</p>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <button className="p-2 hover:bg-neutral-100 rounded-md">
-                          <Pencil className="w-4 h-4 text-neutral-600" />
-                        </button>
-                        <button
-                          onClick={() => setAmenities(amenities.filter((a) => a.id !== amenity.id))}
-                          className="p-2 hover:bg-red-50 rounded-md"
-                        >
-                          <Trash2 className="w-4 h-4 text-red-600" />
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-12">
-                  <div className="w-16 h-16 bg-neutral-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <Check className="w-8 h-8 text-neutral-400" />
+                    )}
                   </div>
-                  <h3 className="font-medium text-neutral-900 mb-2">No amenities added yet</h3>
-                  <p className="text-sm text-neutral-500 mb-6">Add amenities that describe property features</p>
-                  <button
-                    onClick={() => setShowAmenityModal(true)}
-                    className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-md hover:bg-emerald-700 transition-colors"
-                  >
-                    <Plus className="w-4 h-4" />
-                    Add Your First Amenity
-                  </button>
                 </div>
               )}
-            </div>
-          )}
 
-          {/* Step 5: Property Documents */}
-          {currentStep === 5 && (
-            <div className="bg-white rounded-lg border border-neutral-200 p-8">
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="font-medium text-neutral-900">Property Documents</h3>
-                <button
-                  onClick={() => setShowDocumentModal(true)}
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-md hover:bg-emerald-700 transition-colors"
-                >
-                  <Plus className="w-4 h-4" />
-                  Add Document
-                </button>
-              </div>
-
-              {documents.length > 0 ? (
-                <div className="space-y-3">
-                  {documents.map((doc) => (
-                    <div key={doc.id} className="flex items-center justify-between p-4 border border-neutral-200 rounded-md">
-                      <div className="flex items-center gap-3">
-                        <FileText className="w-5 h-5 text-neutral-400" />
-                        <div>
-                          <div className="font-medium text-neutral-900">{doc.name}</div>
-                          <div className="text-xs text-neutral-500">{doc.file}</div>
+              {/* ── Step 4: Amenities ── */}
+              {currentStep === 4 && (
+                <div className="bg-white rounded-xl border border-neutral-200 p-6 sm:p-8">
+                  <div className="flex items-center justify-between mb-6">
+                    <h3 className="font-semibold text-neutral-900">Property Amenities</h3>
+                    <button onClick={openAddAmenity}
+                      className="inline-flex items-center gap-1.5 px-3 py-2 bg-emerald-600 text-white rounded-md text-sm hover:bg-emerald-700">
+                      <Plus className="w-4 h-4" /> Add Amenity
+                    </button>
+                  </div>
+                  {amenities.length > 0 ? (
+                    <div className="space-y-3">
+                      {amenities.map((a) => (
+                        <div key={a.id} className="flex items-center justify-between p-4 border border-neutral-200 rounded-lg">
+                          <div>
+                            <div className="font-medium text-neutral-900">{a.name}</div>
+                            <Badge variant="secondary" className="mt-1 text-xs">{a.status}</Badge>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <button onClick={() => openEditAmenity(a)}
+                              className="p-2 hover:bg-neutral-100 rounded-md transition-colors">
+                              <Pencil className="w-4 h-4 text-neutral-500" />
+                            </button>
+                            <button onClick={() => setAmenities((prev) => prev.filter((x) => x.id !== a.id))}
+                              className="p-2 hover:bg-red-50 rounded-md transition-colors">
+                              <Trash2 className="w-4 h-4 text-red-500" />
+                            </button>
+                          </div>
                         </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <button className="p-2 hover:bg-neutral-100 rounded-md">
-                          <Pencil className="w-4 h-4 text-neutral-600" />
-                        </button>
-                        <button
-                          onClick={() => setDocuments(documents.filter((d) => d.id !== doc.id))}
-                          className="p-2 hover:bg-red-50 rounded-md"
-                        >
-                          <Trash2 className="w-4 h-4 text-red-600" />
-                        </button>
-                      </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-12">
-                  <div className="w-16 h-16 bg-neutral-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <FileText className="w-8 h-8 text-neutral-400" />
-                  </div>
-                  <h3 className="font-medium text-neutral-900 mb-2">No documents added</h3>
-                  <p className="text-sm text-neutral-500 mb-6">
-                    Add important property documents like survey plans, deeds of assignment, and other legal documents
-                  </p>
-                  <button
-                    onClick={() => setShowDocumentModal(true)}
-                    className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-md hover:bg-emerald-700 transition-colors"
-                  >
-                    <Plus className="w-4 h-4" />
-                    Add Your First Document
-                  </button>
+                  ) : (
+                    <div className="text-center py-12">
+                      <Check className="w-10 h-10 text-neutral-300 mx-auto mb-3" />
+                      <p className="font-medium text-neutral-700 mb-1">No amenities added yet</p>
+                      <p className="text-sm text-neutral-400 mb-5">Add features like fencing, street lights, etc.</p>
+                      <button onClick={openAddAmenity}
+                        className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-md text-sm hover:bg-emerald-700">
+                        <Plus className="w-4 h-4" /> Add First Amenity
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
 
-              {documents.length === 0 && (
-                <div className="mt-6 p-4 bg-amber-50 border border-amber-200 rounded-md flex items-start gap-3">
-                  <AlertCircle className="w-5 h-5 text-amber-600 mt-0.5" />
-                  <div className="text-sm text-amber-800">
-                    <strong>Publishing requirement:</strong> At least one document is required to publish the property
+              {/* ── Step 5: Documents ── */}
+              {currentStep === 5 && (
+                <div className="bg-white rounded-xl border border-neutral-200 p-6 sm:p-8">
+                  <div className="flex items-center justify-between mb-6">
+                    <h3 className="font-semibold text-neutral-900">Property Documents</h3>
+                    <button onClick={openAddDoc}
+                      className="inline-flex items-center gap-1.5 px-3 py-2 bg-emerald-600 text-white rounded-md text-sm hover:bg-emerald-700">
+                      <Plus className="w-4 h-4" /> Add Document
+                    </button>
                   </div>
+                  {documents.length > 0 ? (
+                    <div className="space-y-3">
+                      {documents.map((doc) => (
+                        <div key={doc.id} className="flex items-center justify-between p-4 border border-neutral-200 rounded-lg">
+                          <div className="flex items-center gap-3">
+                            <div className="w-9 h-9 bg-emerald-50 rounded-lg flex items-center justify-center">
+                              <FileText className="w-4 h-4 text-emerald-600" />
+                            </div>
+                            <div>
+                              <div className="font-medium text-neutral-900">{doc.name}</div>
+                              <div className="text-xs text-neutral-400">{doc.fileName}</div>
+                            </div>
+                          </div>
+                          <button onClick={() => setDocuments((prev) => prev.filter((d) => d.id !== doc.id))}
+                            className="p-2 hover:bg-red-50 rounded-md">
+                            <Trash2 className="w-4 h-4 text-red-500" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-12">
+                      <FileText className="w-10 h-10 text-neutral-300 mx-auto mb-3" />
+                      <p className="font-medium text-neutral-700 mb-1">No documents added</p>
+                      <p className="text-sm text-neutral-400 mb-5">Upload survey plans, deeds, and other legal documents</p>
+                      <button onClick={openAddDoc}
+                        className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-md text-sm hover:bg-emerald-700">
+                        <Plus className="w-4 h-4" /> Add First Document
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
-            </div>
-          )}
 
-          {/* Step 6: Pricing & Payment Plans */}
-          {currentStep === 6 && (
-            <div className="bg-white rounded-lg border border-neutral-200 p-8">
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="font-medium text-neutral-900">Pricing & Payment Plans</h3>
-                <button
-                  onClick={() => setShowPricingModal(true)}
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-md hover:bg-emerald-700 transition-colors"
-                >
-                  <Plus className="w-4 h-4" />
-                  Add Pricing Plan
-                </button>
-              </div>
-
-              {pricingPlans.length > 0 ? (
-                <div className="space-y-4">
-                  {pricingPlans.map((plan) => (
-                    <div key={plan.id} className="p-6 border border-neutral-200 rounded-md">
-                      <div className="flex items-start justify-between mb-4">
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <h4 className="font-medium text-neutral-900">{plan.name}</h4>
-                            {plan.active && (
-                              <Badge className="bg-emerald-100 text-emerald-700">Active</Badge>
+              {/* ── Step 6: Pricing Plans ── */}
+              {currentStep === 6 && (
+                <div className="bg-white rounded-xl border border-neutral-200 p-6 sm:p-8">
+                  <div className="flex items-center justify-between mb-6">
+                    <h3 className="font-semibold text-neutral-900">Pricing & Payment Plans</h3>
+                    <button onClick={openAddPricing}
+                      className="inline-flex items-center gap-1.5 px-3 py-2 bg-emerald-600 text-white rounded-md text-sm hover:bg-emerald-700">
+                      <Plus className="w-4 h-4" /> Add Plan
+                    </button>
+                  </div>
+                  {pricingPlans.length > 0 ? (
+                    <div className="space-y-4">
+                      {pricingPlans.map((p) => {
+                        const monthly = monthlyInstallment(p);
+                        return (
+                          <div key={p.id} className="p-5 border border-neutral-200 rounded-lg">
+                            <div className="flex items-start justify-between mb-3">
+                              <div>
+                                <div className="flex items-center gap-2">
+                                  <h4 className="font-semibold text-neutral-900">{p.name}</h4>
+                                  <Badge className={cn("text-xs", p.active ? "bg-emerald-100 text-emerald-700" : "bg-neutral-100 text-neutral-500")}>
+                                    {p.active ? "Active" : "Inactive"}
+                                  </Badge>
+                                </div>
+                                <div className="text-sm text-neutral-500 mt-0.5">{p.landSize} sqm · {p.currency}</div>
+                              </div>
+                              <div className="flex gap-1">
+                                <button onClick={() => openEditPricing(p)} className="p-2 hover:bg-neutral-100 rounded-md">
+                                  <Pencil className="w-4 h-4 text-neutral-500" />
+                                </button>
+                                <button onClick={() => setPricingPlans((prev) => prev.filter((x) => x.id !== p.id))}
+                                  className="p-2 hover:bg-red-50 rounded-md">
+                                  <Trash2 className="w-4 h-4 text-red-500" />
+                                </button>
+                              </div>
+                            </div>
+                            <div className="text-2xl font-bold text-neutral-900 mb-2">
+                              {fmt(Number(p.totalPrice))}
+                            </div>
+                            {p.paymentType === "installment" && monthly !== null && (
+                              <div className="flex gap-4 text-sm text-neutral-500">
+                                <span>Initial: {fmt(Number(p.initialPayment))}</span>
+                                <span>Monthly: {fmt(Math.round(monthly))}</span>
+                                <span>{p.duration} months</span>
+                              </div>
+                            )}
+                            {p.paymentType === "outright" && (
+                              <Badge variant="secondary" className="text-xs">Outright</Badge>
                             )}
                           </div>
-                          <div className="text-2xl font-semibold text-neutral-900 mt-2">
-                            ₦{plan.pricePerUnit.toLocaleString()}/sqm
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <button className="p-2 hover:bg-neutral-100 rounded-md">
-                            <Pencil className="w-4 h-4 text-neutral-600" />
-                          </button>
-                          <button className="p-2 hover:bg-red-50 rounded-md">
-                            <Trash2 className="w-4 h-4 text-red-600" />
-                          </button>
-                        </div>
-                      </div>
-                      <div className="text-sm text-neutral-500">
-                        {plan.paymentPlans} payment plan{plan.paymentPlans !== 1 ? "s" : ""}
-                      </div>
+                        );
+                      })}
                     </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-12">
-                  <div className="w-16 h-16 bg-neutral-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <DollarSign className="w-8 h-8 text-neutral-400" />
-                  </div>
-                  <h3 className="font-medium text-neutral-900 mb-2">No pricing plans yet</h3>
-                  <p className="text-sm text-neutral-500 mb-6">
-                    Set up selling prices and installment payment plans
-                  </p>
-                  <button
-                    onClick={() => setShowPricingModal(true)}
-                    className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-md hover:bg-emerald-700 transition-colors"
-                  >
-                    <Plus className="w-4 h-4" />
-                    Create Pricing Plan
-                  </button>
+                  ) : (
+                    <div className="text-center py-12">
+                      <DollarSign className="w-10 h-10 text-neutral-300 mx-auto mb-3" />
+                      <p className="font-medium text-neutral-700 mb-1">No pricing plans yet</p>
+                      <p className="text-sm text-neutral-400 mb-5">Set up selling prices and installment options</p>
+                      <button onClick={openAddPricing}
+                        className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-md text-sm hover:bg-emerald-700">
+                        <Plus className="w-4 h-4" /> Create Plan
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
-            </div>
-          )}
 
-          {/* Step 7: Payment Methods */}
-          {currentStep === 7 && (
-            <div className="bg-white rounded-lg border border-neutral-200 p-8">
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="font-medium text-neutral-900">Payment Methods</h3>
-                <button
-                  onClick={() => setShowPaymentModal(true)}
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-md hover:bg-emerald-700 transition-colors"
-                >
-                  <Plus className="w-4 h-4" />
-                  Add Method
-                </button>
-              </div>
-
-              {paymentMethods.length > 0 ? (
-                <div>
-                  <h4 className="text-sm font-medium text-neutral-700 mb-3">
-                    Bank Transfer Methods — {paymentMethods.filter((m) => m.type === "Bank Transfer").length} Bank
-                    {paymentMethods.filter((m) => m.type === "Bank Transfer").length !== 1 ? "s" : ""}
-                  </h4>
-                  <div className="space-y-3">
-                    {paymentMethods.map((method) => (
-                      <div key={method.id} className="p-4 border border-neutral-200 rounded-md">
-                        <div className="flex items-start justify-between">
-                          <div>
-                            <div className="flex items-center gap-2 mb-1">
-                              <div className="font-medium text-neutral-900">{method.bankName}</div>
-                              {method.active && (
-                                <Badge className="bg-emerald-100 text-emerald-700">Active</Badge>
-                              )}
+              {/* ── Step 7: Payment Methods ── */}
+              {currentStep === 7 && (
+                <div className="bg-white rounded-xl border border-neutral-200 p-6 sm:p-8">
+                  <div className="flex items-center justify-between mb-6">
+                    <h3 className="font-semibold text-neutral-900">Payment Methods</h3>
+                    <button onClick={openAddPayment}
+                      className="inline-flex items-center gap-1.5 px-3 py-2 bg-emerald-600 text-white rounded-md text-sm hover:bg-emerald-700">
+                      <Plus className="w-4 h-4" /> Add Method
+                    </button>
+                  </div>
+                  {paymentMethods.length > 0 ? (
+                    <div className="space-y-3">
+                      {paymentMethods.map((m) => (
+                        <div key={m.id} className="p-4 border border-neutral-200 rounded-lg">
+                          <div className="flex items-start justify-between">
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <span className="font-semibold text-neutral-900">{m.bankName}</span>
+                                <Badge className={cn("text-xs", m.active ? "bg-emerald-100 text-emerald-700" : "bg-neutral-100 text-neutral-500")}>
+                                  {m.active ? "Active" : "Inactive"}
+                                </Badge>
+                              </div>
+                              <div className="text-sm text-neutral-600 mt-0.5">{m.accountName}</div>
+                              <div className="text-sm text-neutral-400">{m.accountNumber}</div>
                             </div>
-                            <div className="text-sm text-neutral-600">{method.accountName}</div>
-                            <div className="text-sm text-neutral-500">{method.accountNumber}</div>
+                            <div className="flex gap-1">
+                              <button onClick={() => openEditPayment(m)} className="p-2 hover:bg-neutral-100 rounded-md">
+                                <Pencil className="w-4 h-4 text-neutral-500" />
+                              </button>
+                              <button onClick={() => setPaymentMethods((prev) => prev.filter((x) => x.id !== m.id))}
+                                className="p-2 hover:bg-red-50 rounded-md">
+                                <Trash2 className="w-4 h-4 text-red-500" />
+                              </button>
+                            </div>
                           </div>
-                          <button className="p-2 hover:bg-neutral-100 rounded-md">
-                            <Pencil className="w-4 h-4 text-neutral-600" />
-                          </button>
                         </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ) : (
-                <div className="text-center py-12">
-                  <div className="w-16 h-16 bg-neutral-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <CreditCard className="w-8 h-8 text-neutral-400" />
-                  </div>
-                  <h3 className="font-medium text-neutral-900 mb-2">No payment methods yet</h3>
-                  <p className="text-sm text-neutral-500 mb-6">
-                    Configure how you'll receive customer payments
-                  </p>
-                  <button
-                    onClick={() => setShowPaymentModal(true)}
-                    className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-md hover:bg-emerald-700 transition-colors"
-                  >
-                    <Plus className="w-4 h-4" />
-                    Add Payment Method
-                  </button>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-12">
+                      <CreditCard className="w-10 h-10 text-neutral-300 mx-auto mb-3" />
+                      <p className="font-medium text-neutral-700 mb-1">No payment methods yet</p>
+                      <p className="text-sm text-neutral-400 mb-5">Configure how customers will pay</p>
+                      <button onClick={openAddPayment}
+                        className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-md text-sm hover:bg-emerald-700">
+                        <Plus className="w-4 h-4" /> Add Method
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
-            </div>
-          )}
 
-          {/* Navigation Buttons */}
-          <div className="flex items-center justify-between mt-8">
-            <Button
-              variant="outline"
-              onClick={handleBack}
-              className="inline-flex items-center gap-2 px-6 py-2 bg-white text-neutral-700"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              {currentStep === 1 ? "Cancel" : "Back"}
-            </Button>
-
-            <Button
-              onClick={handleSave}
-              disabled={currentStep === 7 && documents.length === 0}
-              className="inline-flex items-center gap-2 px-6 py-2 bg-emerald-600 text-white hover:bg-emerald-700"
-            >
-              {currentStep === 7 ? (
-                <>
-                  <Eye className="w-4 h-4" />
-                  {documents.length > 0 ? "Preview & Publish" : "Cannot Publish"}
-                </>
-              ) : (
-                <>
-                  Save & Continue
-                  <ArrowRight className="w-4 h-4" />
-                </>
-              )}
-            </Button>
-          </div>
-          </motion.div>
+              {/* ── Navigation ── */}
+              <div className="flex items-center justify-between mt-6">
+                <Button variant="outline" onClick={handleBack}
+                  className="inline-flex items-center gap-2 px-6 bg-white text-neutral-700">
+                  <ArrowLeft className="w-4 h-4" />
+                  {currentStep === 1 ? "Cancel" : "Back"}
+                </Button>
+                <Button onClick={handleNext}
+                  className="inline-flex items-center gap-2 px-6 bg-emerald-600 text-white hover:bg-emerald-700">
+                  {currentStep === steps.length ? (
+                    <><Eye className="w-4 h-4" /> Preview & Publish</>
+                  ) : (
+                    <>Save & Continue <ArrowRight className="w-4 h-4" /></>
+                  )}
+                </Button>
+              </div>
+            </motion.div>
           </AnimatePresence>
         </div>
       </div>
 
-      {/* Modal overlays */}
+      {/* ══ Modals ══════════════════════════════════════════════════════════ */}
+
+      {/* Amenity modal */}
       {showAmenityModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg max-w-md w-full p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-semibold text-neutral-900">Add New Amenity</h3>
-              <button onClick={() => setShowAmenityModal(false)} className="p-1 hover:bg-neutral-100 rounded">
+          <div className="bg-white rounded-xl max-w-md w-full p-6 shadow-xl">
+            <div className="flex items-center justify-between mb-5">
+              <h3 className="font-semibold text-neutral-900">{editingAmenityId ? "Edit Amenity" : "Add Amenity"}</h3>
+              <button onClick={() => setShowAmenityModal(false)} className="p-1 hover:bg-neutral-100 rounded-md">
                 <X className="w-5 h-5" />
               </button>
             </div>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-neutral-700 mb-2">Amenity Name</label>
-                <input
-                  type="text"
+                <label className="block text-sm font-medium text-neutral-700 mb-1.5">
+                  Amenity Name <span className="text-red-500">*</span>
+                </label>
+                <input type="text" value={amenityForm.name}
+                  onChange={(e) => setAmenityForm((f) => ({ ...f, name: e.target.value }))}
                   placeholder="e.g. Perimeter Fencing"
-                  className="w-full px-4 py-2 border border-neutral-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className="w-full px-3 py-2 border border-neutral-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-neutral-700 mb-2">Status</label>
-                <select className="w-full px-4 py-2 border border-neutral-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                <label className="block text-sm font-medium text-neutral-700 mb-1.5">Status</label>
+                <select value={amenityForm.status}
+                  onChange={(e) => setAmenityForm((f) => ({ ...f, status: e.target.value }))}
+                  className="w-full px-3 py-2 border border-neutral-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
                   <option>Not Started</option>
                   <option>In Progress</option>
                   <option>Completed</option>
                 </select>
               </div>
-              <div className="flex gap-2 mt-6">
-                <button
-                  onClick={() => setShowAmenityModal(false)}
-                  className="flex-1 px-4 py-2 bg-white border border-neutral-300 text-neutral-700 rounded-md hover:bg-neutral-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={addAmenity}
-                  className="flex-1 px-4 py-2 bg-emerald-600 text-white rounded-md hover:bg-emerald-700"
-                >
-                  Create
-                </button>
-              </div>
+            </div>
+            <div className="flex gap-2 mt-6">
+              <button onClick={() => setShowAmenityModal(false)}
+                className="flex-1 px-4 py-2 border border-neutral-300 text-neutral-700 rounded-md text-sm hover:bg-neutral-50">
+                Cancel
+              </button>
+              <button onClick={saveAmenity}
+                className="flex-1 px-4 py-2 bg-emerald-600 text-white rounded-md text-sm hover:bg-emerald-700">
+                {editingAmenityId ? "Update" : "Add"}
+              </button>
             </div>
           </div>
         </div>
       )}
 
-      {showDocumentModal && (
+      {/* Document modal */}
+      {showDocModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg max-w-md w-full p-6">
-            <div className="flex items-center justify-between mb-4">
+          <input ref={docFileRef} type="file" accept=".pdf,.doc,.docx,image/*" className="hidden" onChange={handleDocFileChange} />
+          <div className="bg-white rounded-xl max-w-md w-full p-6 shadow-xl">
+            <div className="flex items-center justify-between mb-5">
               <h3 className="font-semibold text-neutral-900">Add Document</h3>
-              <button onClick={() => setShowDocumentModal(false)} className="p-1 hover:bg-neutral-100 rounded">
+              <button onClick={() => setShowDocModal(false)} className="p-1 hover:bg-neutral-100 rounded-md">
                 <X className="w-5 h-5" />
               </button>
             </div>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-neutral-700 mb-2">Document Name</label>
-                <input
-                  type="text"
+                <label className="block text-sm font-medium text-neutral-700 mb-1.5">
+                  Document Name <span className="text-red-500">*</span>
+                </label>
+                <input type="text" value={docForm.name}
+                  onChange={(e) => setDocForm((d) => ({ ...d, name: e.target.value }))}
                   placeholder="e.g. Survey Plan"
-                  className="w-full px-4 py-2 border border-neutral-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className="w-full px-3 py-2 border border-neutral-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-neutral-700 mb-2">Upload Document</label>
-                <div className="border-2 border-dashed border-neutral-300 rounded-md p-6 text-center cursor-pointer hover:border-emerald-500">
-                  <Upload className="w-8 h-8 text-neutral-400 mx-auto mb-2" />
-                  <p className="text-sm text-neutral-600">Click to upload</p>
+                <label className="block text-sm font-medium text-neutral-700 mb-1.5">Upload Document</label>
+                <div onClick={() => docFileRef.current?.click()}
+                  className="border-2 border-dashed border-neutral-300 rounded-lg p-6 text-center cursor-pointer hover:border-emerald-500 hover:bg-emerald-50/30 transition-colors">
+                  {docForm.fileName ? (
+                    <p className="text-sm font-medium text-emerald-700 flex items-center justify-center gap-2">
+                      <FileText className="w-4 h-4" /> {docForm.fileName}
+                    </p>
+                  ) : (
+                    <>
+                      <Upload className="w-8 h-8 text-neutral-400 mx-auto mb-2" />
+                      <p className="text-sm text-neutral-600">Click to upload</p>
+                      <p className="text-xs text-neutral-400 mt-1">PDF, DOC, images up to 20 MB</p>
+                    </>
+                  )}
                 </div>
               </div>
-              <div className="flex gap-2 mt-6">
-                <button
-                  onClick={() => setShowDocumentModal(false)}
-                  className="flex-1 px-4 py-2 bg-white border border-neutral-300 text-neutral-700 rounded-md hover:bg-neutral-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={addDocument}
-                  className="flex-1 px-4 py-2 bg-emerald-600 text-white rounded-md hover:bg-emerald-700"
-                >
-                  Add
-                </button>
-              </div>
+            </div>
+            <div className="flex gap-2 mt-6">
+              <button onClick={() => setShowDocModal(false)}
+                className="flex-1 px-4 py-2 border border-neutral-300 text-neutral-700 rounded-md text-sm hover:bg-neutral-50">
+                Cancel
+              </button>
+              <button onClick={saveDoc}
+                className="flex-1 px-4 py-2 bg-emerald-600 text-white rounded-md text-sm hover:bg-emerald-700">
+                Add Document
+              </button>
             </div>
           </div>
         </div>
       )}
 
+      {/* Pricing modal */}
       {showPricingModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg max-w-md w-full p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-semibold text-neutral-900">Create Pricing Plan</h3>
-              <button onClick={() => setShowPricingModal(false)} className="p-1 hover:bg-neutral-100 rounded">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
+          <div className="bg-white rounded-xl max-w-lg w-full p-6 shadow-xl my-8">
+            <div className="flex items-center justify-between mb-5">
+              <h3 className="font-semibold text-neutral-900">{editingPlanId ? "Edit Pricing Plan" : "Create Pricing Plan"}</h3>
+              <button onClick={() => setShowPricingModal(false)} className="p-1 hover:bg-neutral-100 rounded-md">
                 <X className="w-5 h-5" />
               </button>
             </div>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-neutral-700 mb-2">Plan Name</label>
-                <input
-                  type="text"
-                  placeholder="e.g. Pre-launch Price"
-                  className="w-full px-4 py-2 border border-neutral-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                <label className="block text-sm font-medium text-neutral-700 mb-1.5">Plan Name <span className="text-red-500">*</span></label>
+                <input type="text" value={pricingForm.name}
+                  onChange={(e) => setPricingForm((f) => ({ ...f, name: e.target.value }))}
+                  placeholder="e.g. Pre-launch Price — 300 sqm"
+                  className="w-full px-3 py-2 border border-neutral-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-neutral-700 mb-1.5">Land Size (sqm) <span className="text-red-500">*</span></label>
+                  <input type="number" value={pricingForm.landSize}
+                    onChange={(e) => setPricingForm((f) => ({ ...f, landSize: e.target.value }))}
+                    placeholder="e.g. 300"
+                    className="w-full px-3 py-2 border border-neutral-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-neutral-700 mb-1.5">Currency</label>
+                  <select value={pricingForm.currency}
+                    onChange={(e) => setPricingForm((f) => ({ ...f, currency: e.target.value }))}
+                    className="w-full px-3 py-2 border border-neutral-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                    <option value="NGN">NGN (₦)</option>
+                    <option value="USD">USD ($)</option>
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-neutral-700 mb-1.5">Total Price (₦) <span className="text-red-500">*</span></label>
+                <input type="number" value={pricingForm.totalPrice}
+                  onChange={(e) => setPricingForm((f) => ({ ...f, totalPrice: e.target.value }))}
+                  placeholder="e.g. 1500000"
+                  className="w-full px-3 py-2 border border-neutral-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-neutral-700 mb-2">Price Per Unit (SQM)</label>
-                <input
-                  type="number"
-                  placeholder="5000"
-                  className="w-full px-4 py-2 border border-neutral-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                />
+                <label className="block text-sm font-medium text-neutral-700 mb-1.5">Payment Type</label>
+                <div className="flex gap-4">
+                  {(["outright", "installment"] as const).map((t) => (
+                    <label key={t} className="flex items-center gap-2 cursor-pointer">
+                      <input type="radio" value={t}
+                        checked={pricingForm.paymentType === t}
+                        onChange={() => setPricingForm((f) => ({ ...f, paymentType: t }))}
+                        className="accent-emerald-600"
+                      />
+                      <span className="text-sm capitalize">{t}</span>
+                    </label>
+                  ))}
+                </div>
               </div>
-              <div className="flex gap-2 mt-6">
-                <button
-                  onClick={() => setShowPricingModal(false)}
-                  className="flex-1 px-4 py-2 bg-white border border-neutral-300 text-neutral-700 rounded-md hover:bg-neutral-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={addPricingPlan}
-                  className="flex-1 px-4 py-2 bg-emerald-600 text-white rounded-md hover:bg-emerald-700"
-                >
-                  Create Plan
-                </button>
-              </div>
+              {pricingForm.paymentType === "installment" && (
+                <>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-neutral-700 mb-1.5">Initial Payment (₦)</label>
+                      <input type="number" value={pricingForm.initialPayment}
+                        onChange={(e) => setPricingForm((f) => ({ ...f, initialPayment: e.target.value }))}
+                        placeholder="e.g. 250000"
+                        className="w-full px-3 py-2 border border-neutral-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-neutral-700 mb-1.5">Duration (months)</label>
+                      <input type="number" value={pricingForm.duration}
+                        onChange={(e) => setPricingForm((f) => ({ ...f, duration: e.target.value }))}
+                        placeholder="e.g. 12"
+                        className="w-full px-3 py-2 border border-neutral-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-neutral-700 mb-1.5">Payment Spread Method</label>
+                    <div className="space-y-2">
+                      <label className="flex items-start gap-2 cursor-pointer p-3 border border-neutral-200 rounded-md hover:bg-neutral-50">
+                        <input type="radio" value="separate"
+                          checked={pricingForm.spreadMethod === "separate"}
+                          onChange={() => setPricingForm((f) => ({ ...f, spreadMethod: "separate" }))}
+                          className="mt-0.5 accent-emerald-600"
+                        />
+                        <div>
+                          <div className="text-sm font-medium">Initial Payment Separate</div>
+                          <div className="text-xs text-neutral-400">Initial is upfront; monthly = (Total − Initial) ÷ Duration</div>
+                        </div>
+                      </label>
+                      <label className="flex items-start gap-2 cursor-pointer p-3 border border-neutral-200 rounded-md hover:bg-neutral-50">
+                        <input type="radio" value="first_month"
+                          checked={pricingForm.spreadMethod === "first_month"}
+                          onChange={() => setPricingForm((f) => ({ ...f, spreadMethod: "first_month" }))}
+                          className="mt-0.5 accent-emerald-600"
+                        />
+                        <div>
+                          <div className="text-sm font-medium">Initial as First Month</div>
+                          <div className="text-xs text-neutral-400">Initial counts as month 1; monthly = (Total − Initial) ÷ (Duration − 1)</div>
+                        </div>
+                      </label>
+                    </div>
+                  </div>
+                  {pricingForm.totalPrice && pricingForm.duration && (
+                    <div className="p-4 bg-emerald-50 rounded-lg border border-emerald-200 text-sm space-y-1">
+                      <div className="font-medium text-emerald-800 mb-2">Summary</div>
+                      <div className="flex justify-between text-neutral-700">
+                        <span>Total Price</span>
+                        <span className="font-medium">{fmt(Number(pricingForm.totalPrice))}</span>
+                      </div>
+                      <div className="flex justify-between text-neutral-700">
+                        <span>Initial Payment</span>
+                        <span className="font-medium">{fmt(Number(pricingForm.initialPayment) || 0)}</span>
+                      </div>
+                      <div className="flex justify-between text-neutral-700">
+                        <span>Monthly Installment</span>
+                        <span className="font-medium">{fmt(Math.round(monthlyInstallment(pricingForm) ?? 0))}</span>
+                      </div>
+                      <div className="flex justify-between text-neutral-700">
+                        <span>Duration</span>
+                        <span className="font-medium">{pricingForm.duration} months</span>
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+            <div className="flex gap-2 mt-6">
+              <button onClick={() => setShowPricingModal(false)}
+                className="flex-1 px-4 py-2 border border-neutral-300 text-neutral-700 rounded-md text-sm hover:bg-neutral-50">
+                Cancel
+              </button>
+              <button onClick={savePricing}
+                className="flex-1 px-4 py-2 bg-emerald-600 text-white rounded-md text-sm hover:bg-emerald-700">
+                {editingPlanId ? "Update Plan" : "Create Plan"}
+              </button>
             </div>
           </div>
         </div>
       )}
 
+      {/* Payment method modal */}
       {showPaymentModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg max-w-md w-full p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-semibold text-neutral-900">Add Payment Method</h3>
-              <button onClick={() => setShowPaymentModal(false)} className="p-1 hover:bg-neutral-100 rounded">
+          <div className="bg-white rounded-xl max-w-md w-full p-6 shadow-xl">
+            <div className="flex items-center justify-between mb-5">
+              <h3 className="font-semibold text-neutral-900">{editingPaymentId ? "Edit Payment Method" : "Add Payment Method"}</h3>
+              <button onClick={() => setShowPaymentModal(false)} className="p-1 hover:bg-neutral-100 rounded-md">
                 <X className="w-5 h-5" />
               </button>
             </div>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-neutral-700 mb-2">Bank Name</label>
-                <input
-                  type="text"
+                <label className="block text-sm font-medium text-neutral-700 mb-1.5">Bank Name <span className="text-red-500">*</span></label>
+                <input type="text" value={paymentForm.bankName}
+                  onChange={(e) => setPaymentForm((f) => ({ ...f, bankName: e.target.value }))}
                   placeholder="e.g. First Bank"
-                  className="w-full px-4 py-2 border border-neutral-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className="w-full px-3 py-2 border border-neutral-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-neutral-700 mb-2">Account Name</label>
-                <input
-                  type="text"
-                  placeholder="Account Name"
-                  className="w-full px-4 py-2 border border-neutral-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                <label className="block text-sm font-medium text-neutral-700 mb-1.5">Account Name <span className="text-red-500">*</span></label>
+                <input type="text" value={paymentForm.accountName}
+                  onChange={(e) => setPaymentForm((f) => ({ ...f, accountName: e.target.value }))}
+                  placeholder="e.g. Tehillah Estate Ltd"
+                  className="w-full px-3 py-2 border border-neutral-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-neutral-700 mb-2">Account Number</label>
-                <input
-                  type="text"
-                  placeholder="1234567890"
-                  className="w-full px-4 py-2 border border-neutral-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                <label className="block text-sm font-medium text-neutral-700 mb-1.5">Account Number <span className="text-red-500">*</span></label>
+                <input type="text" value={paymentForm.accountNumber}
+                  onChange={(e) => setPaymentForm((f) => ({ ...f, accountNumber: e.target.value.replace(/\D/g, "") }))}
+                  placeholder="10-digit account number"
+                  maxLength={10}
+                  className="w-full px-3 py-2 border border-neutral-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
                 />
+                {paymentForm.accountNumber && paymentForm.accountNumber.length < 10 && (
+                  <p className="text-xs text-amber-600 mt-1 flex items-center gap-1">
+                    <AlertCircle className="w-3 h-3" /> Must be 10 digits
+                  </p>
+                )}
               </div>
-              <div className="flex gap-2 mt-6">
-                <button
-                  onClick={() => setShowPaymentModal(false)}
-                  className="flex-1 px-4 py-2 bg-white border border-neutral-300 text-neutral-700 rounded-md hover:bg-neutral-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={addPaymentMethod}
-                  className="flex-1 px-4 py-2 bg-emerald-600 text-white rounded-md hover:bg-emerald-700"
-                >
-                  Add Method
-                </button>
-              </div>
+            </div>
+            <div className="flex gap-2 mt-6">
+              <button onClick={() => setShowPaymentModal(false)}
+                className="flex-1 px-4 py-2 border border-neutral-300 text-neutral-700 rounded-md text-sm hover:bg-neutral-50">
+                Cancel
+              </button>
+              <button onClick={savePayment}
+                className="flex-1 px-4 py-2 bg-emerald-600 text-white rounded-md text-sm hover:bg-emerald-700">
+                {editingPaymentId ? "Update" : "Add Method"}
+              </button>
             </div>
           </div>
         </div>

@@ -33,7 +33,9 @@ export function VerifyIdentity() {
       await otpVerify({ email, code: data.code });
       toast.success("Identity verified!");
       if (flow === "reset") {
-        navigate("/auth/reset-password");
+        navigate("/auth/reset-password", { state: { email } });
+      } else if (flow === "signup") {
+        navigate("/auth/workspace-setup", { state: { email } });
       } else {
         navigate("/");
       }

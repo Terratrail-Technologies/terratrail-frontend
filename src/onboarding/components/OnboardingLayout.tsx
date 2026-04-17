@@ -32,7 +32,7 @@ export function OnboardingLayout() {
         <AnimatePresence mode="wait">
           <motion.div
             key={location.pathname}
-            className={s.card}
+            className={[s.card, location.pathname === "/auth/select-plan" ? s.cardWide : ""].join(" ")}
             variants={pageVariants}
             initial="initial"
             animate="animate"

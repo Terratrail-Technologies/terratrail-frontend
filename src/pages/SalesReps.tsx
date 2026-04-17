@@ -1,7 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
+import { usePolling } from "../hooks/usePolling";
 import { Link2, Settings, TrendingUp, Loader2 } from "lucide-react";
+import { Skeleton } from "../components/ui/skeleton";
 import { api } from "../services/api";
-import { salesReps as mockSalesReps, dashboardStats as mockStats } from "../utils/mockData";
 import { Badge } from "../components/ui/badge";
 
 export function SalesReps() {
@@ -19,17 +20,13 @@ export function SalesReps() {
       setReps(list);
       setStats(performance);
     } catch (err) {
-      console.warn("Using mock sales reps fallback");
-      setReps(mockSalesReps);
-      setStats(mockStats.commission);
+      console.error("Failed to load sales reps:", err);
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    fetchData();
-  }, []);
+  usePolling(fetchData, 30_000);
 
   const formatCurrency = (amount: number | string) => {
     return `₦${Number(amount).toLocaleString("en-NG")}`;
@@ -48,7 +45,7 @@ export function SalesReps() {
     }
   };
 
-  const safeStats = stats || mockStats.commission;
+  const safeStats = stats || {};
 
   return (
     <div className="min-h-screen bg-neutral-50">
@@ -76,6 +73,50 @@ export function SalesReps() {
       </div>
 
       <div className="p-8">
+        {loading && reps.length === 0 ? (
+          /* Skeleton scaffold */
+          <>
+            {/* 3 summary metric cards */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="bg-white rounded-lg border border-neutral-200 p-6 shadow-sm">
+                  <div className="flex items-start justify-between">
+                    <div className="space-y-2 flex-1">
+                      <Skeleton className="h-3.5 w-28 bg-neutral-100" />
+                      <Skeleton className="h-8 w-36 bg-neutral-100" />
+                      <Skeleton className="h-3 w-24 bg-neutral-100" />
+                    </div>
+                    <Skeleton className="w-10 h-10 rounded-lg bg-neutral-100 shrink-0" />
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Table skeleton */}
+            <div className="bg-white rounded-lg border border-neutral-200 overflow-hidden shadow-sm">
+              <div className="px-6 py-4 border-b border-neutral-200">
+                <Skeleton className="h-4 w-48 bg-neutral-100" />
+              </div>
+              <div className="divide-y divide-neutral-200">
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <div key={i} className="px-6 py-4 flex items-center gap-4">
+                    <div className="space-y-1.5 flex-1">
+                      <Skeleton className="h-4 w-36 bg-neutral-100" />
+                      <Skeleton className="h-3 w-24 bg-neutral-100" />
+                    </div>
+                    <Skeleton className="h-5 w-16 rounded-full bg-neutral-100" />
+                    <Skeleton className="h-6 w-20 rounded bg-neutral-100" />
+                    <Skeleton className="h-4 w-8 bg-neutral-100" />
+                    <Skeleton className="h-4 w-24 bg-neutral-100" />
+                    <Skeleton className="h-4 w-20 bg-neutral-100" />
+                    <Skeleton className="h-7 w-7 rounded-md bg-neutral-100 ml-auto" />
+                  </div>
+                ))}
+              </div>
+            </div>
+          </>
+        ) : (
+        <>
         {/* Summary Metrics */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           <div className="bg-white rounded-lg border border-neutral-200 p-6 shadow-sm">
@@ -233,6 +274,8 @@ export function SalesReps() {
             </div>
           </div>
         </div>
+        </>
+        )}
       </div>
     </div>
   );
