@@ -36,7 +36,7 @@ export function Customers() {
   const [search, setSearch] = useState("");
 
   const fetchCustomers = async () => {
-    setLoading(true);
+    setLoading((prev) => prev || customers.length === 0);
     try {
       const data = await api.customers.list();
       setCustomers(data);

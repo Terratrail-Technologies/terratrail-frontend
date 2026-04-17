@@ -16,8 +16,11 @@ import {
   X,
   AlertCircle,
   Image as ImageIcon,
+  Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
+import { api } from "../services/api";
+import { usePageTitle } from "../hooks/usePageTitle";
 import { Badge } from "../components/ui/badge";
 import { cn } from "../components/ui/utils";
 import { motion, AnimatePresence } from "motion/react";
@@ -38,7 +41,25 @@ const steps = [
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 interface Amenity { id: string; name: string; status: string; description: string; }
-interface Doc { id: string; name: string; file: File | null; fileName: string; }
+interface Doc { id: string; documentType: string; status: string; notes: string; file: File | null; fileName: string; }
+
+const DOCUMENT_TYPES = [
+  { value: "C_OF_O",             label: "Certificate of Occupancy (C of O)" },
+  { value: "DEED_OF_ASSIGNMENT", label: "Deed of Assignment" },
+  { value: "SURVEY_PLAN",        label: "Survey Plan" },
+  { value: "OTHER",              label: "Other" },
+];
+const DOCUMENT_STATUSES = [
+  { value: "NOT_STARTED", label: "Not Started" },
+  { value: "IN_PROGRESS", label: "In Progress" },
+  { value: "READY",       label: "Ready" },
+];
+const AMENITY_STATUSES = [
+  { value: "NOT_STARTED", label: "Not Started" },
+  { value: "IN_PROGRESS", label: "In Progress" },
+  { value: "COMPLETED",   label: "Completed" },
+];
+const docLabel = (type: string) => DOCUMENT_TYPES.find((d) => d.value === type)?.label ?? type;
 interface PricingPlan {
   id: string; name: string; landSize: string; currency: string;
   totalPrice: string; paymentType: "outright" | "installment";
@@ -72,6 +93,7 @@ export function PropertyWizard() {
   const navigate = useNavigate();
   const { id } = useParams();
   const isEditing = !!id;
+  usePageTitle(isEditing ? "Edit Property" : "Create Property");
 
   // ── Step ──────────────────────────────────────────────────────────────────
   const [currentStep, setCurrentStep] = useState(1);
@@ -102,8 +124,8 @@ export function PropertyWizard() {
   // ── Step 4 state ─────────────────────────────────────────────────────────
   const [amenities, setAmenities]           = useState<Amenity[]>(
     isEditing ? [
-      { id: "1", name: "Perimeter Fencing", status: "Not Started", description: "" },
-      { id: "2", name: "Street Lights", status: "In Progress", description: "" },
+      { id: "1", name: "Perimeter Fencing", status: "NOT_STARTED", description: "" },
+      { id: "2", name: "Street Lights", status: "IN_PROGRESS", description: "" },
     ] : []
   );
   const [showAmenityModal, setShowAmenityModal] = useState(false);
@@ -112,11 +134,14 @@ export function PropertyWizard() {
 
   // ── Step 5 state ─────────────────────────────────────────────────────────
   const [documents, setDocuments]           = useState<Doc[]>(
-    isEditing ? [{ id: "1", name: "Survey Plan", file: null, fileName: "survey-plan.pdf" }] : []
+    isEditing ? [{ id: "1", documentType: "SURVEY_PLAN", status: "NOT_STARTED", notes: "", file: null, fileName: "survey-plan.pdf" }] : []
   );
   const [showDocModal, setShowDocModal]     = useState(false);
-  const [docForm, setDocForm]               = useState({ name: "", file: null as File | null, fileName: "" });
+  const [docForm, setDocForm]               = useState({ documentType: "SURVEY_PLAN", status: "NOT_STARTED", notes: "", file: null as File | null, fileName: "" });
   const docFileRef = useRef<HTMLInputElement>(null);
+
+  // ── Submission ─────────────────────────────────────────────────────────
+  const [submitting, setSubmitting] = useState(false);
 
   // ── Step 6 state ─────────────────────────────────────────────────────────
   const [pricingPlans, setPricingPlans]     = useState<PricingPlan[]>(
@@ -202,7 +227,7 @@ export function PropertyWizard() {
   // ── Amenity CRUD ─────────────────────────────────────────────────────────
   const openAddAmenity = () => {
     setEditingAmenityId(null);
-    setAmenityForm({ name: "", status: "Not Started" });
+    setAmenityForm({ name: "", status: "NOT_STARTED" });
     setShowAmenityModal(true);
   };
 
@@ -228,12 +253,11 @@ export function PropertyWizard() {
 
   // ── Document CRUD ─────────────────────────────────────────────────────────
   const openAddDoc = () => {
-    setDocForm({ name: "", file: null, fileName: "" });
+    setDocForm({ documentType: "SURVEY_PLAN", status: "NOT_STARTED", notes: "", file: null, fileName: "" });
     setShowDocModal(true);
   };
 
   const saveDoc = () => {
-    if (!docForm.name.trim()) { toast.error("Document name is required."); return; }
     setDocuments((prev) => [...prev, { id: Date.now().toString(), ...docForm }]);
     toast.success("Document added.");
     setShowDocModal(false);
@@ -292,6 +316,83 @@ export function PropertyWizard() {
     setShowPaymentModal(false);
   };
 
+  // ── Submit to API ─────────────────────────────────────────────────────────
+  const handleSubmit = async () => {
+    setSubmitting(true);
+    try {
+      const payload: any = {
+        name: propertyName,
+        property_type: propertyType,
+        description,
+        total_sqms: totalSqms,
+        unit_measurement: "sqm",
+        location: {
+          address: streetAddress || `${city}, ${state}`,
+          city,
+          state,
+          country: "Nigeria",
+          postal_code: postalCode || undefined,
+          latitude: latitude || undefined,
+          longitude: longitude || undefined,
+        },
+        amenities: amenities.map((a) => ({
+          name: a.name,
+          status: a.status,
+          description: a.description,
+        })),
+        documents: documents.map((d) => ({
+          document_type: d.documentType,
+          status: d.status,
+          notes: d.notes,
+        })),
+        pricing_plans: pricingPlans.map((p) => ({
+          plan_name: p.name,
+          land_size: p.landSize,
+          total_price: p.totalPrice,
+          payment_type: p.paymentType === "outright" ? "OUTRIGHT" : "INSTALLMENT",
+          initial_payment: p.initialPayment || "0",
+          duration_months: Number(p.duration) || 12,
+          payment_spread_method:
+            p.spreadMethod === "separate" ? "INITIAL_SEPARATE" : "INITIAL_AS_FIRST",
+        })),
+        bank_accounts: paymentMethods.map((m) => ({
+          bank_name: m.bankName,
+          account_name: m.accountName,
+          account_number: m.accountNumber,
+        })),
+      };
+
+      const created = isEditing
+        ? await api.properties.update(id!, payload)
+        : await api.properties.create(payload);
+
+      // Upload featured image (multipart PATCH)
+      if (coverImage && created?.id) {
+        try {
+          await api.properties.uploadFeaturedImage(created.id, coverImage);
+        } catch {
+          toast.error("Property saved, but cover image upload failed.");
+        }
+      }
+
+      // Upload gallery images
+      if (galleryImages.length > 0 && created?.id) {
+        await Promise.allSettled(
+          galleryImages.map((img, i) =>
+            api.properties.uploadGalleryImage(created.id, img.file, i)
+          )
+        );
+      }
+
+      toast.success(isEditing ? "Property updated!" : "Property created!");
+      navigate("/properties");
+    } catch (err: any) {
+      toast.error(err.message || "Failed to save property. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   // ── Navigation ────────────────────────────────────────────────────────────
   const handleBack = () => {
     if (currentStep > 1) setCurrentStep(currentStep - 1);
@@ -304,8 +405,7 @@ export function PropertyWizard() {
     if (currentStep < steps.length) {
       setCurrentStep(currentStep + 1);
     } else {
-      toast.success(isEditing ? "Property updated!" : "Property created!");
-      navigate("/properties");
+      handleSubmit();
     }
   };
 
@@ -600,7 +700,9 @@ export function PropertyWizard() {
                         <div key={a.id} className="flex items-center justify-between p-4 border border-neutral-200 rounded-lg">
                           <div>
                             <div className="font-medium text-neutral-900">{a.name}</div>
-                            <Badge variant="secondary" className="mt-1 text-xs">{a.status}</Badge>
+                            <Badge variant="secondary" className="mt-1 text-xs">
+                              {AMENITY_STATUSES.find(s => s.value === a.status)?.label ?? a.status}
+                            </Badge>
                           </div>
                           <div className="flex items-center gap-1">
                             <button onClick={() => openEditAmenity(a)}
@@ -648,8 +750,11 @@ export function PropertyWizard() {
                               <FileText className="w-4 h-4 text-emerald-600" />
                             </div>
                             <div>
-                              <div className="font-medium text-neutral-900">{doc.name}</div>
-                              <div className="text-xs text-neutral-400">{doc.fileName}</div>
+                              <div className="font-medium text-neutral-900">{docLabel(doc.documentType)}</div>
+                              <div className="text-xs text-neutral-400">
+                                {DOCUMENT_STATUSES.find(s => s.value === doc.status)?.label ?? doc.status}
+                                {doc.fileName && ` · ${doc.fileName}`}
+                              </div>
                             </div>
                           </div>
                           <button onClick={() => setDocuments((prev) => prev.filter((d) => d.id !== doc.id))}
@@ -799,10 +904,12 @@ export function PropertyWizard() {
                   <ArrowLeft className="w-4 h-4" />
                   {currentStep === 1 ? "Cancel" : "Back"}
                 </Button>
-                <Button onClick={handleNext}
-                  className="inline-flex items-center gap-2 px-6 bg-emerald-600 text-white hover:bg-emerald-700">
-                  {currentStep === steps.length ? (
-                    <><Eye className="w-4 h-4" /> Preview & Publish</>
+                <Button onClick={handleNext} disabled={submitting}
+                  className="inline-flex items-center gap-2 px-6 bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-70">
+                  {submitting ? (
+                    <><Loader2 className="w-4 h-4 animate-spin" /> Saving…</>
+                  ) : currentStep === steps.length ? (
+                    <><Eye className="w-4 h-4" /> {isEditing ? "Save Changes" : "Create Property"}</>
                   ) : (
                     <>Save & Continue <ArrowRight className="w-4 h-4" /></>
                   )}
@@ -841,9 +948,9 @@ export function PropertyWizard() {
                 <select value={amenityForm.status}
                   onChange={(e) => setAmenityForm((f) => ({ ...f, status: e.target.value }))}
                   className="w-full px-3 py-2 border border-neutral-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
-                  <option>Not Started</option>
-                  <option>In Progress</option>
-                  <option>Completed</option>
+                  {AMENITY_STATUSES.map((s) => (
+                    <option key={s.value} value={s.value}>{s.label}</option>
+                  ))}
                 </select>
               </div>
             </div>
@@ -875,16 +982,37 @@ export function PropertyWizard() {
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-neutral-700 mb-1.5">
-                  Document Name <span className="text-red-500">*</span>
+                  Document Type <span className="text-red-500">*</span>
                 </label>
-                <input type="text" value={docForm.name}
-                  onChange={(e) => setDocForm((d) => ({ ...d, name: e.target.value }))}
-                  placeholder="e.g. Survey Plan"
-                  className="w-full px-3 py-2 border border-neutral-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                <select value={docForm.documentType}
+                  onChange={(e) => setDocForm((d) => ({ ...d, documentType: e.target.value }))}
+                  className="w-full px-3 py-2 border border-neutral-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                  {DOCUMENT_TYPES.map((dt) => (
+                    <option key={dt.value} value={dt.value}>{dt.label}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-neutral-700 mb-1.5">Status</label>
+                <select value={docForm.status}
+                  onChange={(e) => setDocForm((d) => ({ ...d, status: e.target.value }))}
+                  className="w-full px-3 py-2 border border-neutral-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                  {DOCUMENT_STATUSES.map((s) => (
+                    <option key={s.value} value={s.value}>{s.label}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-neutral-700 mb-1.5">Notes</label>
+                <textarea value={docForm.notes}
+                  onChange={(e) => setDocForm((d) => ({ ...d, notes: e.target.value }))}
+                  placeholder="Additional notes about this document…"
+                  rows={3}
+                  className="w-full px-3 py-2 border border-neutral-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-y"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-neutral-700 mb-1.5">Upload Document</label>
+                <label className="block text-sm font-medium text-neutral-700 mb-1.5">Upload File <span className="text-neutral-400 text-xs">(optional)</span></label>
                 <div onClick={() => docFileRef.current?.click()}
                   className="border-2 border-dashed border-neutral-300 rounded-lg p-6 text-center cursor-pointer hover:border-emerald-500 hover:bg-emerald-50/30 transition-colors">
                   {docForm.fileName ? (

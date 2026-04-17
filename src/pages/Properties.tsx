@@ -25,7 +25,7 @@ export function Properties() {
   const [search, setSearch] = useState("");
 
   const fetchProperties = async () => {
-    setLoading(true);
+    setLoading((prev) => prev || properties.length === 0);
     try {
       const data = await api.properties.list();
       setProperties(data);

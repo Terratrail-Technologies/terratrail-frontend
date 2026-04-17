@@ -196,6 +196,35 @@ async function request<T>(path: string, options: RequestInit = {}, retry = true)
   return (json && typeof json === "object" && "data" in json ? json.data : json) as T;
 }
 
+// ─── Multipart (file upload) HTTP helper ─────────────────────────────────────
+async function requestFile<T>(path: string, formData: FormData, method = "POST", retry = true): Promise<T> {
+  const tokens = getTokens();
+  const headers: Record<string, string> = {
+    "X-Workspace-Slug": getWorkspaceSlug(),
+  };
+  if (tokens?.access) headers["Authorization"] = `Bearer ${tokens.access}`;
+
+  const response = await fetch(`${BASE_URL}${path}`, { method, body: formData, headers });
+
+  if (response.status === 401 && retry) {
+    try {
+      await refreshAccessToken();
+      return requestFile<T>(path, formData, method, false);
+    } catch {
+      forceLogout("token_expired");
+      throw new Error("Session expired. Please sign in again.");
+    }
+  }
+  if (response.status === 403) throw new Error("You don't have permission to perform this action.");
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}));
+    throw new Error((err as any)?.message || (err as any)?.detail || `HTTP ${response.status}`);
+  }
+  const json = await response.json().catch(() => null);
+  if (!json) return undefined as T;
+  return (json?.data ?? json) as T;
+}
+
 function buildParams(params: Record<string, unknown>): string {
   const searchParams = new URLSearchParams();
   Object.entries(params).forEach(([key, value]) => {
@@ -258,6 +287,18 @@ export const api = {
       request<any>(`/properties/${id}/`, { method: "PATCH", body: JSON.stringify(data) }),
     delete: (id: string) =>
       request<void>(`/properties/${id}/`, { method: "DELETE" }),
+    uploadFeaturedImage: (id: string, file: File) => {
+      const fd = new FormData();
+      fd.append("featured_image", file);
+      return requestFile<any>(`/properties/${id}/`, fd, "PATCH");
+    },
+    uploadGalleryImage: (propertyId: string, file: File, order = 0) => {
+      const fd = new FormData();
+      fd.append("property", propertyId);
+      fd.append("image", file);
+      fd.append("order", String(order));
+      return requestFile<any>("/properties/gallery/", fd, "POST");
+    },
   },
 
   // ── Customers ─────────────────────────────────────────────────────────────

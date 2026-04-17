@@ -2,6 +2,9 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { Outlet, Link, useLocation, useNavigate } from "react-router";
 import { useCurrentUser } from "../hooks/useCurrentUser";
 import { useWorkspace } from "../hooks/useWorkspace";
+import { usePolling } from "../hooks/usePolling";
+import { usePageTitle } from "../hooks/usePageTitle";
+import { api } from "../services/api";
 import {
   LayoutDashboard,
   Building2,
@@ -135,6 +138,13 @@ function NavContent() {
   const { setOpenMobile } = useSidebar();
   const { displayName, initials, user } = useCurrentUser();
   const { name: workspaceName, domain } = useWorkspace();
+  const [planUsage, setPlanUsage] = useState<any>(null);
+
+  usePolling(() => {
+    api.workspaces.billingUsage()
+      .then((data) => setPlanUsage(data))
+      .catch(() => {});
+  }, 60_000);
 
   const handleLogout = () => {
     localStorage.removeItem("tt_auth");
@@ -207,22 +217,30 @@ function NavContent() {
         {/* ── Growth plan + bottom nav ──────────────────────────────── */}
         <SidebarGroup className="mt-auto">
           <SidebarGroupContent>
-            {/* Growth plan pill */}
-            <div className="mx-3 mb-3 rounded-lg border border-emerald-100 bg-emerald-50 px-3 py-2.5">
-              <div className="flex items-center justify-between mb-1.5">
-                <span className="text-[11px] font-bold text-emerald-800">Growth Plan</span>
-                <span className="text-[10px] font-semibold text-emerald-600">10%</span>
+            {/* Plan usage pill — real-time */}
+            {planUsage && (
+              <div className="mx-3 mb-3 rounded-lg border border-emerald-100 bg-emerald-50 px-3 py-2.5">
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-[11px] font-bold text-emerald-800 truncate">
+                    {planUsage.plan_display ?? planUsage.plan ?? "Free Plan"}
+                  </span>
+                  <span className="text-[10px] font-semibold text-emerald-600 shrink-0 ml-1">
+                    {planUsage.properties_percent ?? planUsage.usage_percent ?? 0}%
+                  </span>
+                </div>
+                <div className="h-1 rounded-full bg-emerald-100 overflow-hidden">
+                  <motion.div
+                    initial={{ width: 0 }}
+                    animate={{ width: `${Math.min(planUsage.properties_percent ?? planUsage.usage_percent ?? 0, 100)}%` }}
+                    transition={{ duration: 0.8, ease: "easeOut" }}
+                    className="h-full rounded-full bg-emerald-500"
+                  />
+                </div>
+                <div className="text-[10px] text-emerald-600/70 mt-1.5">
+                  {planUsage.properties_used ?? 0} / {planUsage.properties_limit ?? "∞"} Properties
+                </div>
               </div>
-              <div className="h-1 rounded-full bg-emerald-100 overflow-hidden">
-                <motion.div
-                  initial={{ width: 0 }}
-                  animate={{ width: "10%" }}
-                  transition={{ duration: 0.8, ease: "easeOut" }}
-                  className="h-full rounded-full bg-emerald-500"
-                />
-              </div>
-              <div className="text-[10px] text-emerald-600/70 mt-1.5">1 / 10 Properties</div>
-            </div>
+            )}
 
             <SidebarMenu className="gap-0.5">
               {bottomNavItems.map((item) => {
@@ -290,13 +308,12 @@ export function MainLayout() {
   }, [handleAuthLogout]);
 
   // Page title from route
-  const pageTitle =
-    location.pathname === "/"
-      ? "Overview"
-      : location.pathname.split("/")[1].replace(/-/g, " ");
-
-  // Pretty-print "settings/people" → "Settings"
-  const displayTitle = pageTitle.split("/")[0];
+  const routeSegment = location.pathname === "/"
+    ? "Overview"
+    : location.pathname.split("/")[1].replace(/-/g, " ");
+  const displayTitle = routeSegment.split("/")[0];
+  const pageTitle = displayTitle.charAt(0).toUpperCase() + displayTitle.slice(1);
+  usePageTitle(pageTitle);
 
   return (
     <SidebarProvider>
@@ -355,10 +372,10 @@ export function MainLayout() {
             <AnimatePresence mode="wait">
               <motion.div
                 key={location.pathname}
-                initial={{ opacity: 0, y: 8 }}
+                initial={{ opacity: 1, y: 6 }}
                 animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -6 }}
-                transition={{ duration: 0.18, ease: [0.4, 0, 0.2, 1] }}
+                exit={{ opacity: 0, y: -4 }}
+                transition={{ duration: 0.14, ease: [0.4, 0, 0.2, 1] }}
                 className="h-full"
               >
                 <Outlet />
