@@ -1,5 +1,6 @@
 import { ChevronDown, Check, Lock } from "lucide-react";
 import { Badge } from "../../../components/ui/badge";
+import { usePageTitle } from "../../../hooks/usePageTitle";
 
 const addons = [
   {
@@ -12,6 +13,7 @@ const addons = [
 ];
 
 export function AddonsSettings() {
+  usePageTitle("Add-ons");
   return (
     <div className="max-w-3xl space-y-6">
       <div className="bg-white rounded-lg border border-neutral-200 divide-y divide-neutral-200">

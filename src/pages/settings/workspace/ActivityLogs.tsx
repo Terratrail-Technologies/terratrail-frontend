@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { RefreshCw, Loader2, ExternalLink } from "lucide-react";
 import { api } from "../../../services/api";
 import { Badge } from "../../../components/ui/badge";
+import { usePageTitle } from "../../../hooks/usePageTitle";
 
 const CATEGORY_COLORS: Record<string, string> = {
   payment:      "bg-emerald-50 text-emerald-700",
@@ -12,6 +13,7 @@ const CATEGORY_COLORS: Record<string, string> = {
 };
 
 export function ActivityLogs() {
+  usePageTitle("Activity Logs");
   const [logs,    setLogs]    = useState<any[]>([]);
   const [count,   setCount]   = useState(0);
   const [page,    setPage]    = useState(1);

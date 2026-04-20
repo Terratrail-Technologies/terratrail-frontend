@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { Link } from "react-router";
+import { usePageTitle } from "../hooks/usePageTitle";
 import {
   Users, FileText,
   TrendingUp, TrendingDown,
-  Plus, UserPlus, LayoutDashboard,
+  UserPlus, LayoutDashboard,
   Eye, EyeOff, Loader2,
 } from "lucide-react";
 import { motion } from "motion/react";
@@ -32,6 +33,7 @@ const rankColors = [
 const DEFAULT_RANGE: DateRange = { from: null, to: null };
 
 export function Overview() {
+  usePageTitle("Dashboard");
   // ── Date filter state ──────────────────────────────────────────
   const [preset,      setPreset]      = useState<DatePreset>("all_time");
   const [customRange, setCustomRange] = useState<DateRange | null>(null);
@@ -443,13 +445,8 @@ export function Overview() {
               Get started quickly with your most frequent tasks or explore new ways to manage your workspace.
             </p>
             <div className="flex flex-wrap gap-2.5">
-              <Link to="/properties/new"
-                className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-all text-[13px] font-medium shadow-sm">
-                <Plus className="w-3.5 h-3.5" />
-                Add a Property
-              </Link>
               <Link to="/customers"
-                className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-emerald-200 text-emerald-800 rounded-lg hover:bg-emerald-50 transition-all text-[13px] font-medium">
+                className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-all text-[13px] font-medium shadow-sm">
                 <Users className="w-3.5 h-3.5" />
                 Manage Customers
               </Link>

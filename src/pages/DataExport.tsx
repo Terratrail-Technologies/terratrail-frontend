@@ -1,4 +1,5 @@
 import { Users, Calendar, Building2, Badge, FileText, BarChart3, Clock, Download } from "lucide-react";
+import { usePageTitle } from "../hooks/usePageTitle";
 
 const exportTypes = [
   { id: "customers", name: "Customer Data", icon: Users, description: "Export all customer information" },
@@ -54,6 +55,7 @@ const exportHistory = [
 ];
 
 export function DataExport() {
+  usePageTitle("Data Export");
   return (
     <div className="min-h-screen bg-neutral-50">
       {/* Header */}

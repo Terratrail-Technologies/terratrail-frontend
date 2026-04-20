@@ -8,7 +8,7 @@
 
 import { BASE_URL } from "./api";
 
-const INTERVAL_MS = 10 * 60 * 1000; // 10 minutes
+const INTERVAL_MS = 2 * 60 * 1000; // 2 minutes
 let _timerId: ReturnType<typeof setInterval> | null = null;
 
 async function ping() {

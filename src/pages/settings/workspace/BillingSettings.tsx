@@ -12,7 +12,10 @@ const PLAN_COLORS: Record<string, string> = {
   ENTERPRISE: "bg-amber-50 text-amber-700",
 };
 
+import { usePageTitle } from "../../../hooks/usePageTitle";
+
 export function BillingSettings() {
+  usePageTitle("Billing");
   const [plans,   setPlans]   = useState<any[]>([]);
   const [usage,   setUsage]   = useState<any>(null);
   const [ws,      setWs]      = useState<any>(null);

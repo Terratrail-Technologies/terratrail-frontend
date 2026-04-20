@@ -108,6 +108,7 @@ const AUTH_PATHS = [
   "/workspaces/mine/",
   "/workspaces/create/",
   "/workspaces/check-slug/",
+  "/workspaces/invites/",  // invite detail + accept — no workspace header needed
 ];
 
 // ─── Token refresh queue ─────────────────────────────────────────────────────
@@ -144,11 +145,30 @@ async function refreshAccessToken(): Promise<string> {
   return refreshPromise;
 }
 
+// ─── Dev request logger ───────────────────────────────────────────────────────
+const _isDev = import.meta.env.DEV;
+
+function _logReq(method: string, path: string, status: number, ms: number) {
+  if (!_isDev) return;
+  const style =
+    status >= 500 ? "color:#ef4444;font-weight:bold" :
+    status >= 400 ? "color:#f97316;font-weight:bold" :
+    status >= 300 ? "color:#eab308" :
+    "color:#22c55e";
+  console.groupCollapsed(
+    `%c[API] ${method.padEnd(6)} ${status}  ${path}  (${ms}ms)`,
+    style,
+  );
+  console.log("URL:", `${BASE_URL}${path}`);
+  console.groupEnd();
+}
+
 // ─── Core HTTP helper ─────────────────────────────────────────────────────────
 
 async function request<T>(path: string, options: RequestInit = {}, retry = true): Promise<T> {
   const tokens = getTokens();
   const isAuthPath = AUTH_PATHS.some((p) => path.startsWith(p));
+  const _t0 = Date.now();
 
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
@@ -164,6 +184,7 @@ async function request<T>(path: string, options: RequestInit = {}, retry = true)
   }
 
   const response = await fetch(`${BASE_URL}${path}`, { ...options, headers });
+  _logReq((options.method ?? "GET").toUpperCase(), path, response.status, Date.now() - _t0);
 
   // ── 401 Unauthorized → try token refresh once ────────────────────────────
   if (response.status === 401 && retry && !isAuthPath) {
@@ -184,11 +205,20 @@ async function request<T>(path: string, options: RequestInit = {}, retry = true)
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
-    throw new Error(
-      (errorData as any)?.message ||
-      (errorData as any)?.detail ||
-      `HTTP ${response.status}`
-    );
+    const err = errorData as Record<string, any>;
+    console.error(`[API ${response.status}] ${path}`, err);
+    let message: string | undefined =
+      err?.message ??
+      err?.detail ??
+      err?.non_field_errors?.[0] ??
+      (Array.isArray(err?.errors) ? err.errors[0] : typeof err?.errors === "string" ? err.errors : undefined);
+    if (!message) {
+      const fieldKey = Object.keys(err).find(
+        (k) => Array.isArray(err[k]) && err[k].length > 0
+      );
+      if (fieldKey) message = `${fieldKey}: ${err[fieldKey][0]}`;
+    }
+    throw new Error(message ?? `HTTP ${response.status}`);
   }
 
   const json = await response.json();
@@ -203,8 +233,10 @@ async function requestFile<T>(path: string, formData: FormData, method = "POST",
     "X-Workspace-Slug": getWorkspaceSlug(),
   };
   if (tokens?.access) headers["Authorization"] = `Bearer ${tokens.access}`;
+  const _t0 = Date.now();
 
   const response = await fetch(`${BASE_URL}${path}`, { method, body: formData, headers });
+  _logReq(method.toUpperCase(), path, response.status, Date.now() - _t0);
 
   if (response.status === 401 && retry) {
     try {
@@ -217,8 +249,21 @@ async function requestFile<T>(path: string, formData: FormData, method = "POST",
   }
   if (response.status === 403) throw new Error("You don't have permission to perform this action.");
   if (!response.ok) {
-    const err = await response.json().catch(() => ({}));
-    throw new Error((err as any)?.message || (err as any)?.detail || `HTTP ${response.status}`);
+    const errorData = await response.json().catch(() => ({}));
+    const err = errorData as Record<string, any>;
+    console.error(`[API ${response.status}] ${path}`, err);
+    let message: string | undefined =
+      err?.message ??
+      err?.detail ??
+      err?.non_field_errors?.[0] ??
+      (Array.isArray(err?.errors) ? err.errors[0] : typeof err?.errors === "string" ? err.errors : undefined);
+    if (!message) {
+      const fieldKey = Object.keys(err).find(
+        (k) => Array.isArray(err[k]) && err[k].length > 0
+      );
+      if (fieldKey) message = `${fieldKey}: ${err[fieldKey][0]}`;
+    }
+    throw new Error(message ?? `HTTP ${response.status}`);
   }
   const json = await response.json().catch(() => null);
   if (!json) return undefined as T;
@@ -327,6 +372,12 @@ export const api = {
   // ── Sales Reps / Commissions ──────────────────────────────────────────────
   salesReps: {
     list: () => request<any>("/commissions/reps/").then(unwrapList),
+    create: (data: any) =>
+      request<any>("/commissions/reps/", { method: "POST", body: JSON.stringify(data) }),
+    update: (id: string, data: any) =>
+      request<any>(`/commissions/reps/${id}/`, { method: "PATCH", body: JSON.stringify(data) }),
+    delete: (id: string) =>
+      request<void>(`/commissions/reps/${id}/`, { method: "DELETE" }),
     getStats: (range?: DateRange) =>
       request<any>(
         `/notifications/dashboard/leaderboard/${buildParams({
@@ -334,6 +385,14 @@ export const api = {
           date_to: range?.to,
         })}`
       ),
+  },
+
+  // ── Commissions ────────────────────────────────────────────────────────────
+  commissions: {
+    list: (params?: { status?: string; sales_rep?: string }) =>
+      request<any>(`/commissions/${buildParams(params ?? {})}`).then(unwrapList),
+    markPaid: (id: string, notes = "") =>
+      request<any>(`/commissions/${id}/mark-paid/`, { method: "POST", body: JSON.stringify({ notes }) }),
   },
 
   // ── Workspaces ────────────────────────────────────────────────────────────
@@ -359,12 +418,33 @@ export const api = {
     listMembers: () => request<any>("/workspaces/members/").then(unwrapList),
     invite: (data: { email: string; role: string }) =>
       request<any>("/workspaces/invites/", { method: "POST", body: JSON.stringify(data) }),
+    getInvite: (token: string) =>
+      request<{ email: string; role: string; workspace_name: string; workspace_slug: string; is_expired: boolean; is_accepted: boolean }>(
+        `/workspaces/invites/${token}/`
+      ),
+    acceptInvite: (token: string) =>
+      request<{ detail: string; workspace_slug: string; workspace_name: string; role: string }>(
+        `/workspaces/invites/${token}/accept/`,
+        { method: "POST", body: JSON.stringify({}) }
+      ),
     activity: (page = 1) => request<any>(`/workspaces/activity/${buildParams({ page })}`),
     billingPlans: () => request<any[]>("/workspaces/billing/plans/"),
     billingUsage: () => request<any>("/workspaces/billing/usage/"),
     selectPlan: (data: { plan: string }) =>
       request<any>("/workspaces/billing/select/", { method: "POST", body: JSON.stringify(data) }),
     mine: () => request<any[]>("/workspaces/mine/"),
+    myMembership: () =>
+      request<{ role: string; is_active: boolean; workspace_id: string; workspace_name: string }>(
+        "/workspaces/my-membership/"
+      ),
+  },
+
+  // ── Banking / Account Verification ───────────────────────────────────────
+  banking: {
+    verifyAccount: (accountNumber: string, bankCode: string) =>
+      request<{ account_name: string; account_number: string }>(
+        `/payments/verify-account/${buildParams({ account_number: accountNumber, bank_code: bankCode })}`
+      ),
   },
 
   // ── Auth ──────────────────────────────────────────────────────────────────

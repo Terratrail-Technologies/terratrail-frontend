@@ -1,8 +1,10 @@
 import { useState } from "react";
 import { Check, AlertCircle } from "lucide-react";
 import { Badge } from "../../../components/ui/badge";
+import { usePageTitle } from "../../../hooks/usePageTitle";
 
 export function PermissionsSettings() {
+  usePageTitle("Permissions");
   const [approveBookings, setApproveBookings] = useState(false);
   const [manageSubscriptions, setManageSubscriptions] = useState(false);
   const [manageSalesReps, setManageSalesReps] = useState(false);

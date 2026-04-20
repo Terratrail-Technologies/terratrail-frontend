@@ -11,6 +11,7 @@ import { WorkspaceSettings } from "./pages/settings/WorkspaceSettings";
 import { AccountSettings } from "./pages/settings/AccountSettings";
 import { NotFound } from "./pages/NotFound";
 import { ProtectedRoute } from "./components/ProtectedRoute";
+import { AcceptInvite } from "./pages/AcceptInvite";
 // Onboarding – isolated module, no MainLayout dependency
 import { OnboardingLayout } from "./onboarding/components/OnboardingLayout";
 import { SignIn } from "./onboarding/pages/SignIn";
@@ -22,6 +23,9 @@ import { WorkspaceSetup } from "./onboarding/pages/WorkspaceSetup";
 import { SelectPlan } from "./onboarding/pages/SelectPlan";
 
 export const router = createBrowserRouter([
+  // ── Public invite accept page (no auth required) ─────────────────────────
+  { path: "/accept-invite/:token", Component: AcceptInvite },
+
   // ── Onboarding (standalone, no MainLayout) ──────────────────────────────
   {
     path: "/auth/",

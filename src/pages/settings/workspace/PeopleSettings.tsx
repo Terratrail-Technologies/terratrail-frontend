@@ -3,6 +3,7 @@ import { Search, Mail, UserPlus, Loader2, X } from "lucide-react";
 import { toast } from "sonner";
 import { api } from "../../../services/api";
 import { Badge } from "../../../components/ui/badge";
+import { usePageTitle } from "../../../hooks/usePageTitle";
 
 const ROLE_COLORS: Record<string, string> = {
   OWNER:      "bg-purple-50 text-purple-700",
@@ -12,6 +13,7 @@ const ROLE_COLORS: Record<string, string> = {
 };
 
 export function PeopleSettings() {
+  usePageTitle("People & Teams");
   const [members, setMembers]   = useState<any[]>([]);
   const [loading, setLoading]   = useState(true);
   const [search,  setSearch]    = useState("");

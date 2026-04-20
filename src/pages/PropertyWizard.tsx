@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate, useParams } from "react-router";
 import {
   ArrowLeft,
@@ -66,7 +66,37 @@ interface PricingPlan {
   initialPayment: string; duration: string; spreadMethod: "separate" | "first_month";
   active: boolean;
 }
-interface PaymentMethod { id: string; bankName: string; accountName: string; accountNumber: string; active: boolean; }
+interface PaymentMethod { id: string; bankName: string; bankCode: string; accountName: string; accountNumber: string; active: boolean; }
+
+const NIGERIAN_BANKS = [
+  { name: "Access Bank",                   code: "044" },
+  { name: "Citibank Nigeria",              code: "023" },
+  { name: "Ecobank Nigeria",               code: "050" },
+  { name: "Fidelity Bank",                 code: "070" },
+  { name: "First Bank of Nigeria",         code: "011" },
+  { name: "First City Monument Bank",      code: "214" },
+  { name: "Globus Bank",                   code: "00103" },
+  { name: "Guaranty Trust Bank",           code: "058" },
+  { name: "Heritage Bank",                 code: "030" },
+  { name: "Keystone Bank",                 code: "082" },
+  { name: "Kuda Bank",                     code: "50211" },
+  { name: "Lotus Bank",                    code: "303" },
+  { name: "Moniepoint MFB",               code: "50515" },
+  { name: "Opay",                          code: "100004" },
+  { name: "Palmpay",                       code: "100033" },
+  { name: "Polaris Bank",                  code: "076" },
+  { name: "Providus Bank",                 code: "101" },
+  { name: "Stanbic IBTC Bank",             code: "221" },
+  { name: "Standard Chartered Bank",       code: "068" },
+  { name: "Sterling Bank",                 code: "232" },
+  { name: "Titan Trust Bank",              code: "102" },
+  { name: "Union Bank of Nigeria",         code: "032" },
+  { name: "United Bank for Africa",        code: "033" },
+  { name: "Unity Bank",                    code: "215" },
+  { name: "VFD Microfinance Bank",         code: "566" },
+  { name: "Wema Bank",                     code: "035" },
+  { name: "Zenith Bank",                   code: "057" },
+];
 
 const NIGERIAN_STATES = [
   "Abia","Adamawa","Akwa Ibom","Anambra","Bauchi","Bayelsa","Benue","Borno",
@@ -99,10 +129,11 @@ export function PropertyWizard() {
   const [currentStep, setCurrentStep] = useState(1);
 
   // ── Step 1 state ─────────────────────────────────────────────────────────
-  const [propertyName, setPropertyName]     = useState(isEditing ? "Tehillah Estate Phase 1" : "");
+  const [propertyName, setPropertyName]     = useState("");
   const [propertyType, setPropertyType]     = useState("RESIDENTIAL_LAND");
-  const [description, setDescription]       = useState(isEditing ? "Premium residential land in the heart of Lekki." : "");
-  const [totalSqms, setTotalSqms]           = useState(isEditing ? "50000" : "");
+  const [description, setDescription]       = useState("");
+  const [totalSqms, setTotalSqms]           = useState("");
+  const [availableUnits, setAvailableUnits] = useState("");
 
   // ── Step 2 state ─────────────────────────────────────────────────────────
   const [coverImage, setCoverImage]         = useState<File | null>(null);
@@ -112,9 +143,9 @@ export function PropertyWizard() {
   const galleryRef = useRef<HTMLInputElement>(null);
 
   // ── Step 3 state ─────────────────────────────────────────────────────────
-  const [streetAddress, setStreetAddress]   = useState(isEditing ? "Lekki-Epe Expressway" : "");
-  const [city, setCity]                     = useState(isEditing ? "Lagos" : "");
-  const [state, setState]                   = useState(isEditing ? "Lagos" : "");
+  const [streetAddress, setStreetAddress]   = useState("");
+  const [city, setCity]                     = useState("");
+  const [state, setState]                   = useState("");
   const [postalCode, setPostalCode]         = useState("");
   const [landmark, setLandmark]             = useState("");
   const [latitude,  setLatitude]            = useState("");
@@ -122,35 +153,22 @@ export function PropertyWizard() {
   const [geoLoading, setGeoLoading]         = useState(false);
 
   // ── Step 4 state ─────────────────────────────────────────────────────────
-  const [amenities, setAmenities]           = useState<Amenity[]>(
-    isEditing ? [
-      { id: "1", name: "Perimeter Fencing", status: "NOT_STARTED", description: "" },
-      { id: "2", name: "Street Lights", status: "IN_PROGRESS", description: "" },
-    ] : []
-  );
+  const [amenities, setAmenities]           = useState<Amenity[]>([]);
   const [showAmenityModal, setShowAmenityModal] = useState(false);
   const [editingAmenityId, setEditingAmenityId] = useState<string | null>(null);
   const [amenityForm, setAmenityForm]           = useState({ name: "", status: "Not Started" });
 
   // ── Step 5 state ─────────────────────────────────────────────────────────
-  const [documents, setDocuments]           = useState<Doc[]>(
-    isEditing ? [{ id: "1", documentType: "SURVEY_PLAN", status: "NOT_STARTED", notes: "", file: null, fileName: "survey-plan.pdf" }] : []
-  );
+  const [documents, setDocuments]           = useState<Doc[]>([]);
   const [showDocModal, setShowDocModal]     = useState(false);
-  const [docForm, setDocForm]               = useState({ documentType: "SURVEY_PLAN", status: "NOT_STARTED", notes: "", file: null as File | null, fileName: "" });
+  const [docForm, setDocForm]               = useState({ documentType: "SURVEY_PLAN", customDocName: "", status: "NOT_STARTED", notes: "", file: null as File | null, fileName: "" });
   const docFileRef = useRef<HTMLInputElement>(null);
 
   // ── Submission ─────────────────────────────────────────────────────────
   const [submitting, setSubmitting] = useState(false);
 
   // ── Step 6 state ─────────────────────────────────────────────────────────
-  const [pricingPlans, setPricingPlans]     = useState<PricingPlan[]>(
-    isEditing ? [{
-      id: "1", name: "Pre-launch Price", landSize: "300", currency: "NGN",
-      totalPrice: "1500000", paymentType: "installment",
-      initialPayment: "250000", duration: "6", spreadMethod: "separate", active: true,
-    }] : []
-  );
+  const [pricingPlans, setPricingPlans]     = useState<PricingPlan[]>([]);
   const [showPricingModal, setShowPricingModal] = useState(false);
   const [editingPlanId, setEditingPlanId]       = useState<string | null>(null);
   const [pricingForm, setPricingForm]           = useState<Omit<PricingPlan, "id" | "active">>({
@@ -159,15 +177,12 @@ export function PropertyWizard() {
   });
 
   // ── Step 7 state ─────────────────────────────────────────────────────────
-  const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>(
-    isEditing ? [{
-      id: "1", bankName: "First Bank", accountName: "Tehillah Estate Ltd",
-      accountNumber: "1234567890", active: true,
-    }] : []
-  );
+  const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [editingPaymentId, setEditingPaymentId] = useState<string | null>(null);
-  const [paymentForm, setPaymentForm]           = useState({ bankName: "", accountName: "", accountNumber: "" });
+  const [paymentForm, setPaymentForm]           = useState({ bankName: "", bankCode: "", accountName: "", accountNumber: "" });
+  const [verifyingAccount, setVerifyingAccount] = useState(false);
+  const [verifyError, setVerifyError]           = useState("");
 
   // ── Helpers ───────────────────────────────────────────────────────────────
   const monthlyInstallment = useCallback((p: Omit<PricingPlan, "id" | "active">) => {
@@ -179,6 +194,55 @@ export function PropertyWizard() {
       ? (total - init) / dur
       : (total - init) / (dur - 1 || 1);
   }, []);
+
+  // ── Load property data for editing ───────────────────────────────────────
+  useEffect(() => {
+    if (!isEditing || !id) return;
+    api.properties.get(id).then((prop: any) => {
+      setPropertyName(prop.name ?? "");
+      setPropertyType(prop.property_type ?? "RESIDENTIAL_LAND");
+      setDescription(prop.description ?? "");
+      setTotalSqms(prop.total_sqms?.toString() ?? "");
+      if (prop.featured_image) setCoverPreview(prop.featured_image);
+      if (prop.location) {
+        setStreetAddress(prop.location.address ?? "");
+        setCity(prop.location.city ?? "");
+        setState(prop.location.state ?? "");
+        setPostalCode(prop.location.postal_code ?? "");
+        setLatitude(prop.location.latitude?.toString() ?? "");
+        setLongitude(prop.location.longitude?.toString() ?? "");
+      }
+      if (prop.amenities?.length) {
+        setAmenities(prop.amenities.map((a: any) => ({
+          id: a.id, name: a.name, status: a.status, description: a.description ?? "",
+        })));
+      }
+      if (prop.documents?.length) {
+        setDocuments(prop.documents.map((d: any) => ({
+          id: d.id, documentType: d.document_type, status: d.status,
+          notes: d.notes ?? "", file: null,
+          fileName: d.custom_document_name || d.document_type,
+        })));
+      }
+      if (prop.pricing_plans?.length) {
+        setPricingPlans(prop.pricing_plans.filter((p: any) => !p.is_locked).map((p: any) => ({
+          id: p.id, name: p.plan_name, landSize: p.land_size?.toString() ?? "",
+          currency: "NGN", totalPrice: p.total_price?.toString() ?? "",
+          paymentType: p.payment_type === "OUTRIGHT" ? "outright" : "installment",
+          initialPayment: p.initial_payment?.toString() ?? "",
+          duration: p.duration_months?.toString() ?? "12",
+          spreadMethod: p.payment_spread_method === "INITIAL_SEPARATE" ? "separate" : "first_month",
+          active: true,
+        })));
+      }
+      if (prop.bank_accounts?.length) {
+        setPaymentMethods(prop.bank_accounts.map((b: any) => ({
+          id: b.id, bankName: b.bank_name, bankCode: "",
+          accountName: b.account_name, accountNumber: b.account_number, active: true,
+        })));
+      }
+    }).catch(() => toast.error("Failed to load property data."));
+  }, [id, isEditing]);
 
   // ── Geolocation ───────────────────────────────────────────────────────────
   const handleUseLocation = () => {
@@ -253,7 +317,7 @@ export function PropertyWizard() {
 
   // ── Document CRUD ─────────────────────────────────────────────────────────
   const openAddDoc = () => {
-    setDocForm({ documentType: "SURVEY_PLAN", status: "NOT_STARTED", notes: "", file: null, fileName: "" });
+    setDocForm({ documentType: "SURVEY_PLAN", customDocName: "", status: "NOT_STARTED", notes: "", file: null, fileName: "" });
     setShowDocModal(true);
   };
 
@@ -291,19 +355,36 @@ export function PropertyWizard() {
   // ── Payment Method CRUD ───────────────────────────────────────────────────
   const openAddPayment = () => {
     setEditingPaymentId(null);
-    setPaymentForm({ bankName: "", accountName: "", accountNumber: "" });
+    setPaymentForm({ bankName: "", bankCode: "", accountName: "", accountNumber: "" });
+    setVerifyError("");
     setShowPaymentModal(true);
   };
 
   const openEditPayment = (m: PaymentMethod) => {
     setEditingPaymentId(m.id);
-    setPaymentForm({ bankName: m.bankName, accountName: m.accountName, accountNumber: m.accountNumber });
+    setPaymentForm({ bankName: m.bankName, bankCode: m.bankCode ?? "", accountName: m.accountName, accountNumber: m.accountNumber });
+    setVerifyError("");
     setShowPaymentModal(true);
+  };
+
+  const handleVerifyAccount = async () => {
+    if (!paymentForm.bankCode) { setVerifyError("Please select a bank first."); return; }
+    if (paymentForm.accountNumber.length !== 10) { setVerifyError("Account number must be exactly 10 digits."); return; }
+    setVerifyingAccount(true);
+    setVerifyError("");
+    try {
+      const res = await api.banking.verifyAccount(paymentForm.accountNumber, paymentForm.bankCode);
+      setPaymentForm((f) => ({ ...f, accountName: res.account_name }));
+    } catch (err: any) {
+      setVerifyError(err.message ?? "Could not verify account. Check the number and try again.");
+    } finally {
+      setVerifyingAccount(false);
+    }
   };
 
   const savePayment = () => {
     if (!paymentForm.bankName.trim() || !paymentForm.accountName.trim() || paymentForm.accountNumber.length < 10) {
-      toast.error("Bank name, account name, and a valid account number are required.");
+      toast.error("Please select a bank, enter a valid account number, and verify the account name.");
       return;
     }
     if (editingPaymentId) {
@@ -317,7 +398,7 @@ export function PropertyWizard() {
   };
 
   // ── Submit to API ─────────────────────────────────────────────────────────
-  const handleSubmit = async () => {
+  const handleSubmit = async (overrideStatus?: string) => {
     setSubmitting(true);
     try {
       const payload: any = {
@@ -325,6 +406,8 @@ export function PropertyWizard() {
         property_type: propertyType,
         description,
         total_sqms: totalSqms,
+        available_units: availableUnits ? Number(availableUnits) : undefined,
+        status: overrideStatus ?? "DRAFT",
         unit_measurement: "sqm",
         location: {
           address: streetAddress || `${city}, ${state}`,
@@ -342,6 +425,7 @@ export function PropertyWizard() {
         })),
         documents: documents.map((d) => ({
           document_type: d.documentType,
+          custom_document_name: d.documentType === "OTHER" ? d.fileName : undefined,
           status: d.status,
           notes: d.notes,
         })),
@@ -366,20 +450,22 @@ export function PropertyWizard() {
         ? await api.properties.update(id!, payload)
         : await api.properties.create(payload);
 
+      const propertyId: string = created?.id ?? id!;
+
       // Upload featured image (multipart PATCH)
-      if (coverImage && created?.id) {
+      if (coverImage && propertyId) {
         try {
-          await api.properties.uploadFeaturedImage(created.id, coverImage);
+          await api.properties.uploadFeaturedImage(propertyId, coverImage);
         } catch {
           toast.error("Property saved, but cover image upload failed.");
         }
       }
 
       // Upload gallery images
-      if (galleryImages.length > 0 && created?.id) {
+      if (galleryImages.length > 0 && propertyId) {
         await Promise.allSettled(
           galleryImages.map((img, i) =>
-            api.properties.uploadGalleryImage(created.id, img.file, i)
+            api.properties.uploadGalleryImage(propertyId, img.file, i)
           )
         );
       }
@@ -519,7 +605,15 @@ export function PropertyWizard() {
                       Total SQMs <span className="text-red-500">*</span>
                     </label>
                     <Input type="number" value={totalSqms} onChange={(e) => setTotalSqms(e.target.value)}
-                      placeholder="e.g. 50000" className="bg-white" />
+                      placeholder="e.g. 50000" className="bg-white border-neutral-300 focus-visible:ring-emerald-500/30 focus-visible:border-emerald-400" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-neutral-700 mb-1.5">
+                      Available Units <span className="text-red-500">*</span>
+                    </label>
+                    <Input type="number" value={availableUnits} onChange={(e) => setAvailableUnits(e.target.value)}
+                      placeholder="e.g. 100" className="bg-white border-neutral-300 focus-visible:ring-emerald-500/30 focus-visible:border-emerald-400" />
+                    <p className="text-xs text-neutral-400 mt-1">Number of plots / units available for sale</p>
                   </div>
                 </div>
               )}
@@ -599,7 +693,7 @@ export function PropertyWizard() {
                     <div className="sm:col-span-2">
                       <label className="block text-sm font-medium text-neutral-700 mb-1.5">Street Address</label>
                       <Input value={streetAddress} onChange={(e) => setStreetAddress(e.target.value)}
-                        placeholder="Enter street address" className="bg-white" />
+                        placeholder="Enter address" className="bg-white border-neutral-300 focus-visible:ring-emerald-500/30 focus-visible:border-emerald-400" />
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-neutral-700 mb-1.5">
@@ -904,16 +998,25 @@ export function PropertyWizard() {
                   <ArrowLeft className="w-4 h-4" />
                   {currentStep === 1 ? "Cancel" : "Back"}
                 </Button>
-                <Button onClick={handleNext} disabled={submitting}
-                  className="inline-flex items-center gap-2 px-6 bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-70">
-                  {submitting ? (
-                    <><Loader2 className="w-4 h-4 animate-spin" /> Saving…</>
-                  ) : currentStep === steps.length ? (
-                    <><Eye className="w-4 h-4" /> {isEditing ? "Save Changes" : "Create Property"}</>
-                  ) : (
-                    <>Save & Continue <ArrowRight className="w-4 h-4" /></>
+                <div className="flex items-center gap-3">
+                  {currentStep === steps.length && (
+                    <Button variant="outline" disabled={submitting}
+                      onClick={() => handleSubmit("DRAFT")}
+                      className="inline-flex items-center gap-2 px-6 bg-white text-neutral-700 border-neutral-300">
+                      Save as Draft
+                    </Button>
                   )}
-                </Button>
+                  <Button onClick={handleNext} disabled={submitting}
+                    className="inline-flex items-center gap-2 px-6 bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-70">
+                    {submitting ? (
+                      <><Loader2 className="w-4 h-4 animate-spin" /> Saving…</>
+                    ) : currentStep === steps.length ? (
+                      <><Eye className="w-4 h-4" /> {isEditing ? "Save Changes" : "Publish Property"}</>
+                    ) : (
+                      <>Save & Continue <ArrowRight className="w-4 h-4" /></>
+                    )}
+                  </Button>
+                </div>
               </div>
             </motion.div>
           </AnimatePresence>
@@ -971,7 +1074,6 @@ export function PropertyWizard() {
       {/* Document modal */}
       {showDocModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <input ref={docFileRef} type="file" accept=".pdf,.doc,.docx,image/*" className="hidden" onChange={handleDocFileChange} />
           <div className="bg-white rounded-xl max-w-md w-full p-6 shadow-xl">
             <div className="flex items-center justify-between mb-5">
               <h3 className="font-semibold text-neutral-900">Add Document</h3>
@@ -985,18 +1087,27 @@ export function PropertyWizard() {
                   Document Type <span className="text-red-500">*</span>
                 </label>
                 <select value={docForm.documentType}
-                  onChange={(e) => setDocForm((d) => ({ ...d, documentType: e.target.value }))}
-                  className="w-full px-3 py-2 border border-neutral-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                  onChange={(e) => setDocForm((d) => ({ ...d, documentType: e.target.value, customDocName: "" }))}
+                  className="w-full px-3 py-2 border border-neutral-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400 transition-colors">
                   {DOCUMENT_TYPES.map((dt) => (
                     <option key={dt.value} value={dt.value}>{dt.label}</option>
                   ))}
                 </select>
+                {docForm.documentType === "OTHER" && (
+                  <input
+                    type="text"
+                    value={docForm.customDocName}
+                    onChange={(e) => setDocForm((d) => ({ ...d, customDocName: e.target.value }))}
+                    placeholder="Enter custom document name…"
+                    className="w-full mt-2 px-3 py-2 border border-neutral-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400 transition-colors"
+                  />
+                )}
               </div>
               <div>
                 <label className="block text-sm font-medium text-neutral-700 mb-1.5">Status</label>
                 <select value={docForm.status}
                   onChange={(e) => setDocForm((d) => ({ ...d, status: e.target.value }))}
-                  className="w-full px-3 py-2 border border-neutral-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                  className="w-full px-3 py-2 border border-neutral-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400 transition-colors">
                   {DOCUMENT_STATUSES.map((s) => (
                     <option key={s.value} value={s.value}>{s.label}</option>
                   ))}
@@ -1008,25 +1119,8 @@ export function PropertyWizard() {
                   onChange={(e) => setDocForm((d) => ({ ...d, notes: e.target.value }))}
                   placeholder="Additional notes about this document…"
                   rows={3}
-                  className="w-full px-3 py-2 border border-neutral-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-y"
+                  className="w-full px-3 py-2 border border-neutral-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400 transition-colors resize-y"
                 />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-neutral-700 mb-1.5">Upload File <span className="text-neutral-400 text-xs">(optional)</span></label>
-                <div onClick={() => docFileRef.current?.click()}
-                  className="border-2 border-dashed border-neutral-300 rounded-lg p-6 text-center cursor-pointer hover:border-emerald-500 hover:bg-emerald-50/30 transition-colors">
-                  {docForm.fileName ? (
-                    <p className="text-sm font-medium text-emerald-700 flex items-center justify-center gap-2">
-                      <FileText className="w-4 h-4" /> {docForm.fileName}
-                    </p>
-                  ) : (
-                    <>
-                      <Upload className="w-8 h-8 text-neutral-400 mx-auto mb-2" />
-                      <p className="text-sm text-neutral-600">Click to upload</p>
-                      <p className="text-xs text-neutral-400 mt-1">PDF, DOC, images up to 20 MB</p>
-                    </>
-                  )}
-                </div>
               </div>
             </div>
             <div className="flex gap-2 mt-6">
@@ -1194,39 +1288,97 @@ export function PropertyWizard() {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl max-w-md w-full p-6 shadow-xl">
             <div className="flex items-center justify-between mb-5">
-              <h3 className="font-semibold text-neutral-900">{editingPaymentId ? "Edit Payment Method" : "Add Payment Method"}</h3>
+              <div>
+                <h3 className="font-semibold text-neutral-900">{editingPaymentId ? "Edit Payment Method" : "Add Payment Method"}</h3>
+                <p className="text-xs text-neutral-400 mt-0.5">Account name is auto-verified — do not type it manually.</p>
+              </div>
               <button onClick={() => setShowPaymentModal(false)} className="p-1 hover:bg-neutral-100 rounded-md">
                 <X className="w-5 h-5" />
               </button>
             </div>
             <div className="space-y-4">
+              {/* Bank select */}
               <div>
-                <label className="block text-sm font-medium text-neutral-700 mb-1.5">Bank Name <span className="text-red-500">*</span></label>
-                <input type="text" value={paymentForm.bankName}
-                  onChange={(e) => setPaymentForm((f) => ({ ...f, bankName: e.target.value }))}
-                  placeholder="e.g. First Bank"
-                  className="w-full px-3 py-2 border border-neutral-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                />
+                <label className="block text-sm font-medium text-neutral-700 mb-1.5">
+                  Bank <span className="text-red-500">*</span>
+                </label>
+                <select
+                  value={paymentForm.bankCode}
+                  onChange={(e) => {
+                    const bank = NIGERIAN_BANKS.find((b) => b.code === e.target.value);
+                    setPaymentForm((f) => ({
+                      ...f,
+                      bankCode: e.target.value,
+                      bankName: bank?.name ?? "",
+                      accountName: "",
+                    }));
+                    setVerifyError("");
+                  }}
+                  className="w-full px-3 py-2 border border-neutral-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400 transition-colors"
+                >
+                  <option value="">— Select a bank —</option>
+                  {NIGERIAN_BANKS.map((b) => (
+                    <option key={b.code} value={b.code}>{b.name}</option>
+                  ))}
+                </select>
               </div>
+
+              {/* Account Number + Verify */}
               <div>
-                <label className="block text-sm font-medium text-neutral-700 mb-1.5">Account Name <span className="text-red-500">*</span></label>
-                <input type="text" value={paymentForm.accountName}
-                  onChange={(e) => setPaymentForm((f) => ({ ...f, accountName: e.target.value }))}
-                  placeholder="e.g. Tehillah Estate Ltd"
-                  className="w-full px-3 py-2 border border-neutral-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-neutral-700 mb-1.5">Account Number <span className="text-red-500">*</span></label>
-                <input type="text" value={paymentForm.accountNumber}
-                  onChange={(e) => setPaymentForm((f) => ({ ...f, accountNumber: e.target.value.replace(/\D/g, "") }))}
-                  placeholder="10-digit account number"
-                  maxLength={10}
-                  className="w-full px-3 py-2 border border-neutral-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                />
+                <label className="block text-sm font-medium text-neutral-700 mb-1.5">
+                  Account Number <span className="text-red-500">*</span>
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={paymentForm.accountNumber}
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/\D/g, "");
+                      setPaymentForm((f) => ({ ...f, accountNumber: val, accountName: "" }));
+                      setVerifyError("");
+                    }}
+                    placeholder="10-digit account number"
+                    maxLength={10}
+                    className="flex-1 px-3 py-2 border border-neutral-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400 transition-colors"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleVerifyAccount}
+                    disabled={verifyingAccount || paymentForm.accountNumber.length !== 10 || !paymentForm.bankCode}
+                    className="px-3 py-2 bg-emerald-600 text-white rounded-md text-sm hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-1.5 shrink-0"
+                  >
+                    {verifyingAccount ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
+                    {verifyingAccount ? "Checking…" : "Verify"}
+                  </button>
+                </div>
                 {paymentForm.accountNumber && paymentForm.accountNumber.length < 10 && (
                   <p className="text-xs text-amber-600 mt-1 flex items-center gap-1">
-                    <AlertCircle className="w-3 h-3" /> Must be 10 digits
+                    <AlertCircle className="w-3 h-3" /> Must be exactly 10 digits
+                  </p>
+                )}
+                {verifyError && (
+                  <p className="text-xs text-red-600 mt-1 flex items-center gap-1">
+                    <AlertCircle className="w-3 h-3" /> {verifyError}
+                  </p>
+                )}
+              </div>
+
+              {/* Account Name — read-only, auto-filled */}
+              <div>
+                <label className="block text-sm font-medium text-neutral-700 mb-1.5">
+                  Account Name <span className="text-neutral-400 text-xs">(auto-verified)</span>
+                </label>
+                <div className={`w-full px-3 py-2 border rounded-md text-sm min-h-[38px] flex items-center ${
+                  paymentForm.accountName
+                    ? "border-emerald-300 bg-emerald-50 text-emerald-800 font-medium"
+                    : "border-neutral-200 bg-neutral-50 text-neutral-400"
+                }`}>
+                  {paymentForm.accountName || "Will appear after verification"}
+                </div>
+                {paymentForm.accountName && (
+                  <p className="text-xs text-emerald-600 mt-1 flex items-center gap-1">
+                    <span className="w-3 h-3 rounded-full bg-emerald-500 flex items-center justify-center text-white text-[8px] font-bold">✓</span>
+                    Account verified
                   </p>
                 )}
               </div>
@@ -1236,8 +1388,11 @@ export function PropertyWizard() {
                 className="flex-1 px-4 py-2 border border-neutral-300 text-neutral-700 rounded-md text-sm hover:bg-neutral-50">
                 Cancel
               </button>
-              <button onClick={savePayment}
-                className="flex-1 px-4 py-2 bg-emerald-600 text-white rounded-md text-sm hover:bg-emerald-700">
+              <button
+                onClick={savePayment}
+                disabled={!paymentForm.accountName}
+                className="flex-1 px-4 py-2 bg-emerald-600 text-white rounded-md text-sm hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
                 {editingPaymentId ? "Update" : "Add Method"}
               </button>
             </div>

@@ -1,7 +1,9 @@
 import { Link } from "react-router";
 import { Home, ArrowLeft } from "lucide-react";
+import { usePageTitle } from "../hooks/usePageTitle";
 
 export function NotFound() {
+  usePageTitle("Page Not Found");
   return (
     <div className="min-h-screen bg-neutral-50 flex items-center justify-center p-8">
       <div className="text-center max-w-md">

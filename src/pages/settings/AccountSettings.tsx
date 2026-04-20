@@ -3,6 +3,7 @@ import { Check, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { api, type User } from "../../services/api";
 import { useCurrentUser } from "../../hooks/useCurrentUser";
+import { usePageTitle } from "../../hooks/usePageTitle";
 
 const inputCls =
   "w-full px-4 py-2 border border-neutral-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent disabled:bg-neutral-50 disabled:text-neutral-400 disabled:cursor-not-allowed";
@@ -11,6 +12,7 @@ const selectCls =
   "w-full px-4 py-2 border border-neutral-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent bg-white";
 
 export function AccountSettings() {
+  usePageTitle("Account Settings");
   const { user: cachedUser, initials, refresh } = useCurrentUser();
 
   const [form, setForm] = useState<Partial<User & { password?: string }>>({});

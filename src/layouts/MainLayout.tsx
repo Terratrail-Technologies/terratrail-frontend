@@ -4,6 +4,7 @@ import { useCurrentUser } from "../hooks/useCurrentUser";
 import { useWorkspace } from "../hooks/useWorkspace";
 import { usePolling } from "../hooks/usePolling";
 import { usePageTitle } from "../hooks/usePageTitle";
+import { useWorkspaceRole } from "../hooks/useWorkspaceRole";
 import { api } from "../services/api";
 import {
   LayoutDashboard,
@@ -17,8 +18,8 @@ import {
   User,
   Calendar,
   LogOut,
-  Plus,
   ChevronRight,
+  Loader2,
 } from "lucide-react";
 import { cn } from "../components/ui/utils";
 import {
@@ -39,6 +40,128 @@ import {
 } from "../components/ui/sidebar";
 import { Button } from "../components/ui/button";
 import { motion, AnimatePresence } from "motion/react";
+
+// ── Notification Bell dropdown ────────────────────────────────────────────────
+function NotificationBell() {
+  const [open, setOpen]         = useState(false);
+  const [items, setItems]       = useState<any[]>([]);
+  const [loading, setLoading]   = useState(false);
+  const [unread, setUnread]     = useState(true);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  const handleOpen = async () => {
+    const next = !open;
+    setOpen(next);
+    if (next && items.length === 0) {
+      setLoading(true);
+      try {
+        const res = await api.workspaces.activity(1);
+        const list = Array.isArray(res) ? res : (res as any)?.results ?? [];
+        setItems(list.slice(0, 10));
+        setUnread(false);
+      } catch {
+        setItems([]);
+      } finally {
+        setLoading(false);
+      }
+    } else if (next) {
+      setUnread(false);
+    }
+  };
+
+  const relativeTime = (iso: string) => {
+    const diff = Date.now() - new Date(iso).getTime();
+    const m = Math.floor(diff / 60000);
+    if (m < 1)  return "just now";
+    if (m < 60) return `${m}m ago`;
+    const h = Math.floor(m / 60);
+    if (h < 24) return `${h}h ago`;
+    return `${Math.floor(h / 24)}d ago`;
+  };
+
+  return (
+    <div ref={ref} style={{ position: "relative" }}>
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={handleOpen}
+        className="relative h-8 w-8 text-neutral-400 hover:text-neutral-700 hover:bg-neutral-50 rounded-lg"
+        title="Notifications"
+      >
+        <Bell className="size-[15px]" />
+        {unread && (
+          <span className="absolute top-1.5 right-1.5 h-1.5 w-1.5 rounded-full bg-red-500 ring-1 ring-white" />
+        )}
+      </Button>
+
+      {open && (
+        <div className="absolute right-0 top-full mt-1.5 w-[320px] rounded-xl border border-neutral-100 bg-white shadow-lg shadow-neutral-900/10 z-50 overflow-hidden">
+          <div className="px-4 py-3 border-b border-neutral-50 flex items-center justify-between">
+            <span className="text-[12.5px] font-semibold text-neutral-800">Recent Activity</span>
+            <button
+              onClick={() => setOpen(false)}
+              className="text-[11px] text-emerald-600 hover:text-emerald-700 font-medium"
+            >
+              Close
+            </button>
+          </div>
+
+          <div className="max-h-80 overflow-y-auto">
+            {loading ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="w-4 h-4 animate-spin text-neutral-300" />
+              </div>
+            ) : items.length === 0 ? (
+              <div className="text-center py-8 text-[12px] text-neutral-400">
+                No recent activity
+              </div>
+            ) : (
+              <div className="py-1.5">
+                {items.map((act: any, i: number) => (
+                  <div
+                    key={act.id ?? i}
+                    className="px-4 py-2.5 hover:bg-neutral-50 transition-colors cursor-default"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <p className="text-[12px] text-neutral-700 leading-snug flex-1">
+                        {act.description ?? act.action ?? act.message ?? "Activity recorded"}
+                      </p>
+                      {act.created_at && (
+                        <span className="text-[10.5px] text-neutral-400 shrink-0 mt-0.5">
+                          {relativeTime(act.created_at)}
+                        </span>
+                      )}
+                    </div>
+                    {act.actor && (
+                      <p className="text-[11px] text-neutral-400 mt-0.5">{act.actor}</p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="border-t border-neutral-50 px-4 py-2.5">
+            <button
+              onClick={() => { setOpen(false); window.location.href = "/settings/activity"; }}
+              className="text-[11.5px] text-emerald-600 hover:text-emerald-700 font-medium w-full text-center"
+            >
+              View all activity →
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 // ── Navbar user dropdown ──────────────────────────────────────────────────────
 function NavbarUserMenu() {
@@ -117,19 +240,19 @@ function NavbarUserMenu() {
   );
 }
 
-const mainNavItems = [
-  { icon: LayoutDashboard, label: "Overview",        href: "/" },
-  { icon: Building2,       label: "Properties",      href: "/properties" },
-  { icon: Users,           label: "Customers",       href: "/customers" },
-  { icon: UserCheck,       label: "Sales Reps",      href: "/sales-reps" },
-  { icon: Calendar,        label: "Site Inspection", href: "/site-inspection" },
-  { icon: Download,        label: "Data Export",     href: "/data-export" },
+const ALL_NAV_ITEMS = [
+  { icon: LayoutDashboard, label: "Overview",        href: "/",               roles: ["OWNER","ADMIN","SALES_REP","CUSTOMER"] },
+  { icon: Building2,       label: "Properties",      href: "/properties",     roles: ["OWNER","ADMIN","SALES_REP"] },
+  { icon: Users,           label: "Customers",       href: "/customers",      roles: ["OWNER","ADMIN"] },
+  { icon: UserCheck,       label: "Sales Reps",      href: "/sales-reps",     roles: ["OWNER","ADMIN"] },
+  { icon: Calendar,        label: "Site Inspection", href: "/site-inspection",roles: ["OWNER","ADMIN","SALES_REP"] },
+  { icon: Download,        label: "Data Export",     href: "/data-export",    roles: ["OWNER","ADMIN"] },
 ];
 
-const bottomNavItems = [
-  { icon: Settings,    label: "Workspace", href: "/settings" },
-  { icon: HelpCircle,  label: "Help",      href: "#" },
-  { icon: User,        label: "Account",   href: "/account" },
+const ALL_BOTTOM_ITEMS = [
+  { icon: Settings,    label: "Workspace", href: "/settings", roles: ["OWNER","ADMIN"] },
+  { icon: HelpCircle,  label: "Help",      href: "#",         roles: ["OWNER","ADMIN","SALES_REP","CUSTOMER"] },
+  { icon: User,        label: "Account",   href: "/account",  roles: ["OWNER","ADMIN","SALES_REP","CUSTOMER"] },
 ];
 
 function NavContent() {
@@ -138,6 +261,7 @@ function NavContent() {
   const { setOpenMobile } = useSidebar();
   const { displayName, initials, user } = useCurrentUser();
   const { name: workspaceName, domain } = useWorkspace();
+  const { role } = useWorkspaceRole();
   const [planUsage, setPlanUsage] = useState<any>(null);
 
   usePolling(() => {
@@ -155,6 +279,19 @@ function NavContent() {
 
   const isActive = (href: string) =>
     href === "/" ? location.pathname === "/" : location.pathname.startsWith(href);
+
+  // Filter nav items by role; fall back to full list if role not yet loaded
+  const mainNavItems = ALL_NAV_ITEMS.filter(
+    (i) => !role || i.roles.includes(role)
+  );
+  const bottomNavItems = ALL_BOTTOM_ITEMS.filter(
+    (i) => !role || i.roles.includes(role)
+  );
+
+  // Role badge label for sidebar
+  const roleBadge: Record<string, string> = {
+    OWNER: "Owner", ADMIN: "Admin", SALES_REP: "Sales Rep", CUSTOMER: "Customer",
+  };
 
   return (
     <>
@@ -183,14 +320,14 @@ function NavContent() {
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu className="gap-0.5">
-              {mainNavItems.map((item) => {
-                const active = isActive(item.href);
+              {mainNavItems.map((navItem) => {
+                const active = isActive(navItem.href);
                 return (
-                  <SidebarMenuItem key={item.href}>
+                  <SidebarMenuItem key={navItem.href}>
                     <SidebarMenuButton
                       asChild
                       isActive={active}
-                      tooltip={item.label}
+                      tooltip={navItem.label}
                       onClick={() => setOpenMobile(false)}
                       className={cn(
                         "h-9 rounded-lg px-3 text-[13px] font-semibold transition-all duration-150",
@@ -199,9 +336,9 @@ function NavContent() {
                           : "text-neutral-600 hover:bg-neutral-50 hover:text-neutral-900 [&>svg]:text-neutral-400"
                       )}
                     >
-                      <Link to={item.href}>
-                        <item.icon className="size-[15px]" />
-                        <span>{item.label}</span>
+                      <Link to={navItem.href}>
+                        <navItem.icon className="size-[15px]" />
+                        <span>{navItem.label}</span>
                         {active && (
                           <div className="ml-auto w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
                         )}
@@ -243,14 +380,14 @@ function NavContent() {
             )}
 
             <SidebarMenu className="gap-0.5">
-              {bottomNavItems.map((item) => {
-                const active = isActive(item.href);
+              {bottomNavItems.map((navItem) => {
+                const active = isActive(navItem.href);
                 return (
-                  <SidebarMenuItem key={item.label}>
+                  <SidebarMenuItem key={navItem.label}>
                     <SidebarMenuButton
                       asChild
                       isActive={active}
-                      tooltip={item.label}
+                      tooltip={navItem.label}
                       onClick={() => setOpenMobile(false)}
                       className={cn(
                         "h-9 rounded-lg px-3 text-[13px] font-semibold transition-all duration-150",
@@ -259,9 +396,9 @@ function NavContent() {
                           : "text-neutral-500 hover:bg-neutral-50 hover:text-neutral-900 [&>svg]:text-neutral-400"
                       )}
                     >
-                      <Link to={item.href}>
-                        <item.icon className="size-[15px]" />
-                        <span>{item.label}</span>
+                      <Link to={navItem.href}>
+                        <navItem.icon className="size-[15px]" />
+                        <span>{navItem.label}</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -274,19 +411,29 @@ function NavContent() {
 
       {/* ── User footer ──────────────────────────────────────────── */}
       <SidebarFooter className="border-t border-sidebar-border p-3">
-        <SidebarMenuButton
+        <div
           onClick={() => { setOpenMobile(false); navigate("/account"); }}
-          className="w-full h-10 justify-start gap-2.5 px-2.5 rounded-lg hover:bg-neutral-50 transition-colors group"
-          title="Account profile"
+          className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg hover:bg-neutral-50 transition-colors cursor-pointer group"
         >
           <div className="h-7 w-7 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center text-[11px] font-bold text-white shrink-0 shadow-sm">
             {initials}
           </div>
-          <div className="flex flex-col items-start leading-tight gap-0.5 min-w-0">
+          <div className="flex flex-col items-start leading-tight gap-0 min-w-0 flex-1">
             <span className="text-[12px] font-semibold text-neutral-800 truncate">{displayName}</span>
-            <span className="text-[10px] text-neutral-400 truncate">{user?.email ?? ""}</span>
+            {role && (
+              <span className="text-[10px] text-emerald-600 font-semibold truncate">
+                {roleBadge[role] ?? role}
+              </span>
+            )}
           </div>
-        </SidebarMenuButton>
+          <button
+            onClick={(e) => { e.stopPropagation(); handleLogout(); }}
+            title="Log out"
+            className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-red-50 text-neutral-400 hover:text-red-500"
+          >
+            <LogOut className="size-3.5" />
+          </button>
+        </div>
       </SidebarFooter>
     </>
   );
@@ -324,44 +471,25 @@ export function MainLayout() {
 
         <SidebarInset className="flex flex-col min-w-0">
           {/* ── Top header ─────────────────────────────────────────── */}
-          <header className="flex h-[60px] shrink-0 items-center justify-between gap-2 border-b border-neutral-100 bg-white px-4 md:px-6 sticky top-0 z-10">
-            <div className="flex items-center gap-3">
-              <SidebarTrigger className="-ml-1 text-neutral-400 hover:text-neutral-700" />
+          <header className="flex h-[60px] shrink-0 items-center justify-between gap-2 border-b border-neutral-100 bg-white px-4 md:px-6 sticky top-0 z-10 shadow-[0_1px_0_rgba(0,0,0,0.04)]">
+            <div className="flex items-center gap-2.5">
+              {/* Hamburger / collapse trigger */}
+              <SidebarTrigger className="-ml-1 h-8 w-8 text-neutral-500 hover:text-neutral-800 hover:bg-neutral-100 rounded-lg transition-colors" />
               <div className="h-4 w-px bg-neutral-100 hidden md:block" />
+              {/* Breadcrumb — desktop */}
               <div className="hidden md:flex items-center gap-1.5 text-[12px] text-neutral-400">
-                <span className="font-medium">{workspaceName}</span>
+                <span className="font-medium text-neutral-500">{workspaceName}</span>
                 <ChevronRight className="size-3" />
                 <span className="capitalize font-semibold text-neutral-700">{displayTitle}</span>
               </div>
+              {/* Page title — mobile only */}
+              <span className="md:hidden text-[14px] font-semibold text-neutral-800 capitalize">{displayTitle}</span>
             </div>
 
-            <div className="flex items-center gap-2">
-              {/* Notification bell */}
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => navigate("/settings/activity")}
-                className="relative h-8 w-8 text-neutral-400 hover:text-neutral-700 hover:bg-neutral-50 rounded-lg"
-                title="View activity"
-              >
-                <Bell className="size-[15px]" />
-                <span className="absolute top-1.5 right-1.5 h-1.5 w-1.5 rounded-full bg-red-500 ring-1 ring-white" />
-              </Button>
-
-              <div className="h-5 w-px bg-neutral-100 mx-0.5" />
-
-              {/* Add Property CTA */}
-              <Button
-                size="sm"
-                onClick={() => navigate("/properties/new")}
-                className="h-8 gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-[12px] font-semibold rounded-lg px-3 shadow-sm transition-all hover:shadow-emerald-600/20 hover:shadow-md"
-              >
-                <Plus className="size-3.5" />
-                <span className="hidden sm:inline">Add Property</span>
-              </Button>
-
-              <div className="h-5 w-px bg-neutral-100 mx-0.5" />
-
+            <div className="flex items-center gap-1.5">
+              {/* Notification bell dropdown */}
+              <NotificationBell />
+              <div className="h-5 w-px bg-neutral-100 mx-0.5 hidden sm:block" />
               {/* User avatar + logout dropdown */}
               <NavbarUserMenu />
             </div>

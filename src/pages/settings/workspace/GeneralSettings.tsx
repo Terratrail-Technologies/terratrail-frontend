@@ -2,12 +2,14 @@ import { useState, useEffect } from "react";
 import { Check, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { api } from "../../../services/api";
+import { usePageTitle } from "../../../hooks/usePageTitle";
 
 const inputCls =
   "w-full px-4 py-2 border border-neutral-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent";
 const labelCls = "block text-sm font-medium text-neutral-700 mb-1.5";
 
 export function GeneralSettings() {
+  usePageTitle("General Settings");
   const [ws,      setWs]      = useState<any>(null);
   const [settings, setSettings] = useState<any>(null);
   const [loading,  setLoading]  = useState(true);

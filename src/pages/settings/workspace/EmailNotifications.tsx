@@ -1,8 +1,10 @@
 import { useState } from "react";
 import { Check } from "lucide-react";
 import { Badge } from "../../../components/ui/badge";
+import { usePageTitle } from "../../../hooks/usePageTitle";
 
 export function EmailNotifications() {
+  usePageTitle("Email Notifications");
   const [bookingApproved, setBookingApproved] = useState(true);
   const [newBooking, setNewBooking] = useState(true);
   const [receiptUploaded, setReceiptUploaded] = useState(true);
