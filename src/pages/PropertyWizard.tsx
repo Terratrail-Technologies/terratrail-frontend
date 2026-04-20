@@ -204,11 +204,13 @@ export function PropertyWizard() {
       setDescription(prop.description ?? "");
       setTotalSqms(prop.total_sqms?.toString() ?? "");
       if (prop.featured_image) setCoverPreview(prop.featured_image);
+      setAvailableUnits(prop.available_units?.toString() ?? "");
       if (prop.location) {
         setStreetAddress(prop.location.address ?? "");
         setCity(prop.location.city ?? "");
         setState(prop.location.state ?? "");
         setPostalCode(prop.location.postal_code ?? "");
+        setLandmark(prop.location.nearest_landmark ?? "");
         setLatitude(prop.location.latitude?.toString() ?? "");
         setLongitude(prop.location.longitude?.toString() ?? "");
       }
@@ -415,6 +417,7 @@ export function PropertyWizard() {
           state,
           country: "Nigeria",
           postal_code: postalCode || undefined,
+          nearest_landmark: landmark || undefined,
           latitude: latitude || undefined,
           longitude: longitude || undefined,
         },
@@ -999,23 +1002,43 @@ export function PropertyWizard() {
                   {currentStep === 1 ? "Cancel" : "Back"}
                 </Button>
                 <div className="flex items-center gap-3">
-                  {currentStep === steps.length && (
+                  {/* In edit mode, always show Draft + Publish. In create mode, only on last step. */}
+                  {(isEditing || currentStep === steps.length) && (
                     <Button variant="outline" disabled={submitting}
                       onClick={() => handleSubmit("DRAFT")}
                       className="inline-flex items-center gap-2 px-6 bg-white text-neutral-700 border-neutral-300">
                       Save as Draft
                     </Button>
                   )}
-                  <Button onClick={handleNext} disabled={submitting}
-                    className="inline-flex items-center gap-2 px-6 bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-70">
-                    {submitting ? (
-                      <><Loader2 className="w-4 h-4 animate-spin" /> Saving…</>
-                    ) : currentStep === steps.length ? (
-                      <><Eye className="w-4 h-4" /> {isEditing ? "Save Changes" : "Publish Property"}</>
-                    ) : (
-                      <>Save & Continue <ArrowRight className="w-4 h-4" /></>
-                    )}
-                  </Button>
+                  {isEditing && (
+                    <Button disabled={submitting}
+                      onClick={() => handleSubmit("PUBLISHED")}
+                      className="inline-flex items-center gap-2 px-6 bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-70">
+                      {submitting ? (
+                        <><Loader2 className="w-4 h-4 animate-spin" /> Saving…</>
+                      ) : (
+                        <><Check className="w-4 h-4" /> Publish</>
+                      )}
+                    </Button>
+                  )}
+                  {!isEditing && (
+                    <Button onClick={handleNext} disabled={submitting}
+                      className="inline-flex items-center gap-2 px-6 bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-70">
+                      {submitting ? (
+                        <><Loader2 className="w-4 h-4 animate-spin" /> Saving…</>
+                      ) : currentStep === steps.length ? (
+                        <><Eye className="w-4 h-4" /> Publish Property</>
+                      ) : (
+                        <>Save & Continue <ArrowRight className="w-4 h-4" /></>
+                      )}
+                    </Button>
+                  )}
+                  {isEditing && currentStep < steps.length && (
+                    <Button variant="outline" onClick={handleNext} disabled={submitting}
+                      className="inline-flex items-center gap-2 px-4 bg-white text-neutral-700 border-neutral-300">
+                      Next <ArrowRight className="w-4 h-4" />
+                    </Button>
+                  )}
                 </div>
               </div>
             </motion.div>

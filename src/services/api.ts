@@ -108,7 +108,6 @@ const AUTH_PATHS = [
   "/workspaces/mine/",
   "/workspaces/create/",
   "/workspaces/check-slug/",
-  "/workspaces/invites/",  // invite detail + accept — no workspace header needed
 ];
 
 // ─── Token refresh queue ─────────────────────────────────────────────────────
@@ -167,7 +166,8 @@ function _logReq(method: string, path: string, status: number, ms: number) {
 
 async function request<T>(path: string, options: RequestInit = {}, retry = true): Promise<T> {
   const tokens = getTokens();
-  const isAuthPath = AUTH_PATHS.some((p) => path.startsWith(p));
+  const isAuthPath = AUTH_PATHS.some((p) => path.startsWith(p)) ||
+    /^\/workspaces\/invites\/[^/]/.test(path);
   const _t0 = Date.now();
 
   const headers: Record<string, string> = {

@@ -67,6 +67,7 @@ function AddCustomerModal({ onClose, onCreated }: AddCustomerModalProps) {
     if (!form.email.trim()) e.email = "Email address is required.";
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email))
       e.email = "Enter a valid email address.";
+    if (!form.phone.trim()) e.phone = "Phone number is required.";
     return e;
   };
 
@@ -82,11 +83,11 @@ function AddCustomerModal({ onClose, onCreated }: AddCustomerModalProps) {
     setSaving(true);
     try {
       const payload: any = {
-        name:  form.name.trim(),
-        email: form.email.trim().toLowerCase(),
+        full_name: form.name.trim(),
+        email:     form.email.trim().toLowerCase(),
+        phone:     form.phone.trim(),
       };
-      if (form.phone.trim())           payload.phone           = form.phone.trim();
-      if (form.purchase_status)        payload.purchase_status = form.purchase_status;
+      if (form.purchase_status) payload.purchase_status = form.purchase_status;
 
       await api.customers.create(payload);
       toast.success(`Customer "${form.name}" added successfully.`);
@@ -159,15 +160,18 @@ function AddCustomerModal({ onClose, onCreated }: AddCustomerModalProps) {
           {/* Phone */}
           <div>
             <label className="block text-[12.5px] font-medium text-neutral-700 mb-1.5">
-              Phone Number <span className="text-neutral-400 text-[11px]">(optional)</span>
+              Phone Number <span className="text-red-500">*</span>
             </label>
             <input
               type="tel"
               value={form.phone}
               onChange={(e) => set("phone", e.target.value)}
               placeholder="e.g. 08012345678"
-              className="w-full px-3 py-2 border border-neutral-300 bg-white rounded-lg text-[13px] focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400 transition-colors"
+              className={`w-full px-3 py-2 border rounded-lg text-[13px] focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400 transition-colors ${
+                errors.phone ? "border-red-400 bg-red-50" : "border-neutral-300 bg-white"
+              }`}
             />
+            {errors.phone && <p className="text-[11px] text-red-500 mt-1">{errors.phone}</p>}
           </div>
 
           {/* Purchase Status */}

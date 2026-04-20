@@ -39,7 +39,7 @@ function PropertyMenu({ propertyId, onDelete }: { propertyId: string; onDelete?:
   }, []);
 
   return (
-    <div ref={ref} className="relative" onClick={(e) => e.preventDefault()}>
+    <div ref={ref} className="relative" onClick={(e) => e.stopPropagation()}>
       <button
         onClick={(e) => { e.stopPropagation(); setOpen((o) => !o); }}
         className="h-7 w-7 rounded-md flex items-center justify-center bg-white/80 backdrop-blur-sm text-neutral-500 hover:text-neutral-900 hover:bg-white border border-neutral-200/60 shadow-sm transition-all"
@@ -65,7 +65,7 @@ function PropertyMenu({ propertyId, onDelete }: { propertyId: string; onDelete?:
                 Edit Property
               </button>
               <button
-                onClick={(e) => { e.stopPropagation(); setOpen(false); navigate(`/properties/${propertyId}/edit`); }}
+                onClick={(e) => { e.stopPropagation(); setOpen(false); navigate(`/properties/${propertyId}/preview`); }}
                 className="w-full flex items-center gap-2.5 px-3.5 py-2 text-[12.5px] font-medium text-neutral-700 hover:bg-neutral-50 transition-colors"
               >
                 <Eye className="w-3.5 h-3.5 text-neutral-400" />
@@ -92,11 +92,10 @@ function PropertyCard({ property }: { property: any }) {
   return (
     <motion.div
       variants={item}
-      onClick={() => navigate(`/properties/${property.id}/edit`)}
       className="bg-white rounded-xl border border-neutral-100 overflow-hidden
                  shadow-[0_1px_3px_rgba(0,0,0,0.06)]
                  hover:shadow-[0_6px_20px_rgba(0,0,0,0.09)]
-                 hover:-translate-y-0.5 transition-all duration-200 group flex flex-col cursor-pointer"
+                 hover:-translate-y-0.5 transition-all duration-200 group flex flex-col"
     >
       {/* Cover image */}
       <div className="h-44 relative overflow-hidden flex-shrink-0">

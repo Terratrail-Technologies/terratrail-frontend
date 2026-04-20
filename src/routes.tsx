@@ -3,6 +3,7 @@ import { MainLayout } from "./layouts/MainLayout";
 import { Overview } from "./pages/Overview";
 import { Properties } from "./pages/Properties";
 import { PropertyWizard } from "./pages/PropertyWizard";
+import PropertyPreview from "./pages/PropertyPreview";
 import { Customers } from "./pages/Customers";
 import { SalesReps } from "./pages/SalesReps";
 import { SiteInspection } from "./pages/SiteInspection";
@@ -53,6 +54,7 @@ export const router = createBrowserRouter([
           { path: "properties", Component: Properties },
           { path: "properties/new", Component: PropertyWizard },
           { path: "properties/:id/edit", Component: PropertyWizard },
+          { path: "properties/:id/preview", Component: PropertyPreview },
           { path: "customers", Component: Customers },
           { path: "sales-reps", Component: SalesReps },
           { path: "site-inspection", Component: SiteInspection },
