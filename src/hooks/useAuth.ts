@@ -137,9 +137,7 @@ export function useAuth() {
         storeAuth(regResponse.tokens);
       }
 
-      // 3. Send OTP for email verification
-      await api.auth.otpRequest({ email: data.email });
-
+      // Backend already sends OTP during registration — no second request needed.
       return regResponse;
     } catch (err) {
       humaniseError(err);

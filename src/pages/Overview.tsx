@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router";
 import { usePageTitle } from "../hooks/usePageTitle";
+import { useWorkspaceRole } from "../hooks/useWorkspaceRole";
 import {
   Users, FileText,
   TrendingUp, TrendingDown,
@@ -32,8 +33,55 @@ const rankColors = [
 ];
 const DEFAULT_RANGE: DateRange = { from: null, to: null };
 
+// ── Role-specific dashboard for non-admin users ───────────────────────────────
+function RoleDashboard({ role }: { role: "SALES_REP" | "CUSTOMER" }) {
+  const isSalesRep = role === "SALES_REP";
+  return (
+    <div className="flex flex-col min-h-[calc(100vh-60px)] w-full">
+      <div className="bg-white border-b border-neutral-100 px-6 lg:px-8 py-4">
+        <h1 className="text-[18px] font-semibold text-neutral-900">
+          {isSalesRep ? "My Dashboard" : "My Account"}
+        </h1>
+        <p className="text-[12px] text-neutral-400 mt-0.5">
+          {isSalesRep ? "Your sales performance overview" : "Your account overview"}
+        </p>
+      </div>
+      <div className="p-6 lg:p-8 flex-1">
+        <div className="max-w-2xl mx-auto mt-12 text-center">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-emerald-50 mb-5">
+            <LayoutDashboard className="w-8 h-8 text-emerald-500" />
+          </div>
+          <h2 className="text-xl font-semibold text-neutral-900 mb-2">
+            {isSalesRep ? "Sales Rep Dashboard" : "Customer Dashboard"}
+          </h2>
+          <p className="text-neutral-500 text-sm max-w-sm mx-auto">
+            {isSalesRep
+              ? "Your commission reports, property pipeline, and client activity will appear here."
+              : "Your subscriptions, payment history, and property details will appear here."}
+          </p>
+          {isSalesRep && (
+            <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 gap-4 text-left">
+              <Link to="/properties" className="p-5 bg-white rounded-xl border border-neutral-100 shadow-sm hover:shadow-md transition-shadow">
+                <div className="text-sm font-medium text-neutral-700 mb-1">Browse Properties</div>
+                <div className="text-xs text-neutral-400">View available listings to share with clients</div>
+              </Link>
+              <Link to="/site-inspection" className="p-5 bg-white rounded-xl border border-neutral-100 shadow-sm hover:shadow-md transition-shadow">
+                <div className="text-sm font-medium text-neutral-700 mb-1">Site Inspections</div>
+                <div className="text-xs text-neutral-400">Manage your inspection requests</div>
+              </Link>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function Overview() {
   usePageTitle("Dashboard");
+  const { role, loading: roleLoading } = useWorkspaceRole();
+  const isAdmin = role === "OWNER" || role === "ADMIN" || role === null; // null = likely owner with missing membership
+
   // ── Date filter state ──────────────────────────────────────────
   const [preset,      setPreset]      = useState<DatePreset>("all_time");
   const [customRange, setCustomRange] = useState<DateRange | null>(null);
@@ -58,6 +106,11 @@ export function Overview() {
     loading,
     isFiltered
   } = useDashboard(range || DEFAULT_RANGE);
+
+  // ── Non-admin role dashboard ──────────────────────────────────
+  if (!roleLoading && (role === "SALES_REP" || role === "CUSTOMER")) {
+    return <RoleDashboard role={role} />;
+  }
 
   // Skeleton scaffold — shown on first load before any data arrives
   if (!stats && loading) {

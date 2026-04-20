@@ -14,9 +14,10 @@ export function VerifyIdentity() {
   const navigate = useNavigate();
   const location = useLocation();
   const { otpVerify, otpRequest } = useAuth();
-  const state = location.state as { email?: string; flow?: string } | null;
-  const email = state?.email ?? "";
-  const flow  = state?.flow  ?? "signin";
+  const state = location.state as { email?: string; flow?: string; inviteToken?: string } | null;
+  const email       = state?.email ?? "";
+  const flow        = state?.flow  ?? "signin";
+  const inviteToken = state?.inviteToken ?? "";
 
   const [loading, setLoading]             = useState(false);
   const [resendCooldown, setResendCooldown] = useState(0);
@@ -34,6 +35,9 @@ export function VerifyIdentity() {
       toast.success("Identity verified!");
       if (flow === "reset") {
         navigate("/auth/reset-password", { state: { email } });
+      } else if (flow === "signup" && inviteToken) {
+        // Invited user — skip workspace setup, go straight to accept the invite
+        navigate(`/accept-invite/${inviteToken}`, { replace: true });
       } else if (flow === "signup") {
         navigate("/auth/workspace-setup", { state: { email } });
       } else {

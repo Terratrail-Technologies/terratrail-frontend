@@ -54,28 +54,21 @@ export function useDashboard(dateRange: DateRange) {
     setLoading(true);
     setError(null);
     try {
-      const [
-        statsData,
-        leaderboardData,
-        revenueData,
-        propertiesData,
-        customersData
-      ] = await Promise.all([
-        api.dashboard.getStats(dateRange),
-        api.dashboard.getLeaderboard(dateRange),
-        api.dashboard.getRevenueBreakdown(dateRange),
-        api.dashboard.getProperties(dateRange),
-        api.dashboard.getCustomers(dateRange)
-      ]);
+      const [statsRes, leaderboardRes, revenueRes, propertiesRes, customersRes] =
+        await Promise.allSettled([
+          api.dashboard.getStats(dateRange),
+          api.dashboard.getLeaderboard(dateRange),
+          api.dashboard.getRevenueBreakdown(dateRange),
+          api.dashboard.getProperties(dateRange),
+          api.dashboard.getCustomers(dateRange),
+        ]);
 
-      setStats(statsData);
-      setLeaderboard(leaderboardData.leaderboard);
-      setRevenueBreakdown(revenueData.breakdown);
-      setPropertyLeaderboard(propertiesData);
-      setCustomerLeaderboard(customersData);
+      if (statsRes.status === "fulfilled")       setStats(statsRes.value);
+      if (leaderboardRes.status === "fulfilled") setLeaderboard(leaderboardRes.value?.leaderboard ?? null);
+      if (revenueRes.status === "fulfilled")     setRevenueBreakdown(revenueRes.value?.breakdown ?? null);
+      if (propertiesRes.status === "fulfilled")  setPropertyLeaderboard(propertiesRes.value);
+      if (customersRes.status === "fulfilled")   setCustomerLeaderboard(customersRes.value);
     } catch (err: any) {
-      // Surface the error — let the UI decide how to handle it.
-      // auth:logout events (401/session expiry) are handled by the API client.
       setError(err.message ?? "Failed to load dashboard data");
     } finally {
       setLoading(false);

@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router";
 import { toast } from "sonner";
 import { api } from "../services/api";
 import { useAuth } from "../hooks/useAuth";
+import { invalidateRoleCache } from "../hooks/useWorkspaceRole";
 
 type InviteInfo = {
   email: string;
@@ -38,8 +39,8 @@ export function AcceptInvite() {
     try {
       const res = await api.workspaces.acceptInvite(token);
       toast.success(`You've joined ${res.workspace_name}!`);
-      // Switch to the new workspace then go to overview
       localStorage.setItem("tt_workspace_slug", res.workspace_slug);
+      invalidateRoleCache(); // force re-fetch of role for the new workspace
       navigate("/", { replace: true });
     } catch (e: any) {
       toast.error(e.message ?? "Failed to accept invitation.");

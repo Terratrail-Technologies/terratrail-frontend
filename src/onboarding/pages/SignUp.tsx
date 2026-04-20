@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router";
+import { useNavigate, useSearchParams } from "react-router";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { FormInput } from "../components/FormInput";
@@ -32,10 +32,15 @@ const LockIcon = () => (
 
 export function SignUp() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const inviteToken = searchParams.get("invite") ?? "";
+  const prefillEmail = searchParams.get("email") ?? "";
   const { register: authRegister } = useAuth();
   const [loading, setLoading] = useState(false);
 
-  const { register, handleSubmit, formState: { errors } } = useForm<SignUpForm>();
+  const { register, handleSubmit, formState: { errors } } = useForm<SignUpForm>({
+    defaultValues: { email: prefillEmail },
+  });
 
   const onSubmit = async (data: SignUpForm) => {
     setLoading(true);
@@ -47,7 +52,9 @@ export function SignUp() {
         password: data.password,
       });
       toast.success("Account created! Please verify your email.");
-      navigate("/auth/verify", { state: { email: data.email, flow: "signup" } });
+      navigate("/auth/verify", {
+        state: { email: data.email, flow: "signup", inviteToken: inviteToken || undefined },
+      });
     } catch (err: any) {
       toast.error(err.message || "Something went wrong. Please try again.");
     } finally {

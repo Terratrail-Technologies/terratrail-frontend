@@ -50,7 +50,13 @@ function RepModal({ rep, onClose, onSaved }: { rep?: any; onClose: () => void; o
         toast.success("Sales rep updated.");
       } else {
         await api.salesReps.create(form);
-        toast.success("Sales rep added.");
+        // Send invite email so they can join the workspace
+        try {
+          await api.workspaces.invite({ email: form.email, role: "SALES_REP" });
+          toast.success(`Sales rep added. Invite email sent to ${form.email}.`);
+        } catch {
+          toast.success("Sales rep added. (Invite email could not be sent — send manually via Invite Link.)");
+        }
       }
       onSaved();
       onClose();
@@ -312,12 +318,12 @@ export function SalesReps() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [list, performance] = await Promise.all([
+      const [listResult, statsResult] = await Promise.allSettled([
         api.salesReps.list(),
         api.salesReps.getStats(),
       ]);
-      setReps(list);
-      setStats(performance);
+      if (listResult.status === "fulfilled") setReps(listResult.value);
+      if (statsResult.status === "fulfilled") setStats(statsResult.value);
     } catch (err) {
       console.error("Failed to load sales reps:", err);
     } finally {
