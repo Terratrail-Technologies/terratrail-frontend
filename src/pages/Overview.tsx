@@ -97,15 +97,15 @@ export function Overview() {
   const [valuesHidden, setValuesHidden] = useState(false);
 
   // ── Data ───────────────────────────────────────────────────────
-  const { 
-    stats, 
-    leaderboard, 
-    revenueBreakdown, 
-    propertyLeaderboard, 
-    customerLeaderboard, 
+  const {
+    stats,
+    leaderboard,
+    revenueBreakdown,
+    propertyLeaderboard,
+    customerLeaderboard,
     loading,
     isFiltered
-  } = useDashboard(range || DEFAULT_RANGE);
+  } = useDashboard(range || DEFAULT_RANGE, isAdmin && !roleLoading);
 
   // ── Non-admin role dashboard ──────────────────────────────────
   if (!roleLoading && (role === "SALES_REP" || role === "CUSTOMER")) {

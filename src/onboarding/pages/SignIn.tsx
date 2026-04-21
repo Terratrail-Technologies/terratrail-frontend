@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router";
+import { useNavigate, useSearchParams } from "react-router";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { FormInput } from "../components/FormInput";
@@ -25,6 +25,8 @@ import { useAuth } from "../../hooks/useAuth";
 
 export function SignIn() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const nextUrl = searchParams.get("next") ?? "/";
   const { login } = useAuth();
   const [loading, setLoading] = useState(false);
 
@@ -37,7 +39,7 @@ export function SignIn() {
     try {
       await login({ email: data.email, password: data.password });
       toast.success("Welcome back!");
-      navigate("/");
+      navigate(nextUrl, { replace: true });
     } catch (err: any) {
       // If OTP is required, login might throw an error or we might need to handle it.
       // Assuming simple login for now, or handling "OTP required" error if backend sends it.

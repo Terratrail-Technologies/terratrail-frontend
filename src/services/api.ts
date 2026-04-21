@@ -270,6 +270,16 @@ async function requestFile<T>(path: string, formData: FormData, method = "POST",
   return (json?.data ?? json) as T;
 }
 
+// ─── Public (no-auth) request helper ─────────────────────────────────────────
+async function publicRequest<T>(path: string): Promise<T> {
+  const _t0 = Date.now();
+  const response = await fetch(`${BASE_URL}${path}`);
+  _logReq("GET", path, response.status, Date.now() - _t0);
+  if (!response.ok) throw new Error(`HTTP ${response.status}`);
+  const json = await response.json();
+  return (json?.data ?? json) as T;
+}
+
 function buildParams(params: Record<string, unknown>): string {
   const searchParams = new URLSearchParams();
   Object.entries(params).forEach(([key, value]) => {
@@ -292,6 +302,14 @@ function unwrapList<T>(data: unknown): T[] {
 // ─── API Methods ──────────────────────────────────────────────────────────────
 
 export const api = {
+  // ── Public estate listing (no auth) ─────────────────────────────────────
+  public: {
+    properties: (workspaceSlug: string) =>
+      publicRequest<any[]>(`/public/${workspaceSlug}/properties/`),
+    property: (workspaceSlug: string, id: string) =>
+      publicRequest<any>(`/public/${workspaceSlug}/properties/${id}/`),
+  },
+
   // ── Health ────────────────────────────────────────────────────────────────
   health: {
     ping: () =>

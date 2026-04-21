@@ -1,9 +1,21 @@
 import { useState } from "react";
+import { useNavigate } from "react-router";
 import { usePolling } from "../hooks/usePolling";
 import { usePageTitle } from "../hooks/usePageTitle";
+import { useWorkspaceRole } from "../hooks/useWorkspaceRole";
 import {
-  Search, Filter, Plus, MoreVertical, FileText,
-  CheckCircle2, Users as UsersIcon, Loader2, X, AlertCircle,
+  Search,
+  Filter,
+  Plus,
+  Eye,
+  Pencil,
+  Users as UsersIcon,
+  Loader2,
+  X,
+  AlertCircle,
+  CheckCircle2,
+  XCircle,
+  AlertTriangle,
 } from "lucide-react";
 import { Skeleton } from "../components/ui/skeleton";
 import { api } from "../services/api";
@@ -14,6 +26,7 @@ import { motion } from "motion/react";
 import { EmptyState } from "../components/ui/empty-state";
 import { toast } from "sonner";
 
+// ─── Animation variants ────────────────────────────────────────────────────────
 const container = {
   hidden: { opacity: 0 },
   show: { opacity: 1, transition: { staggerChildren: 0.07 } },
@@ -23,6 +36,7 @@ const item = {
   show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 320, damping: 26 } },
 } as const;
 
+// ─── Avatar helpers ────────────────────────────────────────────────────────────
 const avatarColors = [
   ["bg-emerald-100", "text-emerald-700"],
   ["bg-blue-100",    "text-blue-700"],
@@ -34,16 +48,44 @@ const avatarColors = [
 const avatarColor = (name: string) =>
   avatarColors[name.charCodeAt(0) % avatarColors.length];
 
-// ─── Purchase status config ───────────────────────────────────────────────────
+// ─── Subscription status config ────────────────────────────────────────────────
+type SubStatus = "ACTIVE" | "COMPLETED" | "DEFAULTING" | "CANCELLED";
+
+const STATUS_CONFIG: Record<SubStatus, { label: string; cls: string; dot?: string; icon?: React.ReactNode }> = {
+  ACTIVE:     { label: "Active",     cls: "bg-emerald-50 text-emerald-700 border-emerald-100", dot: "bg-emerald-500" },
+  COMPLETED:  { label: "Completed",  cls: "bg-blue-50 text-blue-700 border-blue-100" },
+  DEFAULTING: { label: "Defaulting", cls: "bg-red-50 text-red-600 border-red-100" },
+  CANCELLED:  { label: "Cancelled",  cls: "bg-neutral-100 text-neutral-500 border-neutral-200" },
+};
+
+function subStatusConfig(val?: string | null) {
+  if (!val) return null;
+  return STATUS_CONFIG[val.toUpperCase() as SubStatus] ?? null;
+}
+
+// ─── Purchase status config (kept for AddCustomerModal) ────────────────────────
 const PURCHASE_STATUSES = [
   { value: "BOOKED",            label: "Booked",            cls: "bg-amber-50 text-amber-700 border-amber-100" },
   { value: "SOLD",              label: "Sold",              cls: "bg-blue-50 text-blue-700 border-blue-100" },
   { value: "PAYMENT_COMPLETED", label: "Payment Completed", cls: "bg-emerald-50 text-emerald-700 border-emerald-100" },
 ];
 
-function purchaseStatusConfig(val?: string) {
-  return PURCHASE_STATUSES.find((s) => s.value === val);
-}
+// ─── Filter options ────────────────────────────────────────────────────────────
+const STATUS_FILTERS = [
+  { value: "ALL",        label: "All" },
+  { value: "ACTIVE",     label: "Active" },
+  { value: "COMPLETED",  label: "Completed" },
+  { value: "DEFAULTING", label: "Defaulting" },
+  { value: "CANCELLED",  label: "Cancelled" },
+];
+
+// ─── Currency formatter ────────────────────────────────────────────────────────
+const fmt = (n: number | string | null | undefined) =>
+  n == null || n === "" ? "—" : `₦${Number(n).toLocaleString("en-NG")}`;
+
+// ─── Dash helper ──────────────────────────────────────────────────────────────
+const dash = (v: string | number | null | undefined) =>
+  v == null || v === "" ? "—" : String(v);
 
 // ─── Add Customer Modal ───────────────────────────────────────────────────────
 interface AddCustomerModalProps {
@@ -109,7 +151,10 @@ function AddCustomerModal({ onClose, onCreated }: AddCustomerModalProps) {
             <h3 className="text-[15px] font-semibold text-neutral-900">Add Customer</h3>
             <p className="text-[12px] text-neutral-400 mt-0.5">Fill in the customer details below.</p>
           </div>
-          <button onClick={onClose} className="p-1.5 hover:bg-neutral-100 rounded-lg transition-colors">
+          <button
+            onClick={onClose}
+            className="p-1.5 hover:bg-neutral-100 rounded-lg transition-colors"
+          >
             <X className="w-4 h-4 text-neutral-500" />
           </button>
         </div>
@@ -171,13 +216,18 @@ function AddCustomerModal({ onClose, onCreated }: AddCustomerModalProps) {
                 errors.phone ? "border-red-400 bg-red-50" : "border-neutral-300 bg-white"
               }`}
             />
-            {errors.phone && <p className="text-[11px] text-red-500 mt-1">{errors.phone}</p>}
+            {errors.phone && (
+              <p className="text-[11px] text-red-500 mt-1 flex items-center gap-1">
+                <AlertCircle className="w-3 h-3" /> {errors.phone}
+              </p>
+            )}
           </div>
 
           {/* Purchase Status */}
           <div>
             <label className="block text-[12.5px] font-medium text-neutral-700 mb-1.5">
-              Purchase Status <span className="text-neutral-400 text-[11px]">(optional)</span>
+              Purchase Status{" "}
+              <span className="text-neutral-400 text-[11px]">(optional)</span>
             </label>
             <select
               value={form.purchase_status}
@@ -186,7 +236,9 @@ function AddCustomerModal({ onClose, onCreated }: AddCustomerModalProps) {
             >
               <option value="">— None —</option>
               {PURCHASE_STATUSES.map((s) => (
-                <option key={s.value} value={s.value}>{s.label}</option>
+                <option key={s.value} value={s.value}>
+                  {s.label}
+                </option>
               ))}
             </select>
           </div>
@@ -206,7 +258,9 @@ function AddCustomerModal({ onClose, onCreated }: AddCustomerModalProps) {
             className="flex-1 px-4 py-2.5 bg-emerald-600 text-white rounded-lg text-[13px] font-medium hover:bg-emerald-700 disabled:opacity-60 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
           >
             {saving ? (
-              <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Saving…</>
+              <>
+                <Loader2 className="w-3.5 h-3.5 animate-spin" /> Saving…
+              </>
             ) : (
               <>Add Customer</>
             )}
@@ -217,13 +271,55 @@ function AddCustomerModal({ onClose, onCreated }: AddCustomerModalProps) {
   );
 }
 
+// ─── Summary Card ─────────────────────────────────────────────────────────────
+interface SummaryCardProps {
+  label: string;
+  value: number | string;
+  sub: string;
+  loading: boolean;
+}
+
+function SummaryCard({ label, value, sub, loading }: SummaryCardProps) {
+  if (loading) {
+    return (
+      <div className="bg-white rounded-xl border border-neutral-100 p-4 shadow-sm">
+        <Skeleton className="h-3 w-24 rounded bg-neutral-100 mb-3" />
+        <Skeleton className="h-7 w-16 rounded bg-neutral-100 mb-2" />
+        <Skeleton className="h-3 w-32 rounded bg-neutral-100" />
+      </div>
+    );
+  }
+  return (
+    <div className="bg-white rounded-xl border border-neutral-100 p-4 shadow-sm">
+      <p className="text-[11px] text-neutral-400 uppercase tracking-wider font-semibold mb-1">
+        {label}
+      </p>
+      <p className="text-2xl font-bold text-neutral-900">{value}</p>
+      <p className="text-[11px] text-neutral-400 mt-1">{sub}</p>
+    </div>
+  );
+}
+
 // ─── Main Page ────────────────────────────────────────────────────────────────
 export function Customers() {
   usePageTitle("Customers");
+  const navigate = useNavigate();
+  const { role } = useWorkspaceRole();
+
   const [customers, setCustomers] = useState<any[]>([]);
   const [loading, setLoading]     = useState(true);
   const [search, setSearch]       = useState("");
+  const [statusFilter, setStatusFilter] = useState("ALL");
   const [showAdd, setShowAdd]     = useState(false);
+
+  // ── Role guard ────────────────────────────────────────────────────────────
+  if (role === "SALES_REP" || role === "CUSTOMER") {
+    return (
+      <div className="p-8 text-center text-neutral-500 text-sm">
+        You don't have permission to access this page.
+      </div>
+    );
+  }
 
   const fetchCustomers = async () => {
     setLoading((prev) => prev || customers.length === 0);
@@ -239,24 +335,47 @@ export function Customers() {
 
   usePolling(fetchCustomers, 30_000);
 
-  const fmt = (n: number | string) => `₦${Number(n).toLocaleString("en-NG")}`;
+  // ── Summary card values ───────────────────────────────────────────────────
+  const totalCustomers    = customers.length;
+  const totalActive       = customers.reduce((s, c) => s + (c.active_subscriptions ?? 0), 0);
+  const totalCompleted    = customers.reduce((s, c) => s + (c.completed_subscriptions ?? 0), 0);
+  const totalDefaulting   = customers.reduce((s, c) => s + (c.defaulting_subscriptions ?? 0), 0);
 
-  const filtered = customers.filter((c) =>
-    (c.full_name ?? c.name ?? "").toLowerCase().includes(search.toLowerCase()) ||
-    c.email?.toLowerCase().includes(search.toLowerCase())
-  );
+  // ── Filtered list ─────────────────────────────────────────────────────────
+  const filtered = customers.filter((c) => {
+    const q = search.toLowerCase();
+    const matchesSearch =
+      !q ||
+      (c.full_name ?? "").toLowerCase().includes(q) ||
+      (c.email ?? "").toLowerCase().includes(q) ||
+      (c.phone ?? "").toLowerCase().includes(q);
+
+    const subStatus = c.primary_subscription?.status?.toUpperCase() ?? "";
+    const matchesStatus =
+      statusFilter === "ALL" || subStatus === statusFilter;
+
+    return matchesSearch && matchesStatus;
+  });
+
+  const isInitialLoad = loading && customers.length === 0;
 
   return (
     <div className="flex flex-col min-h-[calc(100vh-60px)] w-full">
-      {/* Page header */}
+      {/* ── Page header ──────────────────────────────────────────────────── */}
       <div className="bg-white border-b border-neutral-100 px-6 lg:px-8 py-5 hidden md:block">
         <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <div>
-              <h1 className="text-[18px] font-semibold text-neutral-900 tracking-tight">Customers</h1>
-              <p className="text-[12.5px] text-neutral-400 mt-0.5">Customer and subscription management</p>
+              <h1 className="text-[18px] font-semibold text-neutral-900 tracking-tight">
+                Customers
+              </h1>
+              <p className="text-[12.5px] text-neutral-400 mt-0.5">
+                Customer and subscription management
+              </p>
             </div>
-            {loading && <Loader2 className="w-4 h-4 text-emerald-500 animate-spin" />}
+            {loading && !isInitialLoad && (
+              <Loader2 className="w-4 h-4 text-emerald-500 animate-spin" />
+            )}
           </div>
           <Button
             onClick={() => setShowAdd(true)}
@@ -268,78 +387,151 @@ export function Customers() {
         </div>
       </div>
 
-      <motion.div variants={container} initial="hidden" animate="show"
-        className="p-4 sm:p-6 lg:p-8 space-y-5 flex-1">
+      <motion.div
+        variants={container}
+        initial="hidden"
+        animate="show"
+        className="p-4 sm:p-6 lg:p-8 space-y-5 flex-1"
+      >
+        {/* ── Summary cards ──────────────────────────────────────────────── */}
+        <motion.div variants={item} className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <SummaryCard
+            label="Total Customers"
+            value={totalCustomers}
+            sub="All registered customers"
+            loading={isInitialLoad}
+          />
+          <SummaryCard
+            label="Active Subscriptions"
+            value={totalActive}
+            sub="Currently active plans"
+            loading={isInitialLoad}
+          />
+          <SummaryCard
+            label="Completed Subscriptions"
+            value={totalCompleted}
+            sub="Fully paid off plans"
+            loading={isInitialLoad}
+          />
+          <SummaryCard
+            label="Defaulting Subscriptions"
+            value={totalDefaulting}
+            sub="Overdue or missed payments"
+            loading={isInitialLoad}
+          />
+        </motion.div>
 
-        {loading && customers.length === 0 ? (
+        {isInitialLoad ? (
+          /* ── Loading skeleton ─────────────────────────────────────────── */
           <>
             <div className="flex flex-col sm:flex-row items-center gap-2.5">
               <Skeleton className="h-9 w-full sm:w-80 rounded-lg bg-neutral-100" />
-              <Skeleton className="h-9 w-24 rounded-lg bg-neutral-100" />
+              <Skeleton className="h-9 w-28 rounded-lg bg-neutral-100" />
+              <Skeleton className="h-9 w-44 rounded-lg bg-neutral-100" />
             </div>
             <div className="bg-white rounded-xl border border-neutral-100 overflow-hidden shadow-[0_1px_3px_rgba(0,0,0,0.06)]">
               <div className="bg-neutral-50/70 border-b border-neutral-100 px-5 py-3 flex gap-4">
-                {[140, 120, 80, 60, 100, 70].map((w, i) => (
-                  <Skeleton key={i} className="h-3 rounded bg-neutral-200" style={{ width: w }} />
+                {[120, 100, 140, 80, 70, 90, 80, 80, 90, 80, 60].map((w, i) => (
+                  <Skeleton
+                    key={i}
+                    className="h-3 rounded bg-neutral-200"
+                    style={{ width: w }}
+                  />
                 ))}
               </div>
               {Array.from({ length: 7 }).map((_, i) => (
-                <div key={i} className="px-5 py-3.5 flex items-center gap-4 border-b border-neutral-50 last:border-0">
-                  <div className="flex items-center gap-3 flex-1">
+                <div
+                  key={i}
+                  className="px-5 py-3.5 flex items-center gap-4 border-b border-neutral-50 last:border-0"
+                >
+                  <div className="flex items-center gap-3 flex-1 min-w-[140px]">
                     <Skeleton className="h-8 w-8 rounded-full bg-neutral-100 shrink-0" />
                     <div className="space-y-1.5">
-                      <Skeleton className="h-3.5 w-32 bg-neutral-100" />
-                      <Skeleton className="h-3 w-24 bg-neutral-100" />
+                      <Skeleton className="h-3.5 w-28 bg-neutral-100" />
+                      <Skeleton className="h-3 w-20 bg-neutral-100" />
                     </div>
                   </div>
+                  <Skeleton className="h-3.5 w-20 bg-neutral-100 hidden sm:block" />
                   <Skeleton className="h-3.5 w-24 bg-neutral-100 hidden sm:block" />
-                  <Skeleton className="h-3.5 w-16 bg-neutral-100 hidden md:block" />
-                  <Skeleton className="h-5 w-16 rounded-full bg-neutral-100" />
+                  <Skeleton className="h-3.5 w-20 bg-neutral-100 hidden md:block" />
+                  <Skeleton className="h-3.5 w-14 bg-neutral-100 hidden md:block" />
+                  <Skeleton className="h-3.5 w-24 bg-neutral-100 hidden lg:block" />
                   <Skeleton className="h-3.5 w-20 bg-neutral-100 hidden lg:block" />
-                  <Skeleton className="h-7 w-7 rounded-lg bg-neutral-100 ml-auto" />
+                  <Skeleton className="h-3.5 w-20 bg-neutral-100 hidden lg:block" />
+                  <Skeleton className="h-3.5 w-20 bg-neutral-100 hidden xl:block" />
+                  <Skeleton className="h-5 w-16 rounded-full bg-neutral-100" />
+                  <Skeleton className="h-7 w-16 rounded-lg bg-neutral-100 ml-auto" />
                 </div>
               ))}
             </div>
           </>
         ) : filtered.length === 0 ? (
+          /* ── Empty state ─────────────────────────────────────────────── */
           <motion.div variants={item}>
             <EmptyState
               icon={UsersIcon}
-              title={search ? "No matching customers" : "No customers yet"}
+              title={search || statusFilter !== "ALL" ? "No matching customers" : "No customers yet"}
               description={
-                search
-                  ? "Adjust your search to find what you're looking for."
+                search || statusFilter !== "ALL"
+                  ? "Adjust your search or filter to find what you're looking for."
                   : "Add your first customer to start tracking subscriptions and revenue."
               }
               action={
                 <Button
-                  onClick={() => (search ? setSearch("") : setShowAdd(true))}
+                  onClick={() => {
+                    if (search || statusFilter !== "ALL") {
+                      setSearch("");
+                      setStatusFilter("ALL");
+                    } else {
+                      setShowAdd(true);
+                    }
+                  }}
                   className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white"
                 >
                   <Plus className="w-4 h-4" />
-                  {search ? "Clear Search" : "Add New Customer"}
+                  {search || statusFilter !== "ALL" ? "Clear Filters" : "Add New Customer"}
                 </Button>
               }
             />
           </motion.div>
         ) : (
           <>
-            {/* Search + filter bar */}
-            <motion.div variants={item} className="flex flex-col sm:flex-row items-center gap-2.5">
+            {/* ── Search + filter bar ──────────────────────────────────── */}
+            <motion.div
+              variants={item}
+              className="flex flex-col sm:flex-row items-start sm:items-center gap-2.5 flex-wrap"
+            >
+              {/* Search */}
               <div className="relative w-full sm:w-80">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-neutral-400" />
                 <Input
-                  placeholder="Search by name or email…"
+                  placeholder="Search by name, email, phone…"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   className="h-9 pl-9 text-[13px] bg-white border-neutral-200 focus-visible:ring-1 focus-visible:ring-emerald-500/30 focus-visible:border-emerald-400 rounded-lg"
                 />
               </div>
-              <Button variant="outline" size="sm"
-                className="h-9 gap-1.5 text-[12.5px] bg-white border-neutral-200 hover:bg-neutral-50 rounded-lg px-3">
-                <Filter className="w-3.5 h-3.5" />
-                Filter
-              </Button>
+
+              {/* Status filter */}
+              <div className="flex items-center gap-1.5">
+                <Filter className="w-3.5 h-3.5 text-neutral-400 shrink-0" />
+                <div className="flex items-center gap-1 flex-wrap">
+                  {STATUS_FILTERS.map((sf) => (
+                    <button
+                      key={sf.value}
+                      onClick={() => setStatusFilter(sf.value)}
+                      className={`px-2.5 py-1 rounded-full text-[11.5px] font-medium transition-colors border ${
+                        statusFilter === sf.value
+                          ? "bg-emerald-600 text-white border-emerald-600"
+                          : "bg-white text-neutral-500 border-neutral-200 hover:bg-neutral-50"
+                      }`}
+                    >
+                      {sf.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               {/* Mobile add button */}
               <Button
                 onClick={() => setShowAdd(true)}
@@ -349,128 +541,196 @@ export function Customers() {
               </Button>
             </motion.div>
 
-            {/* Table */}
-            <motion.div variants={item}
-              className="bg-white rounded-xl border border-neutral-100 overflow-hidden shadow-[0_1px_3px_rgba(0,0,0,0.06)]">
+            {/* ── Table ───────────────────────────────────────────────── */}
+            <motion.div
+              variants={item}
+              className="bg-white rounded-xl border border-neutral-100 overflow-hidden shadow-[0_1px_3px_rgba(0,0,0,0.06)]"
+            >
               <div className="overflow-x-auto">
                 <table className="w-full text-sm text-left">
                   <thead>
                     <tr className="border-b border-neutral-100 bg-neutral-50/70">
-                      {["Customer", "Contact", "Subscriptions", "Status", "Purchase", "Total Revenue", "Rep", ""].map((col, i) => (
-                        <th key={col || i}
-                          className={[
-                            "px-5 py-3 text-[10.5px] font-semibold tracking-wider text-neutral-400 uppercase",
-                            col === "Contact"       ? "hidden sm:table-cell"  : "",
-                            col === "Subscriptions" ? "hidden md:table-cell"  : "",
-                            col === "Purchase"      ? "hidden md:table-cell"  : "",
-                            col === "Total Revenue" ? "hidden lg:table-cell"  : "",
-                            col === "Rep"           ? "hidden xl:table-cell"  : "",
-                            col === ""              ? "text-right"            : "",
-                          ].join(" ")}>
-                          {col}
-                        </th>
-                      ))}
+                      <th className="px-5 py-3 text-[10.5px] font-semibold tracking-wider text-neutral-400 uppercase whitespace-nowrap">
+                        Customer Name
+                      </th>
+                      <th className="px-5 py-3 text-[10.5px] font-semibold tracking-wider text-neutral-400 uppercase whitespace-nowrap hidden sm:table-cell">
+                        Phone
+                      </th>
+                      <th className="px-5 py-3 text-[10.5px] font-semibold tracking-wider text-neutral-400 uppercase whitespace-nowrap hidden sm:table-cell">
+                        Email
+                      </th>
+                      <th className="px-5 py-3 text-[10.5px] font-semibold tracking-wider text-neutral-400 uppercase whitespace-nowrap hidden md:table-cell">
+                        Property
+                      </th>
+                      <th className="px-5 py-3 text-[10.5px] font-semibold tracking-wider text-neutral-400 uppercase whitespace-nowrap hidden md:table-cell">
+                        Land Size
+                      </th>
+                      <th className="px-5 py-3 text-[10.5px] font-semibold tracking-wider text-neutral-400 uppercase whitespace-nowrap hidden lg:table-cell">
+                        Plan
+                      </th>
+                      <th className="px-5 py-3 text-[10.5px] font-semibold tracking-wider text-neutral-400 uppercase whitespace-nowrap hidden lg:table-cell">
+                        Locked Price
+                      </th>
+                      <th className="px-5 py-3 text-[10.5px] font-semibold tracking-wider text-neutral-400 uppercase whitespace-nowrap hidden lg:table-cell">
+                        Amount Paid
+                      </th>
+                      <th className="px-5 py-3 text-[10.5px] font-semibold tracking-wider text-neutral-400 uppercase whitespace-nowrap hidden xl:table-cell">
+                        Outstanding Balance
+                      </th>
+                      <th className="px-5 py-3 text-[10.5px] font-semibold tracking-wider text-neutral-400 uppercase whitespace-nowrap hidden xl:table-cell">
+                        Next Due Date
+                      </th>
+                      <th className="px-5 py-3 text-[10.5px] font-semibold tracking-wider text-neutral-400 uppercase whitespace-nowrap">
+                        Status
+                      </th>
+                      <th className="px-5 py-3 text-[10.5px] font-semibold tracking-wider text-neutral-400 uppercase text-right whitespace-nowrap">
+                        Actions
+                      </th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-neutral-50">
                     {filtered.map((customer) => {
                       const name = customer.full_name ?? customer.name ?? "Unknown";
                       const [bgCls, txtCls] = avatarColor(name);
-                      const status = (customer.status || "active").toLowerCase();
-                      const purchaseCfg = purchaseStatusConfig(customer.purchase_status);
-                      return (
-                        <tr key={customer.id}
-                          className="hover:bg-neutral-50/60 transition-colors group">
+                      const ps = customer.primary_subscription;
+                      const statusCfg = subStatusConfig(ps?.status);
 
-                          {/* Customer */}
+                      return (
+                        <tr
+                          key={customer.id}
+                          className="hover:bg-neutral-50/60 transition-colors group"
+                        >
+                          {/* Customer Name */}
                           <td className="px-5 py-3.5 whitespace-nowrap">
                             <div className="flex items-center gap-3">
-                              <div className={`h-8 w-8 rounded-full ${bgCls} ${txtCls} flex items-center justify-center text-[11px] font-bold uppercase shrink-0`}>
+                              <div
+                                className={`h-8 w-8 rounded-full ${bgCls} ${txtCls} flex items-center justify-center text-[11px] font-bold uppercase shrink-0`}
+                              >
                                 {name.substring(0, 2)}
                               </div>
                               <div>
-                                <div className="text-[13px] font-semibold text-neutral-900">{name}</div>
-                                <div className="text-[11px] text-neutral-400 mt-0.5 sm:hidden">{customer.email}</div>
-                                <div className="text-[11px] text-neutral-400 mt-0.5 hidden sm:block">
-                                  Joined {customer.joinedAt || customer.created_at?.slice(0, 10) || "N/A"}
+                                <div className="text-[13px] font-semibold text-neutral-900">
+                                  {name}
+                                </div>
+                                <div className="text-[11px] text-neutral-400 mt-0.5 sm:hidden">
+                                  {customer.phone ?? "—"}
                                 </div>
                               </div>
                             </div>
                           </td>
 
-                          {/* Contact */}
+                          {/* Phone */}
                           <td className="px-5 py-3.5 whitespace-nowrap hidden sm:table-cell">
-                            <div className="text-[12.5px] text-neutral-700">{customer.email}</div>
-                            <div className="text-[11px] text-neutral-400 mt-0.5">{customer.phone}</div>
+                            <span className="text-[12.5px] text-neutral-700">
+                              {dash(customer.phone)}
+                            </span>
                           </td>
 
-                          {/* Subscriptions */}
+                          {/* Email */}
+                          <td className="px-5 py-3.5 whitespace-nowrap hidden sm:table-cell">
+                            <span className="text-[12.5px] text-neutral-700">
+                              {dash(customer.email)}
+                            </span>
+                          </td>
+
+                          {/* Property */}
                           <td className="px-5 py-3.5 whitespace-nowrap hidden md:table-cell">
-                            <div className="flex items-center gap-2">
-                              <div className="p-1.5 rounded-md bg-neutral-100 group-hover:bg-white transition-colors border border-transparent group-hover:border-neutral-100">
-                                <FileText className="w-3.5 h-3.5 text-neutral-400" />
-                              </div>
-                              <div>
-                                <div className="text-[12.5px] font-semibold text-neutral-900">
-                                  {customer.subscriptions ?? customer.subscription_count ?? 0} total
-                                </div>
-                                <div className="text-[11px] text-neutral-400">
-                                  {customer.activeSubscriptions ?? customer.active_subscription_count ?? 0} active
-                                </div>
-                              </div>
-                            </div>
+                            <span className="text-[12.5px] text-neutral-700">
+                              {dash(ps?.property_name)}
+                            </span>
                           </td>
 
-                          {/* Subscription Status */}
+                          {/* Land Size */}
+                          <td className="px-5 py-3.5 whitespace-nowrap hidden md:table-cell">
+                            <span className="text-[12.5px] text-neutral-700">
+                              {dash(ps?.land_size)}
+                            </span>
+                          </td>
+
+                          {/* Plan */}
+                          <td className="px-5 py-3.5 whitespace-nowrap hidden lg:table-cell">
+                            <span className="text-[12.5px] text-neutral-700">
+                              {dash(ps?.plan_name)}
+                            </span>
+                          </td>
+
+                          {/* Locked Price */}
+                          <td className="px-5 py-3.5 whitespace-nowrap hidden lg:table-cell">
+                            <span className="text-[12.5px] font-medium text-neutral-800">
+                              {fmt(ps?.locked_price)}
+                            </span>
+                          </td>
+
+                          {/* Amount Paid */}
+                          <td className="px-5 py-3.5 whitespace-nowrap hidden lg:table-cell">
+                            <span className="text-[12.5px] font-medium text-emerald-700">
+                              {fmt(ps?.amount_paid)}
+                            </span>
+                          </td>
+
+                          {/* Outstanding Balance */}
+                          <td className="px-5 py-3.5 whitespace-nowrap hidden xl:table-cell">
+                            <span
+                              className={`text-[12.5px] font-medium ${
+                                ps?.balance > 0 ? "text-red-600" : "text-neutral-700"
+                              }`}
+                            >
+                              {fmt(ps?.balance)}
+                            </span>
+                          </td>
+
+                          {/* Next Due Date */}
+                          <td className="px-5 py-3.5 whitespace-nowrap hidden xl:table-cell">
+                            <span className="text-[12.5px] text-neutral-700">
+                              {dash(ps?.next_due_date)}
+                            </span>
+                          </td>
+
+                          {/* Status */}
                           <td className="px-5 py-3.5 whitespace-nowrap">
-                            <Badge variant={status === "active" ? "default" : "secondary"}
-                              className={
-                                status === "active"
-                                  ? "bg-emerald-50 text-emerald-700 border-emerald-100 text-[11px] gap-1.5"
-                                  : status === "completed"
-                                  ? "bg-blue-50 text-blue-700 border-blue-100 text-[11px] gap-1.5"
-                                  : "text-[11px] gap-1.5"
-                              }>
-                              {status === "active" && <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full" />}
-                              {status === "completed" && <CheckCircle2 className="w-3 h-3" />}
-                              <span className="capitalize">{status}</span>
-                            </Badge>
-                          </td>
-
-                          {/* Purchase Status */}
-                          <td className="px-5 py-3.5 whitespace-nowrap hidden md:table-cell">
-                            {purchaseCfg ? (
-                              <Badge className={`text-[11px] border ${purchaseCfg.cls}`}>
-                                {purchaseCfg.label}
+                            {statusCfg ? (
+                              <Badge
+                                className={`text-[11px] border gap-1.5 ${statusCfg.cls}`}
+                              >
+                                {statusCfg.dot && (
+                                  <span
+                                    className={`w-1.5 h-1.5 rounded-full ${statusCfg.dot} inline-block`}
+                                  />
+                                )}
+                                {ps?.status === "COMPLETED" && (
+                                  <CheckCircle2 className="w-3 h-3" />
+                                )}
+                                {ps?.status === "DEFAULTING" && (
+                                  <AlertTriangle className="w-3 h-3" />
+                                )}
+                                {ps?.status === "CANCELLED" && (
+                                  <XCircle className="w-3 h-3" />
+                                )}
+                                {statusCfg.label}
                               </Badge>
                             ) : (
                               <span className="text-[11px] text-neutral-300">—</span>
                             )}
                           </td>
 
-                          {/* Revenue */}
-                          <td className="px-5 py-3.5 whitespace-nowrap hidden lg:table-cell">
-                            <div className="text-[13px] font-semibold text-neutral-900">
-                              {fmt(customer.totalRevenue ?? customer.total_revenue ?? 0)}
-                            </div>
-                          </td>
-
-                          {/* Rep */}
-                          <td className="px-5 py-3.5 whitespace-nowrap hidden xl:table-cell">
-                            <div className="flex items-center gap-1.5 text-[12.5px] text-neutral-600">
-                              <div className="w-5 h-5 rounded-full bg-neutral-200 flex items-center justify-center text-[9px] font-bold text-neutral-500">
-                                {(customer.customerRep || customer.rep_name || "U").substring(0, 1)}
-                              </div>
-                              {customer.customerRep || customer.rep_name || "N/A"}
-                            </div>
-                          </td>
-
                           {/* Actions */}
                           <td className="px-5 py-3.5 whitespace-nowrap text-right">
-                            <Button variant="ghost" size="icon"
-                              className="h-7 w-7 text-neutral-300 hover:text-neutral-700 hover:bg-neutral-100 rounded-lg">
-                              <MoreVertical className="w-3.5 h-3.5" />
-                            </Button>
+                            <div className="flex items-center justify-end gap-1">
+                              <button
+                                onClick={() => navigate(`/customers/${customer.id}`)}
+                                title="View customer"
+                                className="h-7 w-7 flex items-center justify-center rounded-lg text-neutral-400 hover:text-emerald-700 hover:bg-emerald-50 transition-colors"
+                              >
+                                <Eye className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                onClick={() => navigate(`/customers/${customer.id}/edit`)}
+                                title="Edit customer"
+                                className="h-7 w-7 flex items-center justify-center rounded-lg text-neutral-400 hover:text-blue-700 hover:bg-blue-50 transition-colors"
+                              >
+                                <Pencil className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       );
@@ -478,12 +738,20 @@ export function Customers() {
                   </tbody>
                 </table>
               </div>
+
+              {/* Row count footer */}
+              <div className="px-5 py-2.5 border-t border-neutral-50 bg-neutral-50/40">
+                <p className="text-[11px] text-neutral-400">
+                  Showing {filtered.length} of {customers.length} customer
+                  {customers.length !== 1 ? "s" : ""}
+                </p>
+              </div>
             </motion.div>
           </>
         )}
       </motion.div>
 
-      {/* Add Customer Modal */}
+      {/* ── Add Customer Modal ─────────────────────────────────────────────── */}
       {showAdd && (
         <AddCustomerModal
           onClose={() => setShowAdd(false)}

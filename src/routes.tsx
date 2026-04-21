@@ -6,6 +6,7 @@ import { PropertyWizard } from "./pages/PropertyWizard";
 import PropertyPreview from "./pages/PropertyPreview";
 import { Customers } from "./pages/Customers";
 import { SalesReps } from "./pages/SalesReps";
+import { CustomerReps } from "./pages/CustomerReps";
 import { SiteInspection } from "./pages/SiteInspection";
 import { DataExport } from "./pages/DataExport";
 import { WorkspaceSettings } from "./pages/settings/WorkspaceSettings";
@@ -13,6 +14,7 @@ import { AccountSettings } from "./pages/settings/AccountSettings";
 import { NotFound } from "./pages/NotFound";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { AcceptInvite } from "./pages/AcceptInvite";
+import EstatesPage from "./pages/public/EstatesPage";
 // Onboarding – isolated module, no MainLayout dependency
 import { OnboardingLayout } from "./onboarding/components/OnboardingLayout";
 import { SignIn } from "./onboarding/pages/SignIn";
@@ -24,8 +26,9 @@ import { WorkspaceSetup } from "./onboarding/pages/WorkspaceSetup";
 import { SelectPlan } from "./onboarding/pages/SelectPlan";
 
 export const router = createBrowserRouter([
-  // ── Public invite accept page (no auth required) ─────────────────────────
+  // ── Public pages (no auth required) ──────────────────────────────────────
   { path: "/accept-invite/:token", Component: AcceptInvite },
+  { path: "/estates/:workspaceSlug", Component: EstatesPage },
 
   // ── Onboarding (standalone, no MainLayout) ──────────────────────────────
   {
@@ -56,6 +59,7 @@ export const router = createBrowserRouter([
           { path: "properties/:id/edit", Component: PropertyWizard },
           { path: "properties/:id/preview", Component: PropertyPreview },
           { path: "customers", Component: Customers },
+          { path: "customer-reps", Component: CustomerReps },
           { path: "sales-reps", Component: SalesReps },
           { path: "site-inspection", Component: SiteInspection },
           { path: "data-export", Component: DataExport },

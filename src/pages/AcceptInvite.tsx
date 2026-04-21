@@ -177,7 +177,7 @@ export function AcceptInvite() {
               Sign in to accept
             </button>
             <button
-              onClick={() => navigate(`/auth/sign-up?next=/accept-invite/${token}&email=${encodeURIComponent(invite.email)}`)}
+              onClick={() => navigate(`/auth/sign-up?invite=${token}&email=${encodeURIComponent(invite.email)}`)}
               className="w-full py-2.5 border border-neutral-300 text-neutral-700 rounded-lg text-sm font-medium hover:bg-neutral-50 transition-colors"
             >
               Create an account

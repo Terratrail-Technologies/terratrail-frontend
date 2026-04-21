@@ -20,6 +20,7 @@ import {
   LogOut,
   ChevronRight,
   Loader2,
+  UsersRound,
 } from "lucide-react";
 import { cn } from "../components/ui/utils";
 import {
@@ -244,6 +245,7 @@ const ALL_NAV_ITEMS = [
   { icon: LayoutDashboard, label: "Overview",        href: "/",               roles: ["OWNER","ADMIN","SALES_REP","CUSTOMER"] },
   { icon: Building2,       label: "Properties",      href: "/properties",     roles: ["OWNER","ADMIN","SALES_REP"] },
   { icon: Users,           label: "Customers",       href: "/customers",      roles: ["OWNER","ADMIN"] },
+  { icon: UsersRound,      label: "Customer Reps",   href: "/customer-reps",  roles: ["OWNER","ADMIN"] },
   { icon: UserCheck,       label: "Sales Reps",      href: "/sales-reps",     roles: ["OWNER","ADMIN"] },
   { icon: Calendar,        label: "Site Inspection", href: "/site-inspection",roles: ["OWNER","ADMIN","SALES_REP"] },
   { icon: Download,        label: "Data Export",     href: "/data-export",    roles: ["OWNER","ADMIN"] },
@@ -265,10 +267,12 @@ function NavContent() {
   const [planUsage, setPlanUsage] = useState<any>(null);
 
   usePolling(() => {
-    api.workspaces.billingUsage()
-      .then((data) => setPlanUsage(data))
-      .catch(() => {});
-  }, 60_000);
+    if (role === "OWNER" || role === "ADMIN") {
+      api.workspaces.billingUsage()
+        .then((data) => setPlanUsage(data))
+        .catch(() => {});
+    }
+  }, 30_000);
 
   const handleLogout = () => {
     localStorage.removeItem("tt_auth");

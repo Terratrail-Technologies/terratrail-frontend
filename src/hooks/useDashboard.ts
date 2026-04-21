@@ -41,7 +41,7 @@ export function presetToRange(preset: DatePreset): DateRange {
   }
 }
 
-export function useDashboard(dateRange: DateRange) {
+export function useDashboard(dateRange: DateRange, enabled = true) {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [leaderboard, setLeaderboard] = useState<any>(null);
   const [revenueBreakdown, setRevenueBreakdown] = useState<any>(null);
@@ -51,6 +51,7 @@ export function useDashboard(dateRange: DateRange) {
   const [error, setError] = useState<string | null>(null);
 
   const fetchDashboardData = useCallback(async () => {
+    if (!enabled) return;
     setLoading(true);
     setError(null);
     try {
@@ -73,7 +74,7 @@ export function useDashboard(dateRange: DateRange) {
     } finally {
       setLoading(false);
     }
-  }, [dateRange]);
+  }, [dateRange, enabled]);
 
   useEffect(() => {
     fetchDashboardData();
