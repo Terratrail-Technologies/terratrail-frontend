@@ -275,7 +275,7 @@ function PropertyDetail({
                 title="Property location"
                 width="100%" height="100%" frameBorder="0" style={{ border: 0 }}
                 referrerPolicy="no-referrer-when-downgrade"
-                src={`https://maps.google.com/maps?q=${loc.latitude},${loc.longitude}&z=15&output=embed`}
+                src={`https://www.openstreetmap.org/export/embed.html?bbox=${(Number(loc.longitude)-0.01).toFixed(6)},${(Number(loc.latitude)-0.01).toFixed(6)},${(Number(loc.longitude)+0.01).toFixed(6)},${(Number(loc.latitude)+0.01).toFixed(6)}&layer=mapnik&marker=${loc.latitude},${loc.longitude}`}
                 allowFullScreen
               />
             </div>

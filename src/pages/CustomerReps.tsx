@@ -1,5 +1,10 @@
 import { useState, useEffect } from "react";
-import { Users, UserCheck, ShoppingBag, AlertCircle, Search, Mail, Phone, Copy, Check, MoreHorizontal, UserPlus, X } from "lucide-react";
+import { useNavigate } from "react-router";
+import {
+  Users, UserCheck, ShoppingBag, AlertCircle, Search,
+  Copy, Check, UserPlus, X, TrendingUp, Building2, Eye,
+  UserX, MoreHorizontal,
+} from "lucide-react";
 import { api } from "../services/api";
 import { useWorkspaceRole } from "../hooks/useWorkspaceRole";
 
@@ -10,27 +15,33 @@ interface Member {
   user: string;
   user_name: string;
   user_email: string;
+  user_phone: string;
   role: string;
   is_active: boolean;
   created_at: string;
   managed_customers_count: number;
   managed_subscriptions_count: number;
+  active_subscriptions_count: number;
+  properties_count: number;
+  total_revenue_managed: number;
 }
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+const fmt = (n: number) =>
+  n >= 1_000_000
+    ? `₦${(n / 1_000_000).toFixed(1)}M`
+    : n >= 1_000
+    ? `₦${(n / 1_000).toFixed(0)}K`
+    : `₦${n.toLocaleString("en-NG")}`;
 
 // ── Summary Card ──────────────────────────────────────────────────────────────
 
 function SummaryCard({
-  label,
-  value,
-  icon: Icon,
-  color,
-  sub,
+  label, value, icon: Icon, color, sub,
 }: {
-  label: string;
-  value: number | string;
-  icon: React.ElementType;
-  color: "emerald" | "blue" | "violet" | "amber";
-  sub?: string;
+  label: string; value: number | string; icon: React.ElementType;
+  color: "emerald" | "blue" | "violet" | "amber"; sub?: string;
 }) {
   const colors = {
     emerald: "bg-emerald-50 text-emerald-600",
@@ -79,7 +90,7 @@ function InviteModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: (
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm">
         <div className="flex items-center justify-between p-5 border-b border-neutral-100">
           <div>
-            <h3 className="text-[15px] font-bold text-neutral-900">Invite Sales Rep</h3>
+            <h3 className="text-[15px] font-bold text-neutral-900">Invite Customer Rep</h3>
             <p className="text-[12px] text-neutral-500 mt-0.5">Send an invitation email</p>
           </div>
           <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-neutral-100 text-neutral-400">
@@ -95,9 +106,7 @@ function InviteModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: (
               className="w-full px-3 py-2.5 text-[13px] border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
             />
           </div>
-          {error && (
-            <p className="text-[12px] text-red-600 bg-red-50 rounded-lg px-3 py-2">{error}</p>
-          )}
+          {error && <p className="text-[12px] text-red-600 bg-red-50 rounded-lg px-3 py-2">{error}</p>}
           <button type="submit" disabled={loading}
             className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-[13px] font-semibold rounded-lg transition-colors">
             {loading ? "Sending…" : "Send Invitation"}
@@ -108,9 +117,39 @@ function InviteModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: (
   );
 }
 
+// ── Row Actions Menu ──────────────────────────────────────────────────────────
+
+function RowActions({ member, onView }: { member: Member; onView: () => void }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="relative">
+      <button onClick={() => setOpen((o) => !o)}
+        className="p-1.5 rounded-lg hover:bg-neutral-100 text-neutral-400 hover:text-neutral-700">
+        <MoreHorizontal className="size-4" />
+      </button>
+      {open && (
+        <>
+          <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
+          <div className="absolute right-0 top-7 z-20 w-40 bg-white rounded-xl shadow-lg border border-neutral-100 py-1 text-[13px]">
+            <button onClick={() => { setOpen(false); onView(); }}
+              className="w-full flex items-center gap-2 px-3 py-2 hover:bg-neutral-50 text-neutral-700">
+              <Eye className="size-3.5" /> View Profile
+            </button>
+            <button onClick={() => setOpen(false)}
+              className="w-full flex items-center gap-2 px-3 py-2 hover:bg-red-50 text-red-600">
+              <UserX className="size-3.5" /> Deactivate
+            </button>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 // ── Main Component ────────────────────────────────────────────────────────────
 
 export function CustomerReps() {
+  const navigate = useNavigate();
   const { role, loading: roleLoading } = useWorkspaceRole();
   const [members, setMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(true);
@@ -126,7 +165,6 @@ export function CustomerReps() {
     api.workspaces.listMembers()
       .then((data) => {
         const list = Array.isArray(data) ? data : [];
-        // Filter to sales reps only
         setMembers(list.filter((m: Member) => m.role === "SALES_REP"));
       })
       .catch(() => setMembers([]))
@@ -146,10 +184,10 @@ export function CustomerReps() {
   };
 
   // Summary stats
-  const totalReps = members.length;
-  const activeReps = members.filter((m) => m.is_active).length;
+  const totalReps      = members.length;
+  const activeReps     = members.filter((m) => m.is_active).length;
   const totalCustomers = members.reduce((s, m) => s + m.managed_customers_count, 0);
-  const totalSubscriptions = members.reduce((s, m) => s + m.managed_subscriptions_count, 0);
+  const totalProps     = members.reduce((s, m) => s + (m.properties_count || 0), 0);
 
   const filtered = members.filter((m) => {
     const q = search.toLowerCase();
@@ -181,7 +219,7 @@ export function CustomerReps() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-[20px] font-bold text-neutral-900">Customer Representatives</h1>
-          <p className="text-[13px] text-neutral-500 mt-0.5">Manage your sales reps and their assigned customers</p>
+          <p className="text-[13px] text-neutral-500 mt-0.5">Manage your team and their assigned properties</p>
         </div>
         <button
           onClick={() => setShowInvite(true)}
@@ -194,10 +232,12 @@ export function CustomerReps() {
 
       {/* Summary cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <SummaryCard label="Total Reps"          value={totalReps}          icon={Users}      color="emerald" />
-        <SummaryCard label="Active"               value={activeReps}         icon={UserCheck}  color="blue"    sub={`${totalReps - activeReps} inactive`} />
-        <SummaryCard label="Customers Managed"    value={totalCustomers}     icon={ShoppingBag} color="violet" />
-        <SummaryCard label="Subscriptions Managed" value={totalSubscriptions} icon={UserCheck}  color="amber"  />
+        <SummaryCard label="Total Reps"          value={totalReps}    icon={Users}      color="emerald" sub={`${activeReps} active`} />
+        <SummaryCard label="Properties Managed"  value={totalProps}   icon={Building2}  color="blue"    />
+        <SummaryCard label="Customers Managed"   value={totalCustomers} icon={ShoppingBag} color="violet" />
+        <SummaryCard label="Active Subscriptions"
+          value={members.reduce((s, m) => s + (m.active_subscriptions_count || 0), 0)}
+          icon={TrendingUp} color="amber" />
       </div>
 
       {/* Filters */}
@@ -229,10 +269,13 @@ export function CustomerReps() {
               <tr className="border-b border-neutral-100 bg-neutral-50">
                 <th className="text-left px-4 py-3 text-[11px] font-bold text-neutral-500 uppercase tracking-wide">Name</th>
                 <th className="text-left px-4 py-3 text-[11px] font-bold text-neutral-500 uppercase tracking-wide">Email</th>
+                <th className="text-left px-4 py-3 text-[11px] font-bold text-neutral-500 uppercase tracking-wide">Phone</th>
+                <th className="text-center px-4 py-3 text-[11px] font-bold text-neutral-500 uppercase tracking-wide">Properties</th>
                 <th className="text-center px-4 py-3 text-[11px] font-bold text-neutral-500 uppercase tracking-wide">Customers</th>
-                <th className="text-center px-4 py-3 text-[11px] font-bold text-neutral-500 uppercase tracking-wide">Subscriptions</th>
+                <th className="text-center px-4 py-3 text-[11px] font-bold text-neutral-500 uppercase tracking-wide">Active Subs</th>
+                <th className="text-right px-4 py-3 text-[11px] font-bold text-neutral-500 uppercase tracking-wide">Revenue</th>
                 <th className="text-center px-4 py-3 text-[11px] font-bold text-neutral-500 uppercase tracking-wide">Status</th>
-                <th className="text-center px-4 py-3 text-[11px] font-bold text-neutral-500 uppercase tracking-wide">Joined</th>
+                <th className="px-4 py-3" />
               </tr>
             </thead>
             <tbody className="divide-y divide-neutral-50">
@@ -241,24 +284,23 @@ export function CustomerReps() {
                   <tr key={i} className="animate-pulse">
                     <td className="px-4 py-3"><div className="flex items-center gap-3"><div className="w-8 h-8 rounded-full bg-neutral-100" /><div className="h-3.5 bg-neutral-100 rounded w-28" /></div></td>
                     <td className="px-4 py-3"><div className="h-3 bg-neutral-100 rounded w-36" /></td>
-                    <td className="px-4 py-3 text-center"><div className="h-3 bg-neutral-100 rounded w-8 mx-auto" /></td>
-                    <td className="px-4 py-3 text-center"><div className="h-3 bg-neutral-100 rounded w-8 mx-auto" /></td>
+                    <td className="px-4 py-3"><div className="h-3 bg-neutral-100 rounded w-24" /></td>
+                    {Array.from({ length: 4 }).map((_, j) => (
+                      <td key={j} className="px-4 py-3 text-center"><div className="h-3 bg-neutral-100 rounded w-8 mx-auto" /></td>
+                    ))}
                     <td className="px-4 py-3 text-center"><div className="h-5 bg-neutral-100 rounded-full w-14 mx-auto" /></td>
-                    <td className="px-4 py-3 text-center"><div className="h-3 bg-neutral-100 rounded w-16 mx-auto" /></td>
+                    <td className="px-4 py-3" />
                   </tr>
                 ))
               ) : filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-4 py-12 text-center text-neutral-400 text-[13px]">
+                  <td colSpan={9} className="px-4 py-12 text-center text-neutral-400 text-[13px]">
                     {search || statusFilter !== "ALL" ? "No reps match your filters." : "No customer representatives yet. Invite your first rep."}
                   </td>
                 </tr>
               ) : (
                 filtered.map((m) => {
-                  const initials = m.user_name
-                    .split(" ").slice(0, 2).map((w) => w[0]?.toUpperCase()).join("");
-                  const joined = new Date(m.created_at).toLocaleDateString("en-NG", { day: "numeric", month: "short", year: "numeric" });
-
+                  const initials = m.user_name.split(" ").slice(0, 2).map((w) => w[0]?.toUpperCase()).join("");
                   return (
                     <tr key={m.id} className="hover:bg-neutral-50 transition-colors">
                       {/* Name */}
@@ -267,14 +309,18 @@ export function CustomerReps() {
                           <div className="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center text-[11px] font-bold text-white shrink-0">
                             {initials}
                           </div>
-                          <span className="font-semibold text-neutral-800 truncate max-w-[140px]">{m.user_name}</span>
+                          <button
+                            onClick={() => navigate(`/customer-reps/${m.id}`)}
+                            className="font-semibold text-neutral-800 hover:text-emerald-700 truncate max-w-[140px] text-left transition-colors">
+                            {m.user_name}
+                          </button>
                         </div>
                       </td>
 
                       {/* Email */}
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-1.5">
-                          <span className="text-neutral-600 truncate max-w-[180px]">{m.user_email}</span>
+                          <span className="text-neutral-600 truncate max-w-[160px]">{m.user_email}</span>
                           <button onClick={() => copyEmail(m.user_email)}
                             className="p-1 rounded hover:bg-neutral-100 text-neutral-400 hover:text-neutral-700 shrink-0">
                             {copied === m.user_email ? <Check className="size-3 text-emerald-600" /> : <Copy className="size-3" />}
@@ -282,14 +328,21 @@ export function CustomerReps() {
                         </div>
                       </td>
 
-                      {/* Customers */}
-                      <td className="px-4 py-3 text-center">
-                        <span className="font-semibold text-neutral-700">{m.managed_customers_count}</span>
-                      </td>
+                      {/* Phone */}
+                      <td className="px-4 py-3 text-neutral-500">{m.user_phone || "—"}</td>
 
-                      {/* Subscriptions */}
-                      <td className="px-4 py-3 text-center">
-                        <span className="font-semibold text-neutral-700">{m.managed_subscriptions_count}</span>
+                      {/* Properties */}
+                      <td className="px-4 py-3 text-center font-semibold text-neutral-700">{m.properties_count ?? 0}</td>
+
+                      {/* Customers */}
+                      <td className="px-4 py-3 text-center font-semibold text-neutral-700">{m.managed_customers_count}</td>
+
+                      {/* Active subs */}
+                      <td className="px-4 py-3 text-center font-semibold text-neutral-700">{m.active_subscriptions_count ?? 0}</td>
+
+                      {/* Revenue */}
+                      <td className="px-4 py-3 text-right font-semibold text-emerald-700">
+                        {fmt(m.total_revenue_managed ?? 0)}
                       </td>
 
                       {/* Status */}
@@ -299,8 +352,10 @@ export function CustomerReps() {
                         </span>
                       </td>
 
-                      {/* Joined */}
-                      <td className="px-4 py-3 text-center text-neutral-500">{joined}</td>
+                      {/* Actions */}
+                      <td className="px-4 py-3">
+                        <RowActions member={m} onView={() => navigate(`/customer-reps/${m.id}`)} />
+                      </td>
                     </tr>
                   );
                 })
@@ -309,7 +364,7 @@ export function CustomerReps() {
           </table>
         </div>
         {!loading && filtered.length > 0 && (
-          <div className="px-4 py-2.5 border-t border-neutral-50 bg-neutral-50 flex items-center justify-between">
+          <div className="px-4 py-2.5 border-t border-neutral-50 bg-neutral-50">
             <span className="text-[11px] text-neutral-400">{filtered.length} rep{filtered.length !== 1 ? "s" : ""}</span>
           </div>
         )}

@@ -17,6 +17,7 @@ import {
   AlertCircle,
   Image as ImageIcon,
   Loader2,
+  Layers,
 } from "lucide-react";
 import { toast } from "sonner";
 import { api } from "../services/api";
@@ -30,18 +31,23 @@ import { Textarea } from "../components/ui/textarea";
 
 // ─── Step definitions ────────────────────────────────────────────────────────
 const steps = [
-  { id: 1, name: "Basic Info", icon: FileText },
-  { id: 2, name: "Gallery", icon: Upload },
-  { id: 3, name: "Location", icon: MapPin },
-  { id: 4, name: "Amenities", icon: Check },
-  { id: 5, name: "Documents", icon: FileText },
-  { id: 6, name: "Pricing Plans", icon: DollarSign },
-  { id: 7, name: "Payment Methods", icon: CreditCard },
+  { id: 1, name: "Basic Info",       icon: FileText   },
+  { id: 2, name: "Gallery",          icon: Upload     },
+  { id: 3, name: "Location",         icon: MapPin     },
+  { id: 4, name: "Amenities",        icon: Check      },
+  { id: 5, name: "Documents",        icon: FileText   },
+  { id: 6, name: "Land Inventory",   icon: Layers     },
+  { id: 7, name: "Pricing Plans",    icon: DollarSign },
+  { id: 8, name: "Payment Methods",  icon: CreditCard },
 ];
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 interface Amenity { id: string; name: string; status: string; description: string; }
-interface Doc { id: string; documentType: string; status: string; notes: string; file: File | null; fileName: string; }
+interface Doc {
+  id: string; documentType: string; customDocName: string;
+  status: string; notes: string; file: File | null; fileName: string;
+}
+interface LandSizeEntry { id: string; landSize: string; totalSlots: string; description: string; }
 
 const DOCUMENT_TYPES = [
   { value: "C_OF_O",             label: "Certificate of Occupancy (C of O)" },
@@ -59,7 +65,12 @@ const AMENITY_STATUSES = [
   { value: "IN_PROGRESS", label: "In Progress" },
   { value: "COMPLETED",   label: "Completed" },
 ];
-const docLabel = (type: string) => DOCUMENT_TYPES.find((d) => d.value === type)?.label ?? type;
+
+const docDisplayLabel = (doc: Doc) =>
+  doc.documentType === "OTHER" && doc.customDocName
+    ? doc.customDocName
+    : DOCUMENT_TYPES.find((d) => d.value === doc.documentType)?.label ?? doc.documentType;
+
 interface PricingPlan {
   id: string; name: string; landSize: string; currency: string;
   totalPrice: string; paymentType: "outright" | "installment";
@@ -110,14 +121,21 @@ const NIGERIAN_STATES = [
 function validateStep(step: number, state: Record<string, any>): string | null {
   if (step === 1) {
     if (!state.propertyName.trim()) return "Property Name is required.";
-    if (!state.totalSqms.trim()) return "Total SQMs is required.";
   }
   if (step === 3) {
     if (!state.city.trim()) return "City is required.";
     if (!state.state.trim()) return "State is required.";
   }
+  if (step === 6) {
+    if ((state.landSizes as LandSizeEntry[]).length === 0)
+      return "Add at least one land size to the inventory.";
+  }
   return null;
 }
+
+// ─── Helper ──────────────────────────────────────────────────────────────────
+const fmt = (n: number) => `₦${n.toLocaleString("en-NG")}`;
+const fmtSqm = (n: number) => n.toLocaleString("en-NG");
 
 export function PropertyWizard() {
   const navigate = useNavigate();
@@ -129,46 +147,61 @@ export function PropertyWizard() {
   const [currentStep, setCurrentStep] = useState(1);
 
   // ── Step 1 state ─────────────────────────────────────────────────────────
-  const [propertyName, setPropertyName]     = useState("");
-  const [propertyType, setPropertyType]     = useState("RESIDENTIAL_LAND");
-  const [description, setDescription]       = useState("");
-  const [totalSqms, setTotalSqms]           = useState("");
-  const [availableUnits, setAvailableUnits] = useState("");
+  const [propertyName, setPropertyName] = useState("");
+  const [propertyType, setPropertyType] = useState("RESIDENTIAL_LAND");
+  const [description, setDescription]   = useState("");
 
   // ── Step 2 state ─────────────────────────────────────────────────────────
-  const [coverImage, setCoverImage]         = useState<File | null>(null);
-  const [coverPreview, setCoverPreview]     = useState<string | null>(null);
-  const [galleryImages, setGalleryImages]   = useState<{ file: File; preview: string }[]>([]);
+  const [coverImage, setCoverImage]       = useState<File | null>(null);
+  const [coverPreview, setCoverPreview]   = useState<string | null>(null);
+  const [galleryImages, setGalleryImages] = useState<{ file: File; preview: string }[]>([]);
   const coverRef   = useRef<HTMLInputElement>(null);
   const galleryRef = useRef<HTMLInputElement>(null);
 
   // ── Step 3 state ─────────────────────────────────────────────────────────
-  const [streetAddress, setStreetAddress]   = useState("");
-  const [city, setCity]                     = useState("");
-  const [state, setState]                   = useState("");
-  const [postalCode, setPostalCode]         = useState("");
-  const [landmark, setLandmark]             = useState("");
-  const [latitude,  setLatitude]            = useState("");
-  const [longitude, setLongitude]           = useState("");
-  const [geoLoading, setGeoLoading]         = useState(false);
+  const [streetAddress, setStreetAddress] = useState("");
+  const [city, setCity]                   = useState("");
+  const [state, setState]                 = useState("");
+  const [postalCode, setPostalCode]       = useState("");
+  const [landmark, setLandmark]           = useState("");
+  const [latitude,  setLatitude]          = useState("");
+  const [longitude, setLongitude]         = useState("");
+  const [geoLoading, setGeoLoading]       = useState(false);
 
   // ── Step 4 state ─────────────────────────────────────────────────────────
-  const [amenities, setAmenities]           = useState<Amenity[]>([]);
+  const [amenities, setAmenities]               = useState<Amenity[]>([]);
   const [showAmenityModal, setShowAmenityModal] = useState(false);
   const [editingAmenityId, setEditingAmenityId] = useState<string | null>(null);
-  const [amenityForm, setAmenityForm]           = useState({ name: "", status: "Not Started" });
+  const [amenityForm, setAmenityForm]           = useState({ name: "", status: "NOT_STARTED" });
 
   // ── Step 5 state ─────────────────────────────────────────────────────────
-  const [documents, setDocuments]           = useState<Doc[]>([]);
-  const [showDocModal, setShowDocModal]     = useState(false);
-  const [docForm, setDocForm]               = useState({ documentType: "SURVEY_PLAN", customDocName: "", status: "NOT_STARTED", notes: "", file: null as File | null, fileName: "" });
+  const [documents, setDocuments]       = useState<Doc[]>([]);
+  const [showDocModal, setShowDocModal] = useState(false);
+  const [docForm, setDocForm]           = useState<Omit<Doc, "id">>({
+    documentType: "SURVEY_PLAN", customDocName: "", status: "NOT_STARTED",
+    notes: "", file: null, fileName: "",
+  });
   const docFileRef = useRef<HTMLInputElement>(null);
+
+  // ── Step 6 state — Land Inventory ────────────────────────────────────────
+  const [landSizes, setLandSizes]               = useState<LandSizeEntry[]>([]);
+  const [showLandSizeModal, setShowLandSizeModal] = useState(false);
+  const [editingLandSizeId, setEditingLandSizeId] = useState<string | null>(null);
+  const [landSizeForm, setLandSizeForm]           = useState({ landSize: "", totalSlots: "", description: "" });
+
+  // Computed from land inventory
+  const computedTotalSqms = landSizes.reduce(
+    (sum, ls) => sum + (Number(ls.landSize) || 0) * (Number(ls.totalSlots) || 0), 0
+  );
+  const computedAvailableUnits = landSizes.reduce(
+    (sum, ls) => sum + (Number(ls.totalSlots) || 0), 0
+  );
 
   // ── Submission ─────────────────────────────────────────────────────────
   const [submitting, setSubmitting] = useState(false);
 
-  // ── Step 6 state ─────────────────────────────────────────────────────────
-  const [pricingPlans, setPricingPlans]     = useState<PricingPlan[]>([]);
+  // ── Step 7 state — Pricing Plans ─────────────────────────────────────────
+  const [pricingPlans, setPricingPlans]         = useState<PricingPlan[]>([]);
   const [showPricingModal, setShowPricingModal] = useState(false);
   const [editingPlanId, setEditingPlanId]       = useState<string | null>(null);
   const [pricingForm, setPricingForm]           = useState<Omit<PricingPlan, "id" | "active">>({
@@ -176,8 +209,8 @@ export function PropertyWizard() {
     paymentType: "outright", initialPayment: "", duration: "", spreadMethod: "separate",
   });
 
-  // ── Step 7 state ─────────────────────────────────────────────────────────
-  const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
+  // ── Step 8 state — Payment Methods ───────────────────────────────────────
+  const [paymentMethods, setPaymentMethods]     = useState<PaymentMethod[]>([]);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [editingPaymentId, setEditingPaymentId] = useState<string | null>(null);
   const [paymentForm, setPaymentForm]           = useState({ bankName: "", bankCode: "", accountName: "", accountNumber: "" });
@@ -186,9 +219,9 @@ export function PropertyWizard() {
 
   // ── Helpers ───────────────────────────────────────────────────────────────
   const monthlyInstallment = useCallback((p: Omit<PricingPlan, "id" | "active">) => {
-    const total  = Number(p.totalPrice) || 0;
-    const init   = Number(p.initialPayment) || 0;
-    const dur    = Number(p.duration) || 1;
+    const total = Number(p.totalPrice) || 0;
+    const init  = Number(p.initialPayment) || 0;
+    const dur   = Number(p.duration) || 1;
     if (p.paymentType !== "installment") return null;
     return p.spreadMethod === "separate"
       ? (total - init) / dur
@@ -202,9 +235,7 @@ export function PropertyWizard() {
       setPropertyName(prop.name ?? "");
       setPropertyType(prop.property_type ?? "RESIDENTIAL_LAND");
       setDescription(prop.description ?? "");
-      setTotalSqms(prop.total_sqms?.toString() ?? "");
       if (prop.featured_image) setCoverPreview(prop.featured_image);
-      setAvailableUnits(prop.available_units?.toString() ?? "");
       if (prop.location) {
         setStreetAddress(prop.location.address ?? "");
         setCity(prop.location.city ?? "");
@@ -222,8 +253,16 @@ export function PropertyWizard() {
       if (prop.documents?.length) {
         setDocuments(prop.documents.map((d: any) => ({
           id: d.id, documentType: d.document_type, status: d.status,
-          notes: d.notes ?? "", file: null,
-          fileName: d.custom_document_name || d.document_type,
+          customDocName: d.custom_document_name ?? "",
+          notes: d.notes ?? "", file: null, fileName: "",
+        })));
+      }
+      if (prop.land_sizes?.length) {
+        setLandSizes(prop.land_sizes.map((ls: any) => ({
+          id: ls.id,
+          landSize: ls.land_size?.toString() ?? "",
+          totalSlots: ls.total_slots?.toString() ?? "",
+          description: ls.description ?? "",
         })));
       }
       if (prop.pricing_plans?.length) {
@@ -284,31 +323,21 @@ export function PropertyWizard() {
     setGalleryImages((prev) => [...prev, ...newImages].slice(0, 10));
   };
 
-  const handleDocFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setDocForm((d) => ({ ...d, file, fileName: file.name }));
-  };
-
   // ── Amenity CRUD ─────────────────────────────────────────────────────────
   const openAddAmenity = () => {
     setEditingAmenityId(null);
     setAmenityForm({ name: "", status: "NOT_STARTED" });
     setShowAmenityModal(true);
   };
-
   const openEditAmenity = (a: Amenity) => {
     setEditingAmenityId(a.id);
     setAmenityForm({ name: a.name, status: a.status });
     setShowAmenityModal(true);
   };
-
   const saveAmenity = () => {
     if (!amenityForm.name.trim()) { toast.error("Amenity name is required."); return; }
     if (editingAmenityId) {
-      setAmenities((prev) =>
-        prev.map((a) => a.id === editingAmenityId ? { ...a, ...amenityForm } : a)
-      );
+      setAmenities((prev) => prev.map((a) => a.id === editingAmenityId ? { ...a, ...amenityForm } : a));
       toast.success("Amenity updated.");
     } else {
       setAmenities((prev) => [...prev, { id: Date.now().toString(), description: "", ...amenityForm }]);
@@ -322,28 +351,66 @@ export function PropertyWizard() {
     setDocForm({ documentType: "SURVEY_PLAN", customDocName: "", status: "NOT_STARTED", notes: "", file: null, fileName: "" });
     setShowDocModal(true);
   };
-
   const saveDoc = () => {
     setDocuments((prev) => [...prev, { id: Date.now().toString(), ...docForm }]);
     toast.success("Document added.");
     setShowDocModal(false);
   };
 
+  // ── Land Size CRUD ────────────────────────────────────────────────────────
+  const openAddLandSize = () => {
+    setEditingLandSizeId(null);
+    setLandSizeForm({ landSize: "", totalSlots: "", description: "" });
+    setShowLandSizeModal(true);
+  };
+  const openEditLandSize = (ls: LandSizeEntry) => {
+    setEditingLandSizeId(ls.id);
+    setLandSizeForm({ landSize: ls.landSize, totalSlots: ls.totalSlots, description: ls.description });
+    setShowLandSizeModal(true);
+  };
+  const saveLandSize = () => {
+    if (!landSizeForm.landSize || !landSizeForm.totalSlots) {
+      toast.error("Land size (SQM) and number of slots are required.");
+      return;
+    }
+    if (Number(landSizeForm.landSize) <= 0 || Number(landSizeForm.totalSlots) <= 0) {
+      toast.error("Land size and slots must be positive numbers.");
+      return;
+    }
+    if (editingLandSizeId) {
+      setLandSizes((prev) => prev.map((ls) =>
+        ls.id === editingLandSizeId ? { ...ls, ...landSizeForm } : ls
+      ));
+      toast.success("Land size updated.");
+    } else {
+      // Prevent duplicate land sizes
+      const duplicate = landSizes.find((ls) => ls.landSize === landSizeForm.landSize);
+      if (duplicate) { toast.error(`${landSizeForm.landSize} SQM already exists in the inventory.`); return; }
+      setLandSizes((prev) => [...prev, { id: Date.now().toString(), ...landSizeForm }]);
+      toast.success("Land size added.");
+    }
+    setShowLandSizeModal(false);
+  };
+
   // ── Pricing Plan CRUD ─────────────────────────────────────────────────────
   const openAddPricing = () => {
     setEditingPlanId(null);
-    setPricingForm({ name: "", landSize: "", currency: "NGN", totalPrice: "", paymentType: "outright", initialPayment: "", duration: "", spreadMethod: "separate" });
+    setPricingForm({
+      name: "", landSize: landSizes[0]?.landSize ?? "", currency: "NGN", totalPrice: "",
+      paymentType: "outright", initialPayment: "", duration: "", spreadMethod: "separate",
+    });
     setShowPricingModal(true);
   };
-
   const openEditPricing = (p: PricingPlan) => {
     setEditingPlanId(p.id);
     setPricingForm({ name: p.name, landSize: p.landSize, currency: p.currency, totalPrice: p.totalPrice, paymentType: p.paymentType, initialPayment: p.initialPayment, duration: p.duration, spreadMethod: p.spreadMethod });
     setShowPricingModal(true);
   };
-
   const savePricing = () => {
-    if (!pricingForm.name.trim() || !pricingForm.totalPrice) { toast.error("Plan name and total price are required."); return; }
+    if (!pricingForm.name.trim() || !pricingForm.totalPrice) {
+      toast.error("Plan name and total price are required.");
+      return;
+    }
     if (editingPlanId) {
       setPricingPlans((prev) => prev.map((p) => p.id === editingPlanId ? { ...p, ...pricingForm } : p));
       toast.success("Pricing plan updated.");
@@ -361,14 +428,12 @@ export function PropertyWizard() {
     setVerifyError("");
     setShowPaymentModal(true);
   };
-
   const openEditPayment = (m: PaymentMethod) => {
     setEditingPaymentId(m.id);
     setPaymentForm({ bankName: m.bankName, bankCode: m.bankCode ?? "", accountName: m.accountName, accountNumber: m.accountNumber });
     setVerifyError("");
     setShowPaymentModal(true);
   };
-
   const handleVerifyAccount = async () => {
     if (!paymentForm.bankCode) { setVerifyError("Please select a bank first."); return; }
     if (paymentForm.accountNumber.length !== 10) { setVerifyError("Account number must be exactly 10 digits."); return; }
@@ -383,7 +448,6 @@ export function PropertyWizard() {
       setVerifyingAccount(false);
     }
   };
-
   const savePayment = () => {
     if (!paymentForm.bankName.trim() || !paymentForm.accountName.trim() || paymentForm.accountNumber.length < 10) {
       toast.error("Please select a bank, enter a valid account number, and verify the account name.");
@@ -407,10 +471,9 @@ export function PropertyWizard() {
         name: propertyName,
         property_type: propertyType,
         description,
-        total_sqms: totalSqms,
-        available_units: availableUnits ? Number(availableUnits) : undefined,
         status: overrideStatus ?? "DRAFT",
         unit_measurement: "sqm",
+        // total_sqms and available_units are auto-computed server-side from land_sizes
         location: {
           address: streetAddress || `${city}, ${state}`,
           city,
@@ -428,9 +491,14 @@ export function PropertyWizard() {
         })),
         documents: documents.map((d) => ({
           document_type: d.documentType,
-          custom_document_name: d.documentType === "OTHER" ? d.fileName : undefined,
+          custom_document_name: d.documentType === "OTHER" ? d.customDocName : "",
           status: d.status,
           notes: d.notes,
+        })),
+        land_sizes: landSizes.map((ls) => ({
+          land_size: ls.landSize,
+          total_slots: Number(ls.totalSlots),
+          description: ls.description,
         })),
         pricing_plans: pricingPlans.map((p) => ({
           plan_name: p.name,
@@ -455,7 +523,6 @@ export function PropertyWizard() {
 
       const propertyId: string = created?.id ?? id!;
 
-      // Upload featured image (multipart PATCH)
       if (coverImage && propertyId) {
         try {
           await api.properties.uploadFeaturedImage(propertyId, coverImage);
@@ -464,7 +531,6 @@ export function PropertyWizard() {
         }
       }
 
-      // Upload gallery images
       if (galleryImages.length > 0 && propertyId) {
         await Promise.allSettled(
           galleryImages.map((img, i) =>
@@ -489,7 +555,7 @@ export function PropertyWizard() {
   };
 
   const handleNext = () => {
-    const err = validateStep(currentStep, { propertyName, totalSqms, city, state });
+    const err = validateStep(currentStep, { propertyName, landSizes, city, state });
     if (err) { toast.error(err); return; }
     if (currentStep < steps.length) {
       setCurrentStep(currentStep + 1);
@@ -497,8 +563,6 @@ export function PropertyWizard() {
       handleSubmit();
     }
   };
-
-  const fmt = (n: number) => `₦${n.toLocaleString("en-NG")}`;
 
   // ─────────────────────────────────────────────────────────────────────────
   return (
@@ -526,14 +590,12 @@ export function PropertyWizard() {
         {/* Step indicator */}
         <div className="mt-5 flex items-center gap-1.5">
           {steps.map((step, index) => {
-            const done    = currentStep > step.id;
-            const active  = currentStep === step.id;
+            const done   = currentStep > step.id;
+            const active = currentStep === step.id;
             return (
               <div key={step.id} className="flex items-center flex-1 min-w-0">
                 <button
-                  onClick={() => {
-                    if (step.id < currentStep) setCurrentStep(step.id);
-                  }}
+                  onClick={() => { if (step.id < currentStep) setCurrentStep(step.id); }}
                   title={step.name}
                   className={cn(
                     "flex items-center gap-1.5 px-2.5 py-2 rounded-md text-xs font-medium flex-1 min-w-0 transition-colors truncate",
@@ -603,20 +665,9 @@ export function PropertyWizard() {
                       placeholder="Describe your property…" className="bg-white resize-y min-h-[100px]" />
                     <p className="text-xs text-neutral-400 mt-1">Supports Markdown & HTML</p>
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-neutral-700 mb-1.5">
-                      Total SQMs <span className="text-red-500">*</span>
-                    </label>
-                    <Input type="number" value={totalSqms} onChange={(e) => setTotalSqms(e.target.value)}
-                      placeholder="e.g. 50000" className="bg-white border-neutral-300 focus-visible:ring-emerald-500/30 focus-visible:border-emerald-400" />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-neutral-700 mb-1.5">
-                      Available Units <span className="text-red-500">*</span>
-                    </label>
-                    <Input type="number" value={availableUnits} onChange={(e) => setAvailableUnits(e.target.value)}
-                      placeholder="e.g. 100" className="bg-white border-neutral-300 focus-visible:ring-emerald-500/30 focus-visible:border-emerald-400" />
-                    <p className="text-xs text-neutral-400 mt-1">Number of plots / units available for sale</p>
+                  <div className="p-4 bg-neutral-50 border border-neutral-200 rounded-lg text-sm text-neutral-500">
+                    <span className="font-medium text-neutral-700">Total SQMs & Available Units</span> are
+                    automatically calculated from the Land Inventory you define in step 6.
                   </div>
                 </div>
               )}
@@ -624,7 +675,6 @@ export function PropertyWizard() {
               {/* ── Step 2: Gallery ── */}
               {currentStep === 2 && (
                 <div className="bg-white rounded-xl border border-neutral-200 p-6 sm:p-8 space-y-6">
-                  {/* Hidden inputs */}
                   <input ref={coverRef} type="file" accept="image/*" className="hidden" onChange={handleCoverChange} />
                   <input ref={galleryRef} type="file" accept="image/*" multiple className="hidden" onChange={handleGalleryChange} />
 
@@ -638,8 +688,7 @@ export function PropertyWizard() {
                     >
                       {coverPreview ? (
                         <div className="relative inline-block">
-                          <img src={coverPreview} alt="Cover preview"
-                            className="max-h-48 rounded-md mx-auto object-cover" />
+                          <img src={coverPreview} alt="Cover preview" className="max-h-48 rounded-md mx-auto object-cover" />
                           <button
                             type="button"
                             onClick={(e) => { e.stopPropagation(); setCoverImage(null); setCoverPreview(null); }}
@@ -702,8 +751,7 @@ export function PropertyWizard() {
                       <label className="block text-sm font-medium text-neutral-700 mb-1.5">
                         City <span className="text-red-500">*</span>
                       </label>
-                      <Input value={city} onChange={(e) => setCity(e.target.value)}
-                        placeholder="e.g. Lagos" className="bg-white" />
+                      <Input value={city} onChange={(e) => setCity(e.target.value)} placeholder="e.g. Lagos" className="bg-white" />
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-neutral-700 mb-1.5">
@@ -717,23 +765,19 @@ export function PropertyWizard() {
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-neutral-700 mb-1.5">Postal Code</label>
-                      <Input value={postalCode} onChange={(e) => setPostalCode(e.target.value)}
-                        placeholder="e.g. 101001" className="bg-white" />
+                      <Input value={postalCode} onChange={(e) => setPostalCode(e.target.value)} placeholder="e.g. 101001" className="bg-white" />
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-neutral-700 mb-1.5">Nearest Landmark</label>
-                      <Input value={landmark} onChange={(e) => setLandmark(e.target.value)}
-                        placeholder="e.g. Near Shoprite" className="bg-white" />
+                      <Input value={landmark} onChange={(e) => setLandmark(e.target.value)} placeholder="e.g. Near Shoprite" className="bg-white" />
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-neutral-700 mb-1.5">Latitude</label>
-                      <Input value={latitude} onChange={(e) => setLatitude(e.target.value)}
-                        placeholder="e.g. 6.524379" className="bg-white" />
+                      <Input value={latitude} onChange={(e) => setLatitude(e.target.value)} placeholder="e.g. 6.524379" className="bg-white" />
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-neutral-700 mb-1.5">Longitude</label>
-                      <Input value={longitude} onChange={(e) => setLongitude(e.target.value)}
-                        placeholder="e.g. 3.379206" className="bg-white" />
+                      <Input value={longitude} onChange={(e) => setLongitude(e.target.value)} placeholder="e.g. 3.379206" className="bg-white" />
                     </div>
                   </div>
 
@@ -756,7 +800,6 @@ export function PropertyWizard() {
                     )}
                   </div>
 
-                  {/* Map preview — OpenStreetMap, no API key needed */}
                   <div>
                     <label className="block text-sm font-medium text-neutral-700 mb-1.5">Map Preview</label>
                     {latitude && longitude ? (
@@ -798,12 +841,11 @@ export function PropertyWizard() {
                           <div>
                             <div className="font-medium text-neutral-900">{a.name}</div>
                             <Badge variant="secondary" className="mt-1 text-xs">
-                              {AMENITY_STATUSES.find(s => s.value === a.status)?.label ?? a.status}
+                              {AMENITY_STATUSES.find((s) => s.value === a.status)?.label ?? a.status}
                             </Badge>
                           </div>
                           <div className="flex items-center gap-1">
-                            <button onClick={() => openEditAmenity(a)}
-                              className="p-2 hover:bg-neutral-100 rounded-md transition-colors">
+                            <button onClick={() => openEditAmenity(a)} className="p-2 hover:bg-neutral-100 rounded-md transition-colors">
                               <Pencil className="w-4 h-4 text-neutral-500" />
                             </button>
                             <button onClick={() => setAmenities((prev) => prev.filter((x) => x.id !== a.id))}
@@ -847,10 +889,9 @@ export function PropertyWizard() {
                               <FileText className="w-4 h-4 text-emerald-600" />
                             </div>
                             <div>
-                              <div className="font-medium text-neutral-900">{docLabel(doc.documentType)}</div>
+                              <div className="font-medium text-neutral-900">{docDisplayLabel(doc)}</div>
                               <div className="text-xs text-neutral-400">
-                                {DOCUMENT_STATUSES.find(s => s.value === doc.status)?.label ?? doc.status}
-                                {doc.fileName && ` · ${doc.fileName}`}
+                                {DOCUMENT_STATUSES.find((s) => s.value === doc.status)?.label ?? doc.status}
                               </div>
                             </div>
                           </div>
@@ -875,11 +916,113 @@ export function PropertyWizard() {
                 </div>
               )}
 
-              {/* ── Step 6: Pricing Plans ── */}
+              {/* ── Step 6: Land Inventory ── */}
               {currentStep === 6 && (
+                <div className="space-y-5">
+                  {/* Summary bar */}
+                  {landSizes.length > 0 && (
+                    <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 flex items-center justify-between flex-wrap gap-3">
+                      <div>
+                        <p className="text-[11px] font-semibold text-emerald-700 uppercase tracking-wide">Computed Totals</p>
+                        <p className="text-[22px] font-bold text-emerald-900 leading-tight">
+                          {fmtSqm(computedTotalSqms)} SQM
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-[11px] font-semibold text-emerald-700 uppercase tracking-wide">Total Slots</p>
+                        <p className="text-[22px] font-bold text-emerald-900 leading-tight">{computedAvailableUnits}</p>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="bg-white rounded-xl border border-neutral-200 p-6 sm:p-8">
+                    <div className="flex items-center justify-between mb-2">
+                      <div>
+                        <h3 className="font-semibold text-neutral-900">Land Inventory</h3>
+                        <p className="text-xs text-neutral-400 mt-0.5">
+                          Define each land size and its total slot count. Total SQMs = Σ(size × slots).
+                        </p>
+                      </div>
+                      <button onClick={openAddLandSize}
+                        className="inline-flex items-center gap-1.5 px-3 py-2 bg-emerald-600 text-white rounded-md text-sm hover:bg-emerald-700 shrink-0">
+                        <Plus className="w-4 h-4" /> Add Land Size
+                      </button>
+                    </div>
+
+                    {landSizes.length > 0 ? (
+                      <div className="mt-4 overflow-x-auto">
+                        <table className="w-full text-[13px]">
+                          <thead>
+                            <tr className="border-b border-neutral-100 bg-neutral-50">
+                              <th className="text-left px-3 py-2.5 text-[11px] font-bold text-neutral-500 uppercase tracking-wide">Land Size</th>
+                              <th className="text-center px-3 py-2.5 text-[11px] font-bold text-neutral-500 uppercase tracking-wide">Slots</th>
+                              <th className="text-center px-3 py-2.5 text-[11px] font-bold text-neutral-500 uppercase tracking-wide">Total SQM</th>
+                              <th className="text-left px-3 py-2.5 text-[11px] font-bold text-neutral-500 uppercase tracking-wide">Label</th>
+                              <th className="px-3 py-2.5" />
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-neutral-50">
+                            {landSizes.map((ls) => (
+                              <tr key={ls.id} className="hover:bg-neutral-50 transition-colors">
+                                <td className="px-3 py-3 font-semibold text-neutral-800">{ls.landSize} SQM</td>
+                                <td className="px-3 py-3 text-center text-neutral-600">{ls.totalSlots}</td>
+                                <td className="px-3 py-3 text-center font-medium text-emerald-700">
+                                  {fmtSqm((Number(ls.landSize) || 0) * (Number(ls.totalSlots) || 0))}
+                                </td>
+                                <td className="px-3 py-3 text-neutral-400 text-xs">{ls.description || "—"}</td>
+                                <td className="px-3 py-3">
+                                  <div className="flex items-center justify-end gap-1">
+                                    <button onClick={() => openEditLandSize(ls)} className="p-1.5 hover:bg-neutral-100 rounded-md">
+                                      <Pencil className="w-3.5 h-3.5 text-neutral-500" />
+                                    </button>
+                                    <button onClick={() => setLandSizes((prev) => prev.filter((x) => x.id !== ls.id))}
+                                      className="p-1.5 hover:bg-red-50 rounded-md">
+                                      <Trash2 className="w-3.5 h-3.5 text-red-500" />
+                                    </button>
+                                  </div>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                          <tfoot>
+                            <tr className="border-t-2 border-neutral-200 bg-neutral-50">
+                              <td className="px-3 py-2.5 text-[11px] font-bold text-neutral-600 uppercase">Total</td>
+                              <td className="px-3 py-2.5 text-center text-[13px] font-bold text-neutral-700">{computedAvailableUnits}</td>
+                              <td className="px-3 py-2.5 text-center text-[13px] font-bold text-emerald-700">{fmtSqm(computedTotalSqms)}</td>
+                              <td colSpan={2} />
+                            </tr>
+                          </tfoot>
+                        </table>
+                      </div>
+                    ) : (
+                      <div className="text-center py-12 mt-2">
+                        <Layers className="w-10 h-10 text-neutral-300 mx-auto mb-3" />
+                        <p className="font-medium text-neutral-700 mb-1">No land sizes defined</p>
+                        <p className="text-sm text-neutral-400 mb-5">
+                          e.g. 300 SQM × 30 slots, 500 SQM × 20 slots
+                        </p>
+                        <button onClick={openAddLandSize}
+                          className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-md text-sm hover:bg-emerald-700">
+                          <Plus className="w-4 h-4" /> Add First Land Size
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* ── Step 7: Pricing Plans ── */}
+              {currentStep === 7 && (
                 <div className="bg-white rounded-xl border border-neutral-200 p-6 sm:p-8">
                   <div className="flex items-center justify-between mb-6">
-                    <h3 className="font-semibold text-neutral-900">Pricing & Payment Plans</h3>
+                    <div>
+                      <h3 className="font-semibold text-neutral-900">Pricing & Payment Plans</h3>
+                      {landSizes.length > 0 && (
+                        <p className="text-xs text-neutral-400 mt-0.5">
+                          Land sizes from inventory: {landSizes.map((ls) => `${ls.landSize} SQM`).join(" · ")}
+                        </p>
+                      )}
+                    </div>
                     <button onClick={openAddPricing}
                       className="inline-flex items-center gap-1.5 px-3 py-2 bg-emerald-600 text-white rounded-md text-sm hover:bg-emerald-700">
                       <Plus className="w-4 h-4" /> Add Plan
@@ -911,9 +1054,7 @@ export function PropertyWizard() {
                                 </button>
                               </div>
                             </div>
-                            <div className="text-2xl font-bold text-neutral-900 mb-2">
-                              {fmt(Number(p.totalPrice))}
-                            </div>
+                            <div className="text-2xl font-bold text-neutral-900 mb-2">{fmt(Number(p.totalPrice))}</div>
                             {p.paymentType === "installment" && monthly !== null && (
                               <div className="flex gap-4 text-sm text-neutral-500">
                                 <span>Initial: {fmt(Number(p.initialPayment))}</span>
@@ -942,8 +1083,8 @@ export function PropertyWizard() {
                 </div>
               )}
 
-              {/* ── Step 7: Payment Methods ── */}
-              {currentStep === 7 && (
+              {/* ── Step 8: Payment Methods ── */}
+              {currentStep === 8 && (
                 <div className="bg-white rounded-xl border border-neutral-200 p-6 sm:p-8">
                   <div className="flex items-center justify-between mb-6">
                     <h3 className="font-semibold text-neutral-900">Payment Methods</h3>
@@ -1002,7 +1143,6 @@ export function PropertyWizard() {
                   {currentStep === 1 ? "Cancel" : "Back"}
                 </Button>
                 <div className="flex items-center gap-3">
-                  {/* In edit mode, always show Draft + Publish. In create mode, only on last step. */}
                   {(isEditing || currentStep === steps.length) && (
                     <Button variant="outline" disabled={submitting}
                       onClick={() => handleSubmit("DRAFT")}
@@ -1060,9 +1200,7 @@ export function PropertyWizard() {
             </div>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-neutral-700 mb-1.5">
-                  Amenity Name <span className="text-red-500">*</span>
-                </label>
+                <label className="block text-sm font-medium text-neutral-700 mb-1.5">Amenity Name <span className="text-red-500">*</span></label>
                 <input type="text" value={amenityForm.name}
                   onChange={(e) => setAmenityForm((f) => ({ ...f, name: e.target.value }))}
                   placeholder="e.g. Perimeter Fencing"
@@ -1074,17 +1212,13 @@ export function PropertyWizard() {
                 <select value={amenityForm.status}
                   onChange={(e) => setAmenityForm((f) => ({ ...f, status: e.target.value }))}
                   className="w-full px-3 py-2 border border-neutral-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
-                  {AMENITY_STATUSES.map((s) => (
-                    <option key={s.value} value={s.value}>{s.label}</option>
-                  ))}
+                  {AMENITY_STATUSES.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
                 </select>
               </div>
             </div>
             <div className="flex gap-2 mt-6">
               <button onClick={() => setShowAmenityModal(false)}
-                className="flex-1 px-4 py-2 border border-neutral-300 text-neutral-700 rounded-md text-sm hover:bg-neutral-50">
-                Cancel
-              </button>
+                className="flex-1 px-4 py-2 border border-neutral-300 text-neutral-700 rounded-md text-sm hover:bg-neutral-50">Cancel</button>
               <button onClick={saveAmenity}
                 className="flex-1 px-4 py-2 bg-emerald-600 text-white rounded-md text-sm hover:bg-emerald-700">
                 {editingAmenityId ? "Update" : "Add"}
@@ -1106,22 +1240,18 @@ export function PropertyWizard() {
             </div>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-neutral-700 mb-1.5">
-                  Document Type <span className="text-red-500">*</span>
-                </label>
+                <label className="block text-sm font-medium text-neutral-700 mb-1.5">Document Type <span className="text-red-500">*</span></label>
                 <select value={docForm.documentType}
                   onChange={(e) => setDocForm((d) => ({ ...d, documentType: e.target.value, customDocName: "" }))}
                   className="w-full px-3 py-2 border border-neutral-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400 transition-colors">
-                  {DOCUMENT_TYPES.map((dt) => (
-                    <option key={dt.value} value={dt.value}>{dt.label}</option>
-                  ))}
+                  {DOCUMENT_TYPES.map((dt) => <option key={dt.value} value={dt.value}>{dt.label}</option>)}
                 </select>
                 {docForm.documentType === "OTHER" && (
                   <input
                     type="text"
                     value={docForm.customDocName}
                     onChange={(e) => setDocForm((d) => ({ ...d, customDocName: e.target.value }))}
-                    placeholder="Enter custom document name…"
+                    placeholder="Enter document name…"
                     className="w-full mt-2 px-3 py-2 border border-neutral-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400 transition-colors"
                   />
                 )}
@@ -1131,9 +1261,7 @@ export function PropertyWizard() {
                 <select value={docForm.status}
                   onChange={(e) => setDocForm((d) => ({ ...d, status: e.target.value }))}
                   className="w-full px-3 py-2 border border-neutral-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400 transition-colors">
-                  {DOCUMENT_STATUSES.map((s) => (
-                    <option key={s.value} value={s.value}>{s.label}</option>
-                  ))}
+                  {DOCUMENT_STATUSES.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
                 </select>
               </div>
               <div>
@@ -1148,12 +1276,68 @@ export function PropertyWizard() {
             </div>
             <div className="flex gap-2 mt-6">
               <button onClick={() => setShowDocModal(false)}
-                className="flex-1 px-4 py-2 border border-neutral-300 text-neutral-700 rounded-md text-sm hover:bg-neutral-50">
-                Cancel
-              </button>
+                className="flex-1 px-4 py-2 border border-neutral-300 text-neutral-700 rounded-md text-sm hover:bg-neutral-50">Cancel</button>
               <button onClick={saveDoc}
+                className="flex-1 px-4 py-2 bg-emerald-600 text-white rounded-md text-sm hover:bg-emerald-700">Add Document</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Land Size modal */}
+      {showLandSizeModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl max-w-sm w-full p-6 shadow-xl">
+            <div className="flex items-center justify-between mb-5">
+              <h3 className="font-semibold text-neutral-900">{editingLandSizeId ? "Edit Land Size" : "Add Land Size"}</h3>
+              <button onClick={() => setShowLandSizeModal(false)} className="p-1 hover:bg-neutral-100 rounded-md">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-neutral-700 mb-1.5">Land Size (SQM) <span className="text-red-500">*</span></label>
+                  <input type="number" value={landSizeForm.landSize}
+                    onChange={(e) => setLandSizeForm((f) => ({ ...f, landSize: e.target.value }))}
+                    placeholder="e.g. 300"
+                    className="w-full px-3 py-2 border border-neutral-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-neutral-700 mb-1.5">Total Slots <span className="text-red-500">*</span></label>
+                  <input type="number" value={landSizeForm.totalSlots}
+                    onChange={(e) => setLandSizeForm((f) => ({ ...f, totalSlots: e.target.value }))}
+                    placeholder="e.g. 30"
+                    className="w-full px-3 py-2 border border-neutral-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  />
+                </div>
+              </div>
+              {landSizeForm.landSize && landSizeForm.totalSlots && (
+                <div className="p-3 bg-emerald-50 rounded-lg border border-emerald-200 text-sm">
+                  <span className="text-emerald-700 font-medium">
+                    {fmtSqm((Number(landSizeForm.landSize) || 0) * (Number(landSizeForm.totalSlots) || 0))} SQM total
+                  </span>
+                  <span className="text-neutral-500 ml-1.5">
+                    ({landSizeForm.landSize} × {landSizeForm.totalSlots} slots)
+                  </span>
+                </div>
+              )}
+              <div>
+                <label className="block text-sm font-medium text-neutral-700 mb-1.5">Label <span className="text-neutral-400 text-xs">(optional)</span></label>
+                <input type="text" value={landSizeForm.description}
+                  onChange={(e) => setLandSizeForm((f) => ({ ...f, description: e.target.value }))}
+                  placeholder="e.g. Half Plot"
+                  className="w-full px-3 py-2 border border-neutral-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                />
+              </div>
+            </div>
+            <div className="flex gap-2 mt-6">
+              <button onClick={() => setShowLandSizeModal(false)}
+                className="flex-1 px-4 py-2 border border-neutral-300 text-neutral-700 rounded-md text-sm hover:bg-neutral-50">Cancel</button>
+              <button onClick={saveLandSize}
                 className="flex-1 px-4 py-2 bg-emerald-600 text-white rounded-md text-sm hover:bg-emerald-700">
-                Add Document
+                {editingLandSizeId ? "Update" : "Add"}
               </button>
             </div>
           </div>
@@ -1175,18 +1359,31 @@ export function PropertyWizard() {
                 <label className="block text-sm font-medium text-neutral-700 mb-1.5">Plan Name <span className="text-red-500">*</span></label>
                 <input type="text" value={pricingForm.name}
                   onChange={(e) => setPricingForm((f) => ({ ...f, name: e.target.value }))}
-                  placeholder="e.g. Pre-launch Price — 300 sqm"
+                  placeholder="e.g. Pre-launch Price"
                   className="w-full px-3 py-2 border border-neutral-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
                 />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-neutral-700 mb-1.5">Land Size (sqm) <span className="text-red-500">*</span></label>
-                  <input type="number" value={pricingForm.landSize}
-                    onChange={(e) => setPricingForm((f) => ({ ...f, landSize: e.target.value }))}
-                    placeholder="e.g. 300"
-                    className="w-full px-3 py-2 border border-neutral-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                  />
+                  <label className="block text-sm font-medium text-neutral-700 mb-1.5">Land Size (SQM) <span className="text-red-500">*</span></label>
+                  {landSizes.length > 0 ? (
+                    <select value={pricingForm.landSize}
+                      onChange={(e) => setPricingForm((f) => ({ ...f, landSize: e.target.value }))}
+                      className="w-full px-3 py-2 border border-neutral-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                      <option value="">— Select —</option>
+                      {landSizes.map((ls) => (
+                        <option key={ls.id} value={ls.landSize}>
+                          {ls.landSize} SQM{ls.description ? ` (${ls.description})` : ""}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <input type="number" value={pricingForm.landSize}
+                      onChange={(e) => setPricingForm((f) => ({ ...f, landSize: e.target.value }))}
+                      placeholder="e.g. 300"
+                      className="w-full px-3 py-2 border border-neutral-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    />
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-neutral-700 mb-1.5">Currency</label>
@@ -1211,8 +1408,7 @@ export function PropertyWizard() {
                 <div className="flex gap-4">
                   {(["outright", "installment"] as const).map((t) => (
                     <label key={t} className="flex items-center gap-2 cursor-pointer">
-                      <input type="radio" value={t}
-                        checked={pricingForm.paymentType === t}
+                      <input type="radio" value={t} checked={pricingForm.paymentType === t}
                         onChange={() => setPricingForm((f) => ({ ...f, paymentType: t }))}
                         className="accent-emerald-600"
                       />
@@ -1245,8 +1441,7 @@ export function PropertyWizard() {
                     <label className="block text-sm font-medium text-neutral-700 mb-1.5">Payment Spread Method</label>
                     <div className="space-y-2">
                       <label className="flex items-start gap-2 cursor-pointer p-3 border border-neutral-200 rounded-md hover:bg-neutral-50">
-                        <input type="radio" value="separate"
-                          checked={pricingForm.spreadMethod === "separate"}
+                        <input type="radio" value="separate" checked={pricingForm.spreadMethod === "separate"}
                           onChange={() => setPricingForm((f) => ({ ...f, spreadMethod: "separate" }))}
                           className="mt-0.5 accent-emerald-600"
                         />
@@ -1256,8 +1451,7 @@ export function PropertyWizard() {
                         </div>
                       </label>
                       <label className="flex items-start gap-2 cursor-pointer p-3 border border-neutral-200 rounded-md hover:bg-neutral-50">
-                        <input type="radio" value="first_month"
-                          checked={pricingForm.spreadMethod === "first_month"}
+                        <input type="radio" value="first_month" checked={pricingForm.spreadMethod === "first_month"}
                           onChange={() => setPricingForm((f) => ({ ...f, spreadMethod: "first_month" }))}
                           className="mt-0.5 accent-emerald-600"
                         />
@@ -1294,9 +1488,7 @@ export function PropertyWizard() {
             </div>
             <div className="flex gap-2 mt-6">
               <button onClick={() => setShowPricingModal(false)}
-                className="flex-1 px-4 py-2 border border-neutral-300 text-neutral-700 rounded-md text-sm hover:bg-neutral-50">
-                Cancel
-              </button>
+                className="flex-1 px-4 py-2 border border-neutral-300 text-neutral-700 rounded-md text-sm hover:bg-neutral-50">Cancel</button>
               <button onClick={savePricing}
                 className="flex-1 px-4 py-2 bg-emerald-600 text-white rounded-md text-sm hover:bg-emerald-700">
                 {editingPlanId ? "Update Plan" : "Create Plan"}
@@ -1320,37 +1512,21 @@ export function PropertyWizard() {
               </button>
             </div>
             <div className="space-y-4">
-              {/* Bank select */}
               <div>
-                <label className="block text-sm font-medium text-neutral-700 mb-1.5">
-                  Bank <span className="text-red-500">*</span>
-                </label>
-                <select
-                  value={paymentForm.bankCode}
+                <label className="block text-sm font-medium text-neutral-700 mb-1.5">Bank <span className="text-red-500">*</span></label>
+                <select value={paymentForm.bankCode}
                   onChange={(e) => {
                     const bank = NIGERIAN_BANKS.find((b) => b.code === e.target.value);
-                    setPaymentForm((f) => ({
-                      ...f,
-                      bankCode: e.target.value,
-                      bankName: bank?.name ?? "",
-                      accountName: "",
-                    }));
+                    setPaymentForm((f) => ({ ...f, bankCode: e.target.value, bankName: bank?.name ?? "", accountName: "" }));
                     setVerifyError("");
                   }}
-                  className="w-full px-3 py-2 border border-neutral-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400 transition-colors"
-                >
+                  className="w-full px-3 py-2 border border-neutral-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400 transition-colors">
                   <option value="">— Select a bank —</option>
-                  {NIGERIAN_BANKS.map((b) => (
-                    <option key={b.code} value={b.code}>{b.name}</option>
-                  ))}
+                  {NIGERIAN_BANKS.map((b) => <option key={b.code} value={b.code}>{b.name}</option>)}
                 </select>
               </div>
-
-              {/* Account Number + Verify */}
               <div>
-                <label className="block text-sm font-medium text-neutral-700 mb-1.5">
-                  Account Number <span className="text-red-500">*</span>
-                </label>
+                <label className="block text-sm font-medium text-neutral-700 mb-1.5">Account Number <span className="text-red-500">*</span></label>
                 <div className="flex gap-2">
                   <input
                     type="text"
@@ -1364,12 +1540,9 @@ export function PropertyWizard() {
                     maxLength={10}
                     className="flex-1 px-3 py-2 border border-neutral-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400 transition-colors"
                   />
-                  <button
-                    type="button"
-                    onClick={handleVerifyAccount}
+                  <button type="button" onClick={handleVerifyAccount}
                     disabled={verifyingAccount || paymentForm.accountNumber.length !== 10 || !paymentForm.bankCode}
-                    className="px-3 py-2 bg-emerald-600 text-white rounded-md text-sm hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-1.5 shrink-0"
-                  >
+                    className="px-3 py-2 bg-emerald-600 text-white rounded-md text-sm hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-1.5 shrink-0">
                     {verifyingAccount ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
                     {verifyingAccount ? "Checking…" : "Verify"}
                   </button>
@@ -1385,8 +1558,6 @@ export function PropertyWizard() {
                   </p>
                 )}
               </div>
-
-              {/* Account Name — read-only, auto-filled */}
               <div>
                 <label className="block text-sm font-medium text-neutral-700 mb-1.5">
                   Account Name <span className="text-neutral-400 text-xs">(auto-verified)</span>
@@ -1408,14 +1579,9 @@ export function PropertyWizard() {
             </div>
             <div className="flex gap-2 mt-6">
               <button onClick={() => setShowPaymentModal(false)}
-                className="flex-1 px-4 py-2 border border-neutral-300 text-neutral-700 rounded-md text-sm hover:bg-neutral-50">
-                Cancel
-              </button>
-              <button
-                onClick={savePayment}
-                disabled={!paymentForm.accountName}
-                className="flex-1 px-4 py-2 bg-emerald-600 text-white rounded-md text-sm hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
+                className="flex-1 px-4 py-2 border border-neutral-300 text-neutral-700 rounded-md text-sm hover:bg-neutral-50">Cancel</button>
+              <button onClick={savePayment} disabled={!paymentForm.accountName}
+                className="flex-1 px-4 py-2 bg-emerald-600 text-white rounded-md text-sm hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
                 {editingPaymentId ? "Update" : "Add Method"}
               </button>
             </div>
