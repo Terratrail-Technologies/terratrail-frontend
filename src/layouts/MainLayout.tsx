@@ -74,53 +74,21 @@ function NotificationBell() {
   const fetchEvents = useCallback(async () => {
     setLoading(true);
     try {
-      const [inspections, customers] = await Promise.allSettled([
-        api.siteInspections.list(),
-        api.customers.list(),
-      ]);
-
-      const events: NotificationItem[] = [];
-
-      if (inspections.status === "fulfilled") {
-        const pending = (inspections.value as any[]).filter((i: any) =>
-          i.status === "PENDING" || i.status === "pending"
-        );
-        pending.slice(0, 5).forEach((i: any) => {
-          events.push({
-            id: `insp-${i.id}`,
-            type: "inspection",
-            title: "Site Inspection Request",
-            subtitle: i.property_name ?? i.customer_name ?? "Inspection pending",
-            time: i.created_at ?? i.inspection_date ?? "",
-            href: "/site-inspections",
-          });
-        });
-      }
-
-      if (customers.status === "fulfilled") {
-        const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
-        const recent = (customers.value as any[]).filter((c: any) => {
-          const t = c.created_at ? new Date(c.created_at).getTime() : 0;
-          return t > sevenDaysAgo;
-        });
-        recent.slice(0, 5).forEach((c: any) => {
-          events.push({
-            id: `cust-${c.id}`,
-            type: "customer",
-            title: "New Customer",
-            subtitle: `${c.first_name ?? ""} ${c.last_name ?? ""}`.trim() || c.email || "Customer added",
-            time: c.created_at ?? "",
-            href: "/customers",
-          });
-        });
-      }
-
-      events.sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime());
-      setItems(events.slice(0, 10));
+      const res = await api.workspaces.events();
+      const events: NotificationItem[] = (res.events ?? []).map((e: any) => ({
+        id: e.id,
+        type: e.type as NotificationItem["type"],
+        title: e.title,
+        subtitle: e.subtitle,
+        time: e.created_at ?? "",
+        href: e.href ?? "/",
+      }));
+      setItems(events);
       setUnread(events.length);
       setFetched(true);
     } catch {
       setItems([]);
+      setFetched(true);
     } finally {
       setLoading(false);
     }
@@ -339,8 +307,11 @@ function MobileBottomNav() {
   const navItems = [...priorityItems.slice(0, 4), accountItem];
 
   return (
-    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-neutral-100 shadow-[0_-1px_0_rgba(0,0,0,0.04),0_-4px_16px_rgba(0,0,0,0.06)]">
-      <div className="flex items-stretch h-16" style={{ paddingBottom: "env(safe-area-inset-bottom)" }}>
+    <nav
+      className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-neutral-100 shadow-[0_-1px_0_rgba(0,0,0,0.04),0_-4px_16px_rgba(0,0,0,0.06)]"
+      style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
+    >
+      <div className="flex items-stretch h-[56px]">
         {navItems.map((navItem) => {
           const active = isActive(navItem.href);
           return (
@@ -348,15 +319,15 @@ function MobileBottomNav() {
               key={navItem.href}
               to={navItem.href}
               className={cn(
-                "flex-1 flex flex-col items-center justify-center gap-1 pt-2 pb-1 transition-all duration-150 relative",
+                "flex-1 flex flex-col items-center justify-center gap-[3px] transition-colors duration-150 relative",
                 active ? "text-emerald-600" : "text-neutral-400 hover:text-neutral-600"
               )}
             >
               {active && (
                 <span className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-0.5 rounded-full bg-emerald-500" />
               )}
-              <navItem.icon className={cn("size-[20px] transition-transform duration-150", active && "scale-110")} />
-              <span className={cn("text-[10px] font-semibold tracking-tight leading-none", active ? "text-emerald-600" : "text-neutral-400")}>
+              <navItem.icon className="size-[20px] shrink-0" />
+              <span className="text-[10px] font-semibold tracking-tight leading-none shrink-0">
                 {navItem.label === "Site Inspection" ? "Inspections" : navItem.label}
               </span>
             </Link>
@@ -471,7 +442,7 @@ function NavContent() {
             <SidebarGroupContent>
               <div className="mx-3 mb-1">
                 <a
-                  href={`/${slug}/estates`}
+                  href={`/estates/${slug}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   onClick={() => setOpenMobile(false)}
@@ -631,7 +602,7 @@ export function MainLayout() {
           </header>
 
           {/* ── Page content ─────────────────────────────────────────── */}
-          <main className="flex-1 overflow-x-hidden pb-16 md:pb-0">
+          <main className="flex-1 overflow-x-hidden pb-14 md:pb-0">
             <AnimatePresence mode="wait">
               <motion.div
                 key={location.pathname}

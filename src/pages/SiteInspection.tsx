@@ -579,30 +579,41 @@ function InspectionConfigModal({ onClose }: { onClose: () => void }) {
 
   useEffect(() => {
     if (!selectedPropId) return;
-    try {
-      const saved = localStorage.getItem(`tt_inspection_config_${selectedPropId}`);
-      if (saved) {
-        const cfg = JSON.parse(saved);
-        setMeetingPoint(cfg.meetingPoint ?? "");
-        setVirtualLink(cfg.virtualLink ?? "");
-        setAvailableDays(cfg.availableDays ?? []);
-        setTimeFrom(cfg.timeFrom ?? "09:00");
-        setTimeTo(cfg.timeTo ?? "17:00");
-        setMaxPersons(cfg.maxPersons ?? "20");
-        setNotes(cfg.notes ?? "");
-      } else {
-        setMeetingPoint(""); setVirtualLink(""); setAvailableDays([]);
-        setTimeFrom("09:00"); setTimeTo("17:00"); setMaxPersons("20"); setNotes("");
-      }
-    } catch {}
+    api.properties.inspectionConfig.get(selectedPropId)
+      .then((cfg: any) => {
+        if (cfg && Object.keys(cfg).length > 0) {
+          setMeetingPoint(cfg.meeting_point ?? "");
+          setVirtualLink(cfg.virtual_link ?? "");
+          setAvailableDays(cfg.available_days ?? []);
+          setTimeFrom(cfg.time_from ?? "09:00");
+          setTimeTo(cfg.time_to ?? "17:00");
+          setMaxPersons(String(cfg.max_persons ?? "20"));
+          setNotes(cfg.notes ?? "");
+        } else {
+          setMeetingPoint(""); setVirtualLink(""); setAvailableDays([]);
+          setTimeFrom("09:00"); setTimeTo("17:00"); setMaxPersons("20"); setNotes("");
+        }
+      })
+      .catch(() => {});
   }, [selectedPropId]);
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!selectedPropId) { toast.error("Select a property first."); return; }
-    const cfg = { meetingPoint, virtualLink, availableDays, timeFrom, timeTo, maxPersons, notes };
-    localStorage.setItem(`tt_inspection_config_${selectedPropId}`, JSON.stringify(cfg));
-    toast.success("Inspection settings saved.");
-    onClose();
+    try {
+      await api.properties.inspectionConfig.save(selectedPropId, {
+        meeting_point: meetingPoint,
+        virtual_link: virtualLink,
+        available_days: availableDays,
+        time_from: timeFrom || null,
+        time_to: timeTo || null,
+        max_persons: Number(maxPersons) || 20,
+        notes,
+      });
+      toast.success("Inspection settings saved.");
+      onClose();
+    } catch {
+      toast.error("Failed to save settings. Please try again.");
+    }
   };
 
   const toggleDay = (d: string) =>

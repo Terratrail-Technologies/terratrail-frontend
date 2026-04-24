@@ -308,6 +308,10 @@ export const api = {
       publicRequest<any[]>(`/public/${workspaceSlug}/properties/`),
     property: (workspaceSlug: string, id: string) =>
       publicRequest<any>(`/public/${workspaceSlug}/properties/${id}/`),
+    inspectionConfig: (workspaceSlug: string, propertyId: string) =>
+      publicRequest<any>(`/public/${workspaceSlug}/properties/${propertyId}/inspection-config/`),
+    appreciations: (workspaceSlug: string, propertyId: string) =>
+      publicRequest<any[]>(`/public/${workspaceSlug}/properties/${propertyId}/appreciations/`),
   },
 
   // ── Health ────────────────────────────────────────────────────────────────
@@ -344,6 +348,18 @@ export const api = {
   properties: {
     list: () => request<any>("/properties/").then(unwrapList),
     get: (id: string) => request<any>(`/properties/${id}/`),
+    inspectionConfig: {
+      get: (propertyId: string) => request<any>(`/properties/${propertyId}/inspection-config/`),
+      save: (propertyId: string, data: any) =>
+        request<any>(`/properties/${propertyId}/inspection-config/`, { method: "POST", body: JSON.stringify(data) }),
+    },
+    appreciations: {
+      list: (propertyId: string) => request<any[]>(`/properties/${propertyId}/appreciations/`),
+      create: (propertyId: string, data: any) =>
+        request<any>(`/properties/${propertyId}/appreciations/`, { method: "POST", body: JSON.stringify(data) }),
+      delete: (propertyId: string, appreciationId: string) =>
+        request<void>(`/properties/${propertyId}/appreciations/${appreciationId}/`, { method: "DELETE" }),
+    },
     create: (data: any) =>
       request<any>("/properties/", { method: "POST", body: JSON.stringify(data) }),
     update: (id: string, data: any) =>
@@ -446,6 +462,7 @@ export const api = {
         { method: "POST", body: JSON.stringify({}) }
       ),
     activity: (page = 1) => request<any>(`/workspaces/activity/${buildParams({ page })}`),
+    events: () => request<{ events: any[]; count: number }>("/workspaces/events/"),
     billingPlans: () => request<any[]>("/workspaces/billing/plans/"),
     billingUsage: () => request<any>("/workspaces/billing/usage/"),
     selectPlan: (data: { plan: string }) =>
@@ -457,12 +474,13 @@ export const api = {
       ),
   },
 
-  // ── Banking / Account Verification ───────────────────────────────────────
+  // ── Banking / Account Verification (Paystack) ────────────────────────────
   banking: {
     verifyAccount: (accountNumber: string, bankCode: string) =>
       request<{ account_name: string; account_number: string }>(
         `/payments/verify-account/${buildParams({ account_number: accountNumber, bank_code: bankCode })}`
       ),
+    listBanks: () => request<{ banks: { name: string; code: string }[] }>("/payments/banks/"),
   },
 
   // ── Auth ──────────────────────────────────────────────────────────────────

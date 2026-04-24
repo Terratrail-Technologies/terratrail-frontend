@@ -16,6 +16,7 @@ import { NotFound } from "./pages/NotFound";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { AcceptInvite } from "./pages/AcceptInvite";
 import EstatesPage from "./pages/public/EstatesPage";
+import LandingPage from "./pages/public/LandingPage";
 // Onboarding – isolated module, no MainLayout dependency
 import { OnboardingLayout } from "./onboarding/components/OnboardingLayout";
 import { SignIn } from "./onboarding/pages/SignIn";
@@ -28,6 +29,7 @@ import { SelectPlan } from "./onboarding/pages/SelectPlan";
 
 export const router = createBrowserRouter([
   // ── Public pages (no auth required) ──────────────────────────────────────
+  { path: "/landing", Component: LandingPage },
   { path: "/accept-invite/:token", Component: AcceptInvite },
   { path: "/estates/:workspaceSlug", Component: EstatesPage },
 

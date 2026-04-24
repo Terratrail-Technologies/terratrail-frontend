@@ -141,26 +141,17 @@ const docStatusColor = (s: string) =>
 // ── Appreciation ─────────────────────────────────────────────────────────────
 interface AppreciationEntry {
   id: string;
-  date: string;
+  effective_date: string;
   old_price: number;
   new_price: number;
+  percentage_change: number;
   notes: string;
-  recorded_at: string;
-}
-
-function loadAppreciation(propertyId: string): AppreciationEntry[] {
-  try {
-    const raw = localStorage.getItem(`tt_appreciation_${propertyId}`);
-    return raw ? JSON.parse(raw) : [];
-  } catch { return []; }
-}
-
-function saveAppreciation(propertyId: string, entries: AppreciationEntry[]) {
-  localStorage.setItem(`tt_appreciation_${propertyId}`, JSON.stringify(entries));
+  created_at: string;
 }
 
 function AppreciationModal({ propertyId, onClose, onSave }: { propertyId: string; onClose: () => void; onSave: (e: AppreciationEntry) => void }) {
-  const [form, setForm] = useState({ date: new Date().toISOString().slice(0, 10), old_price: "", new_price: "", notes: "" });
+  const [form, setForm] = useState({ effective_date: new Date().toISOString().slice(0, 10), old_price: "", new_price: "", notes: "" });
+  const [saving, setSaving] = useState(false);
 
   const pct = (() => {
     const o = Number(form.old_price), n = Number(form.new_price);
@@ -168,21 +159,26 @@ function AppreciationModal({ propertyId, onClose, onSave }: { propertyId: string
     return (((n - o) / o) * 100).toFixed(2);
   })();
 
-  const handleSubmit = () => {
-    if (!form.date || !form.old_price || !form.new_price) {
+  const handleSubmit = async () => {
+    if (!form.effective_date || !form.old_price || !form.new_price) {
       toast.error("Please fill in date, old price, and new price.");
       return;
     }
-    const entry: AppreciationEntry = {
-      id: crypto.randomUUID(),
-      date: form.date,
-      old_price: Number(form.old_price),
-      new_price: Number(form.new_price),
-      notes: form.notes,
-      recorded_at: new Date().toISOString(),
-    };
-    onSave(entry);
-    onClose();
+    setSaving(true);
+    try {
+      const entry = await api.properties.appreciations.create(propertyId, {
+        effective_date: form.effective_date,
+        old_price: Number(form.old_price),
+        new_price: Number(form.new_price),
+        notes: form.notes,
+      });
+      onSave(entry);
+      onClose();
+    } catch {
+      toast.error("Failed to save appreciation record.");
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -204,7 +200,7 @@ function AppreciationModal({ propertyId, onClose, onSave }: { propertyId: string
         <div className="p-5 space-y-4">
           <div>
             <label className="text-[12px] font-medium text-neutral-600 block mb-1.5">Effective Date</label>
-            <input type="date" value={form.date} onChange={e => setForm(f => ({ ...f, date: e.target.value }))}
+            <input type="date" value={form.effective_date} onChange={e => setForm(f => ({ ...f, effective_date: e.target.value }))}
               className="w-full h-9 px-3 rounded-lg border border-neutral-200 text-[13px] focus:outline-none focus:ring-1 focus:ring-emerald-500/40 focus:border-emerald-400" />
           </div>
           <div className="grid grid-cols-2 gap-3">
@@ -233,7 +229,7 @@ function AppreciationModal({ propertyId, onClose, onSave }: { propertyId: string
 
         <div className="flex items-center justify-end gap-2.5 p-5 border-t border-neutral-100">
           <Button variant="outline" onClick={onClose} className="text-[13px] h-9">Cancel</Button>
-          <Button onClick={handleSubmit} className="bg-emerald-600 hover:bg-emerald-700 text-white text-[13px] h-9">Save Record</Button>
+          <Button onClick={handleSubmit} disabled={saving} className="bg-emerald-600 hover:bg-emerald-700 text-white text-[13px] h-9">{saving ? "Saving…" : "Save Record"}</Button>
         </div>
       </motion.div>
     </div>
@@ -254,8 +250,11 @@ export default function PropertyPreview() {
 
   useEffect(() => {
     if (!id) return;
-    api.properties.get(id)
-      .then((p) => { setProperty(p); setAppreciationHistory(loadAppreciation(id)); })
+    Promise.all([
+      api.properties.get(id),
+      api.properties.appreciations.list(id).catch(() => []),
+    ])
+      .then(([p, apprs]) => { setProperty(p); setAppreciationHistory(apprs ?? []); })
       .catch(() => navigate("/properties"))
       .finally(() => setLoading(false));
   }, [id]);
@@ -358,17 +357,19 @@ export default function PropertyPreview() {
               )}
             </div>
             {loc.latitude && loc.longitude && (
-              <div className="h-56 rounded-xl border border-neutral-200 overflow-hidden mt-3">
-                <iframe
-                  title="Map"
-                  width="100%"
-                  height="100%"
-                  style={{ border: 0 }}
-                  loading="lazy"
-                  referrerPolicy="no-referrer-when-downgrade"
-                  src={`https://www.openstreetmap.org/export/embed.html?bbox=${(Number(loc.longitude)-0.01).toFixed(6)},${(Number(loc.latitude)-0.01).toFixed(6)},${(Number(loc.longitude)+0.01).toFixed(6)},${(Number(loc.latitude)+0.01).toFixed(6)}&layer=mapnik&marker=${loc.latitude},${loc.longitude}`}
-                />
-              </div>
+              <a
+                href={`https://www.google.com/maps?q=${loc.latitude},${loc.longitude}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-3 flex items-center gap-2.5 px-4 py-3 rounded-xl border border-neutral-200 bg-neutral-50 hover:bg-emerald-50 hover:border-emerald-200 transition-colors group"
+              >
+                <MapPin className="w-4 h-4 text-emerald-600 shrink-0" />
+                <div className="min-w-0">
+                  <p className="text-[12.5px] font-semibold text-neutral-800 group-hover:text-emerald-700 transition-colors">View on Google Maps</p>
+                  <p className="text-[11px] text-neutral-400">{Number(loc.latitude).toFixed(5)}, {Number(loc.longitude).toFixed(5)}</p>
+                </div>
+                <span className="ml-auto text-neutral-300 group-hover:text-emerald-400 transition-colors text-sm">↗</span>
+              </a>
             )}
           </div>
         </Section>
@@ -473,15 +474,15 @@ export default function PropertyPreview() {
             </div>
           ) : (
             <div className="space-y-3">
-              {[...appreciationHistory].reverse().map((entry) => {
-                const pct = (((entry.new_price - entry.old_price) / entry.old_price) * 100).toFixed(2);
+              {[...appreciationHistory].map((entry) => {
+                const pct = Number(entry.percentage_change ?? 0).toFixed(2);
                 const up = Number(pct) >= 0;
                 return (
                   <div key={entry.id} className="border border-neutral-100 rounded-xl p-4">
                     <div className="flex items-start justify-between mb-2 gap-3">
                       <div className="flex items-center gap-2 text-[12px] text-neutral-500">
                         <Calendar className="w-3.5 h-3.5" />
-                        {new Date(entry.date).toLocaleDateString("en-NG", { year: "numeric", month: "long", day: "numeric" })}
+                        {new Date(entry.effective_date).toLocaleDateString("en-NG", { year: "numeric", month: "long", day: "numeric" })}
                       </div>
                       <span className={cn("text-[12px] font-bold px-2 py-0.5 rounded-md", up ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-700")}>
                         {up ? "+" : ""}{pct}%
@@ -509,9 +510,7 @@ export default function PropertyPreview() {
             propertyId={id!}
             onClose={() => setShowAppreciation(false)}
             onSave={(entry) => {
-              const updated = [...appreciationHistory, entry];
-              saveAppreciation(id!, updated);
-              setAppreciationHistory(updated);
+              setAppreciationHistory((prev) => [entry, ...prev]);
               toast.success("Appreciation update recorded.");
             }}
           />
