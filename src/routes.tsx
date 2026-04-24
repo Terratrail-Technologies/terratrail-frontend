@@ -6,6 +6,7 @@ import { PropertyWizard } from "./pages/PropertyWizard";
 import PropertyPreview from "./pages/PropertyPreview";
 import { Customers } from "./pages/Customers";
 import { SalesReps } from "./pages/SalesReps";
+import { SalesRepDetail } from "./pages/SalesRepDetail";
 import { CustomerReps } from "./pages/CustomerReps";
 import { CustomerRepDetail } from "./pages/CustomerRepDetail";
 import { SiteInspection } from "./pages/SiteInspection";
@@ -65,6 +66,7 @@ export const router = createBrowserRouter([
           { path: "customer-reps", Component: CustomerReps },
           { path: "customer-reps/:id", Component: CustomerRepDetail },
           { path: "sales-reps", Component: SalesReps },
+          { path: "sales-reps/:id", Component: SalesRepDetail },
           { path: "site-inspection", Component: SiteInspection },
           { path: "data-export", Component: DataExport },
           { path: "settings/*", Component: WorkspaceSettings },

@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router";
 import { toast } from "sonner";
 import { api } from "../services/api";
-import { useAuth } from "../hooks/useAuth";
+import { useCurrentUser } from "../hooks/useCurrentUser";
 import { invalidateRoleCache } from "../hooks/useWorkspaceRole";
 
 type InviteInfo = {
@@ -17,7 +17,7 @@ type InviteInfo = {
 export function AcceptInvite() {
   const { token } = useParams<{ token: string }>();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user } = useCurrentUser();
 
   const [invite, setInvite] = useState<InviteInfo | null>(null);
   const [loading, setLoading] = useState(true);

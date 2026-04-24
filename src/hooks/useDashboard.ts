@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { api, DashboardStats, type DateRange } from '../services/api';
 export type { DateRange };
-import { format, subDays, startOfMonth, startOfYear, endOfMonth, endOfYear, subMonths } from 'date-fns';
+import { format, subDays, startOfMonth, startOfYear, endOfMonth, subMonths } from 'date-fns';
 
 export type DatePreset = 'today' | '7d' | '30d' | 'this_month' | 'last_month' | 'this_year' | 'all_time' | 'custom';
 
@@ -78,8 +78,8 @@ export function useDashboard(dateRange: DateRange, enabled = true) {
 
   useEffect(() => {
     fetchDashboardData();
-    // Auto-refresh every 30s + on tab focus
-    const interval = setInterval(fetchDashboardData, 30_000);
+    // Auto-refresh every 5m + on tab focus
+    const interval = setInterval(fetchDashboardData, 300_000);
     const onFocus  = () => fetchDashboardData();
     window.addEventListener("focus", onFocus);
     return () => { clearInterval(interval); window.removeEventListener("focus", onFocus); };

@@ -16,7 +16,6 @@ import {
   Settings,
   HelpCircle,
   User,
-  Calendar,
   LogOut,
   ChevronRight,
   Loader2,
@@ -342,7 +341,7 @@ function NavContent() {
   const location = useLocation();
   const navigate = useNavigate();
   const { setOpenMobile } = useSidebar();
-  const { displayName, initials, user } = useCurrentUser();
+  const { displayName, initials } = useCurrentUser();
   const { name: workspaceName, domain, slug } = useWorkspace();
   const { role } = useWorkspaceRole();
   const [planUsage, setPlanUsage] = useState<any>(null);
@@ -353,7 +352,7 @@ function NavContent() {
         .then((data) => setPlanUsage(data))
         .catch(() => {});
     }
-  }, 30_000);
+  }, 300_000); // 5 minutes
 
   const handleLogout = () => {
     localStorage.removeItem("tt_auth");
@@ -398,6 +397,27 @@ function NavContent() {
       </SidebarHeader>
 
       <SidebarContent className="pt-2">
+        {/* ── View Estate public page (Primary Action) ──────────────── */}
+        {slug && (
+          <SidebarGroup className="pb-0">
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  asChild
+                  onClick={() => setOpenMobile(false)}
+                  className="h-10 rounded-lg px-3 text-[13.5px] font-bold transition-all duration-200 text-white bg-emerald-600 hover:bg-emerald-700 shadow-md shadow-emerald-200/50 border border-emerald-500"
+                >
+                  <a href={`/estates/${slug}`} target="_blank" rel="noopener noreferrer hover:bg-emerald-700 transition-all text-[13px]">
+                    <Globe className="size-[16px] text-emerald-100" />
+                    <span>View Estate</span>
+                    <span className="ml-auto text-[10px] text-emerald-200 font-medium">↗</span>
+                  </a>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroup>
+        )}
+
         {/* ── Main nav ─────────────────────────────────────────────── */}
         <SidebarGroup>
           <SidebarGroupLabel className="text-[10px] font-semibold tracking-widest text-neutral-400 uppercase px-3 mb-1">
@@ -435,27 +455,6 @@ function NavContent() {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
-
-        {/* ── View Estate public page ──────────────────────────────── */}
-        {slug && (
-          <SidebarGroup>
-            <SidebarGroupContent>
-              <div className="mx-3 mb-1">
-                <a
-                  href={`/estates/${slug}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={() => setOpenMobile(false)}
-                  className="flex items-center gap-2.5 px-3 h-9 rounded-lg text-[13px] font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 transition-colors border border-emerald-100"
-                >
-                  <Globe className="size-[15px] text-emerald-600" />
-                  <span>View Estate</span>
-                  <span className="ml-auto text-[10px] text-emerald-500 font-medium">↗</span>
-                </a>
-              </div>
-            </SidebarGroupContent>
-          </SidebarGroup>
-        )}
 
         {/* ── Growth plan + bottom nav ──────────────────────────────── */}
         <SidebarGroup className="mt-auto">
@@ -579,8 +578,8 @@ export function MainLayout() {
           {/* ── Top header ─────────────────────────────────────────── */}
           <header className="flex h-[60px] shrink-0 items-center justify-between gap-2 border-b border-neutral-100 bg-white px-4 md:px-6 sticky top-0 z-30 shadow-[0_1px_0_rgba(0,0,0,0.04)]">
             <div className="flex items-center gap-2.5">
-              {/* Hamburger / collapse trigger */}
-              <SidebarTrigger className="-ml-1 h-8 w-8 text-neutral-500 hover:text-neutral-800 hover:bg-neutral-100 rounded-lg transition-colors" />
+              {/* Hamburger / collapse trigger — standard design */}
+              <SidebarTrigger className="-ml-2 h-10 w-10 text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100/80 rounded-xl transition-all active:scale-95 [&>svg]:size-5" />
               <div className="h-4 w-px bg-neutral-100 hidden md:block" />
               {/* Breadcrumb — desktop */}
               <div className="hidden md:flex items-center gap-1.5 text-[12px] text-neutral-400">

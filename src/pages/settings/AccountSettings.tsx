@@ -80,12 +80,12 @@ export function AccountSettings() {
 
   return (
     <div className="min-h-screen bg-neutral-50">
-      <div className="bg-white border-b border-neutral-200 px-8 py-4">
-        <h1 className="text-2xl font-semibold text-neutral-900">Account Settings</h1>
-        <p className="text-sm text-neutral-500 mt-1">Manage your personal account information</p>
+      <div className="bg-white border-b border-neutral-200 px-4 sm:px-8 py-4 sm:py-6">
+        <h1 className="text-[18px] sm:text-2xl font-semibold text-neutral-900 tracking-tight">Account Settings</h1>
+        <p className="text-[12px] sm:text-sm text-neutral-500 mt-0.5 sm:mt-1">Manage your personal account information</p>
       </div>
 
-      <div className="p-8">
+      <div className="p-4 sm:p-8">
         <div className="max-w-3xl space-y-8">
           {/* Avatar */}
           <div className="bg-white rounded-lg border border-neutral-200 p-6">

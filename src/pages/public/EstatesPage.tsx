@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useParams } from "react-router";
 import {
   Building2, MapPin, Search, ChevronLeft, ChevronRight, X,
-  Phone, Mail, CheckCircle2, ArrowRight, Maximize2, TrendingUp,
+  Phone, Mail, CheckCircle2, ArrowRight, TrendingUp,
   Star, Shield, Clock, Users, ExternalLink,
 } from "lucide-react";
 import { motion, AnimatePresence, useScroll, useTransform, useInView } from "motion/react";
@@ -45,7 +45,7 @@ function typeLabel(t: string) {
 }
 
 // ── Animation variants ────────────────────────────────────────────────────────
-const fadeUp = { hidden: { opacity: 0, y: 24 }, show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 280, damping: 24 } } };
+const fadeUp = { hidden: { opacity: 0, y: 24 }, show: { opacity: 1, y: 0, transition: { type: "spring" as const, stiffness: 280, damping: 24 } } };
 const stagger = { hidden: {}, show: { transition: { staggerChildren: 0.07 } } };
 
 // ── FadeIn section wrapper ────────────────────────────────────────────────────
@@ -369,7 +369,7 @@ function PropertyDetail({ property, workspaceSlug, onBack }: { property: Propert
 }
 
 // ── Property Card ─────────────────────────────────────────────────────────────
-function PropertyCard({ property, onClick, index }: { property: Property; onClick: () => void; index: number }) {
+function PropertyCard({ property, onClick }: { property: Property; onClick: () => void; index?: number }) {
   const min = minPrice(property.pricing_plans);
   const loc = property.location;
   const activePlansCount = property.pricing_plans.filter((p) => p.is_active).length;
@@ -625,7 +625,7 @@ export default function EstatesPage() {
 }
 
 // ── Shared TopBar ─────────────────────────────────────────────────────────────
-function TopBar({ workspaceSlug }: { workspaceSlug: string }) {
+function TopBar({ workspaceSlug: _workspaceSlug }: { workspaceSlug: string }) {
   const [scrolled, setScrolled] = useState(false);
   useEffect(() => {
     const handler = () => setScrolled(window.scrollY > 10);

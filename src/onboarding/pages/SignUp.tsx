@@ -69,7 +69,7 @@ export function SignUp() {
 
       <form className={s.form} onSubmit={handleSubmit(onSubmit)} noValidate>
         {/* Name row */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+        <div className={s.grid2}>
           <FormInput
             label="First Name"
             placeholder="Praise"

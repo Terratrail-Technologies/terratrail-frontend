@@ -1,9 +1,9 @@
 import { useRef, useState } from "react";
 import { Link } from "react-router";
 import {
-  Building2, ArrowRight, CheckCircle2, Star, Shield, TrendingUp,
+  Building2, ArrowRight, CheckCircle2, Star, Shield,
   Users, BarChart3, Zap, Globe, ChevronDown, Menu, X,
-  MapPin, CreditCard, Bell, FileText, UserCheck, LayoutDashboard,
+  MapPin, CreditCard, Bell, FileText, UserCheck,
 } from "lucide-react";
 import {
   motion, AnimatePresence, useScroll, useTransform, useInView,

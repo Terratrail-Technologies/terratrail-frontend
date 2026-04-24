@@ -27,19 +27,19 @@ export function WorkspaceSettings() {
   };
 
   return (
-    <div className="min-h-screen bg-neutral-50">
+    <div className="min-h-screen bg-neutral-50/50 flex flex-col">
       {/* Header */}
-      <div className="bg-white border-b border-neutral-200 px-8 py-4">
+      <div className="bg-white border-b border-neutral-200 px-4 sm:px-8 py-4 sm:py-6">
         <div>
-          <h1 className="text-2xl font-semibold text-neutral-900">Workspace Settings</h1>
-          <p className="text-sm text-neutral-500 mt-1">Manage your workspace preferences and configuration</p>
+          <h1 className="text-[18px] sm:text-2xl font-semibold text-neutral-900 tracking-tight">Workspace Settings</h1>
+          <p className="text-[12px] sm:text-sm text-neutral-500 mt-0.5 sm:mt-1">Manage your workspace preferences and configuration</p>
         </div>
       </div>
 
-      <div className="flex">
-        {/* Settings Sidebar */}
-        <div className="w-64 bg-white border-r border-neutral-200 min-h-[calc(100vh-73px)]">
-          <nav className="p-4 space-y-1">
+      <div className="flex flex-col lg:flex-row flex-1">
+        {/* Settings Sidebar / Tab bar */}
+        <div className="w-full lg:w-64 bg-white border-b lg:border-b-0 lg:border-r border-neutral-200 sticky top-[60px] z-20">
+          <nav className="flex lg:flex-col overflow-x-auto lg:overflow-x-visible p-2 sm:p-4 gap-1 no-scrollbar">
             {settingsTabs.map((tab) => {
               const Icon = tab.icon;
               const active = isActive(tab.href);
@@ -48,10 +48,10 @@ export function WorkspaceSettings() {
                   key={tab.id}
                   to={tab.href}
                   className={cn(
-                    "flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors",
+                    "flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13px] transition-all duration-200 whitespace-nowrap shrink-0",
                     active
-                      ? "bg-emerald-50 text-emerald-700 font-medium"
-                      : "text-neutral-600 hover:bg-neutral-50 hover:text-neutral-900"
+                      ? "bg-emerald-50 text-emerald-700 font-semibold shadow-sm shadow-emerald-100/50"
+                      : "text-neutral-500 hover:bg-neutral-50 hover:text-neutral-900"
                   )}
                 >
                   <Icon className="w-4 h-4" />
@@ -63,17 +63,19 @@ export function WorkspaceSettings() {
         </div>
 
         {/* Settings Content */}
-        <div className="flex-1 p-8">
-          <Routes>
-            <Route index element={<Navigate to="/settings/general" replace />} />
-            <Route path="general" element={<GeneralSettings />} />
-            <Route path="people" element={<PeopleSettings />} />
-            <Route path="billing" element={<BillingSettings />} />
-            <Route path="add-ons" element={<AddonsSettings />} />
-            <Route path="activity" element={<ActivityLogs />} />
-            <Route path="permissions" element={<PermissionsSettings />} />
-            <Route path="email" element={<EmailNotifications />} />
-          </Routes>
+        <div className="flex-1 p-4 sm:p-8">
+          <div className="max-w-4xl mx-auto">
+            <Routes>
+              <Route index element={<Navigate to="/settings/general" replace />} />
+              <Route path="general" element={<GeneralSettings />} />
+              <Route path="people" element={<PeopleSettings />} />
+              <Route path="billing" element={<BillingSettings />} />
+              <Route path="add-ons" element={<AddonsSettings />} />
+              <Route path="activity" element={<ActivityLogs />} />
+              <Route path="permissions" element={<PermissionsSettings />} />
+              <Route path="email" element={<EmailNotifications />} />
+            </Routes>
+          </div>
         </div>
       </div>
     </div>

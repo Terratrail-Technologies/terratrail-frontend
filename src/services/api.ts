@@ -406,6 +406,7 @@ export const api = {
   // ── Sales Reps / Commissions ──────────────────────────────────────────────
   salesReps: {
     list: () => request<any>("/commissions/reps/").then(unwrapList),
+    get: (id: string) => request<any>(`/commissions/reps/${id}/`),
     create: (data: any) =>
       request<any>("/commissions/reps/", { method: "POST", body: JSON.stringify(data) }),
     update: (id: string, data: any) =>

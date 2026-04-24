@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
 import {
-  Users, UserCheck, ShoppingBag, AlertCircle, Search,
+  Users, ShoppingBag, AlertCircle, Search,
   Copy, Check, UserPlus, X, TrendingUp, Building2, Eye,
   UserX, MoreHorizontal,
 } from "lucide-react";
@@ -126,7 +126,7 @@ function InviteModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: (
 
 // ── Row Actions Menu ──────────────────────────────────────────────────────────
 
-function RowActions({ member, onView }: { member: Member; onView: () => void }) {
+function RowActions({ onView }: { member?: Member; onView: () => void }) {
   const [open, setOpen] = useState(false);
   return (
     <div className="relative">
@@ -171,8 +171,8 @@ export function CustomerReps() {
     setLoading(true);
     api.workspaces.listMembers()
       .then((data) => {
-        const list = Array.isArray(data) ? data : [];
-        setMembers(list.filter((m: Member) => m.role === "SALES_REP"));
+        const list = (Array.isArray(data) ? data : []) as Member[];
+        setMembers(list.filter((m) => m.role === "SALES_REP"));
       })
       .catch(() => setMembers([]))
       .finally(() => setLoading(false));

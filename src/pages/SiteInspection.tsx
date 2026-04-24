@@ -389,7 +389,7 @@ function AddInspectionModal({
           </div>
 
           {/* Type + Category + Persons */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
             <div>
               <label className="block text-[11.5px] font-semibold text-neutral-600 mb-1.5">
                 Inspection Type <span className="text-red-500">*</span>
@@ -673,7 +673,7 @@ function InspectionConfigModal({ onClose }: { onClose: () => void }) {
               </div>
 
               {/* Time range */}
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-[11.5px] font-semibold text-neutral-600 mb-1.5">Available From</label>
                   <input type="time" className={inputCls} value={timeFrom} onChange={(e) => setTimeFrom(e.target.value)} />
@@ -737,7 +737,7 @@ export function SiteInspection() {
   const fetchInspections = async () => {
     try {
       const data = await api.siteInspections.list();
-      setInspections(data);
+      setInspections(data as SiteInspection[]);
     } catch {
       // silently keep existing data on polling errors
     } finally {
@@ -745,7 +745,7 @@ export function SiteInspection() {
     }
   };
 
-  usePolling(fetchInspections, 30_000);
+  usePolling(fetchInspections, 300_000);
 
   // ── Derived counts ────────────────────────────────────────────────────────
   const today = new Date().toISOString().split("T")[0];

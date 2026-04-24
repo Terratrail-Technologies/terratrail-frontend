@@ -293,7 +293,7 @@ export function WorkspaceSetup() {
               </div>
 
               {/* Timezone + Region side-by-side */}
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+              <div className={s.grid2}>
                 <div className={s.fieldGroup}>
                   <label className={s.label}>Timezone</label>
                   <select
@@ -314,7 +314,7 @@ export function WorkspaceSetup() {
               </div>
 
               {/* Contact info */}
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+              <div className={s.grid2}>
                 <FormInput
                   label="Support Email"
                   type="email"

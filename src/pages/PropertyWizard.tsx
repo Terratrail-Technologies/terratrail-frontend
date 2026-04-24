@@ -179,8 +179,6 @@ export function PropertyWizard() {
     documentType: "SURVEY_PLAN", customDocName: "", status: "NOT_STARTED",
     notes: "", file: null, fileName: "",
   });
-  const docFileRef = useRef<HTMLInputElement>(null);
-
   // ── Step 6 state — Land Inventory ────────────────────────────────────────
   const [landSizes, setLandSizes]               = useState<LandSizeEntry[]>([]);
   const [showLandSizeModal, setShowLandSizeModal] = useState(false);
@@ -622,12 +620,13 @@ export function PropertyWizard() {
               <div key={step.id} className="flex items-center flex-1 min-w-0">
                 <button
                   onClick={() => { if (isEditing || step.id <= currentStep) setCurrentStep(step.id); }}
-                  title={step.name}
+                  title={isEditing ? `Jump to ${step.name}` : step.name}
+                  disabled={!isEditing && step.id > currentStep}
                   className={cn(
                     "flex items-center gap-1.5 px-2.5 py-2 rounded-md text-xs font-medium flex-1 min-w-0 transition-colors truncate",
-                    active  ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                    active  ? "bg-emerald-50 text-emerald-700 border border-emerald-200 cursor-pointer"
                             : (done || isEditing) ? "bg-neutral-100 text-neutral-600 cursor-pointer hover:bg-neutral-200"
-                                    : "bg-white text-neutral-400 border border-neutral-100 cursor-default"
+                                    : "bg-white text-neutral-300 border border-neutral-100 cursor-not-allowed"
                   )}
                 >
                   {done ? (

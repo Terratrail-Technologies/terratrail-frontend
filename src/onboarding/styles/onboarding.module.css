@@ -144,6 +144,19 @@
   gap: 14px;
 }
 
+.grid2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+@media (max-width: 480px) {
+  .grid2 {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+}
+
 .fieldGroup {
   display: flex;
   flex-direction: column;
@@ -188,6 +201,29 @@
 .input.inputError {
   border-color: #ef4444;
   box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.08);
+}
+
+.otpSingle {
+  height: 52px;
+  width: 100%;
+  padding: 0 12px;
+  background: #f8fafc;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 24px;
+  font-weight: 700;
+  color: #0f172a;
+  transition: all 0.15s ease;
+  text-align: center;
+  letter-spacing: 0.3em;
+  padding-left: 0.3em;
+}
+
+.otpSingle:focus {
+  outline: none;
+  background: #fff;
+  border-color: #1c2268;
+  box-shadow: 0 0 0 4px rgba(28, 34, 104, 0.08);
 }
 
 /* ─── Password field ─────────────────────────────────────────── */
@@ -236,13 +272,18 @@
 .checkLabel {
   display: flex;
   align-items: center;
-  gap: 7px;
+  gap: 8px;
+  font-size: 13px;
+  color: #64748b;
   cursor: pointer;
-  font-size: 12.5px;
-  font-weight: 500;
-  color: #475569;
-  font-family: inherit;
   user-select: none;
+}
+
+.resendRow {
+  margin: 4px 0 20px;
+  font-size: 13px;
+  color: #64748b;
+  text-align: center;
 }
 
 .checkbox {
@@ -522,22 +563,28 @@
 
 /* ─── Responsive ─────────────────────────────────────────────── */
 @media (max-width: 480px) {
-  .scrollArea { padding: 24px 12px 0; }
+  .scrollArea { padding: 16px 12px 0; }
 
   .card {
-    padding: 28px 22px 24px;
+    padding: 24px 20px 20px;
     border-radius: 8px;
+    max-width: 100%;
+  }
+
+  .cardWide {
+    max-width: 100% !important;
   }
 
   .heading { font-size: 18px; }
+  .subtext { font-size: 13px; margin-bottom: 18px; }
 
-  .marketing { padding: 20px 22px 32px; }
-
+  .marketing { padding: 16px 20px 32px; }
   .marketingHeading { font-size: 16px; }
 }
 
 @media (max-width: 360px) {
-  .card { padding: 24px 16px 20px; }
+  .card { padding: 20px 16px 16px; }
+  .heading { font-size: 17px; }
 }
 
 /* ─── Stepper (workspace setup) ─────────────────────────────── */
@@ -766,6 +813,44 @@
   background: #f8fafc;
   border-color: #cbd5e1;
   color: #374151;
+}
+
+/* ─── Billing Toggle ─────────────────────────────────────────── */
+.billingToggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.billingBtn {
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.15s;
+  background: #fff;
+  color: #64748b;
+  border: 1.5px solid #e2e8f0;
+}
+
+.billingBtnActive {
+  background: #1c2268;
+  color: #fff;
+  border-color: #1c2268;
+}
+
+.discountBadge {
+  margin-left: 5px;
+  font-size: 10px;
+  background: #16a34a;
+  color: #fff;
+  padding: 1px 6px;
+  border-radius: 10px;
+  font-weight: 700;
 }
 
 /* ─── Plan grid ──────────────────────────────────────────────── */

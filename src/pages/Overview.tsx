@@ -330,7 +330,7 @@ export function Overview() {
             </span>
           </div>
           <div className="p-6 sm:p-8 pt-4">
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8">
               {/* Total Revenue – FILTERABLE + HIDEABLE */}
               <div className="space-y-1.5">
                 <div className="text-[11.5px] font-medium text-slate-400">Total Revenue</div>

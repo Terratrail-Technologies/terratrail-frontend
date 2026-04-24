@@ -5,7 +5,7 @@ import { usePageTitle } from "../hooks/usePageTitle";
 import { useWorkspaceRole } from "../hooks/useWorkspaceRole";
 import {
   Search, Plus, X, AlertCircle, Copy, Check,
-  Loader2, MoreVertical, Eye, ChevronDown, Pencil,
+  Loader2, Eye, ChevronDown, Pencil,
   Users, TrendingUp, Wallet, Banknote,
 } from "lucide-react";
 import { Skeleton } from "../components/ui/skeleton";
@@ -142,8 +142,8 @@ function AddRepModal({ onClose, onSaved }: AddRepModalProps) {
     "w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400 bg-white transition-colors";
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-lg">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 p-4 overflow-y-auto">
+      <div className="bg-white rounded-t-2xl sm:rounded-xl shadow-xl w-full max-w-lg my-auto">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-200">
           <h2 className="font-semibold text-neutral-900">Add Sales Rep</h2>
@@ -164,7 +164,7 @@ function AddRepModal({ onClose, onSaved }: AddRepModalProps) {
             </div>
           )}
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-neutral-700 mb-1">
                 Full Name <span className="text-red-500">*</span>
@@ -202,7 +202,7 @@ function AddRepModal({ onClose, onSaved }: AddRepModalProps) {
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-neutral-700 mb-1">Tier</label>
               <select value={form.tier} onChange={f("tier")} className={inputCls}>
@@ -340,8 +340,8 @@ function EditRepModal({ rep, onClose, onSaved }: EditRepModalProps) {
     "w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400 bg-white transition-colors";
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-lg">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 p-4 overflow-y-auto">
+      <div className="bg-white rounded-t-2xl sm:rounded-xl shadow-xl w-full max-w-lg my-auto">
         <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-200">
           <h2 className="font-semibold text-neutral-900">Edit Sales Rep</h2>
           <button
@@ -360,7 +360,7 @@ function EditRepModal({ rep, onClose, onSaved }: EditRepModalProps) {
             </div>
           )}
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-neutral-700 mb-1">
                 Full Name <span className="text-red-500">*</span>
@@ -382,7 +382,7 @@ function EditRepModal({ rep, onClose, onSaved }: EditRepModalProps) {
             <input type="email" value={form.email} onChange={f("email")} placeholder="rep@example.com" className={inputCls} />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-neutral-700 mb-1">Tier</label>
               <select value={form.tier} onChange={f("tier")} className={inputCls}>

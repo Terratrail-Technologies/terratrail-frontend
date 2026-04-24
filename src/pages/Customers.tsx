@@ -322,7 +322,11 @@ export function Customers() {
   const [customers, setCustomers] = useState<any[]>([]);
   const [loading, setLoading]     = useState(true);
   const [search, setSearch]       = useState("");
-  const [statusFilter, setStatusFilter] = useState("ALL");
+  const [statusFilter, setStatusFilter]       = useState("ALL");
+  const [propertyFilter, setPropertyFilter]   = useState("ALL");
+  const [landSizeFilter, setLandSizeFilter]   = useState("ALL");
+  const [salesRepFilter, setSalesRepFilter]   = useState("ALL");
+  const [custRepFilter, setCustRepFilter]     = useState("ALL");
   const [showAdd, setShowAdd]     = useState(false);
 
   // ── Role guard ────────────────────────────────────────────────────────────
@@ -346,13 +350,30 @@ export function Customers() {
     }
   };
 
-  usePolling(fetchCustomers, 30_000);
+  usePolling(fetchCustomers, 300_000);
 
   // ── Summary card values ───────────────────────────────────────────────────
   const totalCustomers    = customers.length;
   const totalActive       = customers.reduce((s, c) => s + (c.active_subscriptions ?? 0), 0);
   const totalCompleted    = customers.reduce((s, c) => s + (c.completed_subscriptions ?? 0), 0);
   const totalDefaulting   = customers.reduce((s, c) => s + (c.defaulting_subscriptions ?? 0), 0);
+
+  // ── Derived filter options ────────────────────────────────────────────────
+  const propertyOptions = Array.from(
+    new Set(customers.map((c) => c.primary_subscription?.property_name).filter(Boolean))
+  ).sort() as string[];
+
+  const landSizeOptions = Array.from(
+    new Set(customers.map((c) => c.primary_subscription?.land_size).filter(Boolean))
+  ).sort((a, b) => Number(a) - Number(b)) as string[];
+
+  const salesRepOptions = Array.from(
+    new Set(customers.map((c) => c.primary_subscription?.sales_rep_name ?? c.sales_rep_name).filter(Boolean))
+  ).sort() as string[];
+
+  const custRepOptions = Array.from(
+    new Set(customers.map((c) => c.assigned_rep_name ?? c.customer_rep_name).filter(Boolean))
+  ).sort() as string[];
 
   // ── Filtered list ─────────────────────────────────────────────────────────
   const filtered = customers.filter((c) => {
@@ -363,12 +384,29 @@ export function Customers() {
       (c.email ?? "").toLowerCase().includes(q) ||
       (c.phone ?? "").toLowerCase().includes(q);
 
-    const subStatus = c.primary_subscription?.status?.toUpperCase() ?? "";
-    const matchesStatus =
-      statusFilter === "ALL" || subStatus === statusFilter;
+    const ps = c.primary_subscription;
+    const subStatus = ps?.status?.toUpperCase() ?? "";
+    const matchesStatus   = statusFilter   === "ALL" || subStatus === statusFilter;
+    const matchesProperty = propertyFilter === "ALL" || ps?.property_name === propertyFilter;
+    const matchesLandSize = landSizeFilter === "ALL" || String(ps?.land_size) === landSizeFilter;
+    const matchesSalesRep = salesRepFilter === "ALL" ||
+      (ps?.sales_rep_name ?? c.sales_rep_name) === salesRepFilter;
+    const matchesCustRep  = custRepFilter  === "ALL" ||
+      (c.assigned_rep_name ?? c.customer_rep_name) === custRepFilter;
 
-    return matchesSearch && matchesStatus;
+    return matchesSearch && matchesStatus && matchesProperty && matchesLandSize && matchesSalesRep && matchesCustRep;
   });
+
+  const hasFilters = search || statusFilter !== "ALL" || propertyFilter !== "ALL" || landSizeFilter !== "ALL" || salesRepFilter !== "ALL" || custRepFilter !== "ALL";
+
+  const clearFilters = () => {
+    setSearch("");
+    setStatusFilter("ALL");
+    setPropertyFilter("ALL");
+    setLandSizeFilter("ALL");
+    setSalesRepFilter("ALL");
+    setCustRepFilter("ALL");
+  };
 
   const isInitialLoad = loading && customers.length === 0;
 
@@ -500,26 +538,19 @@ export function Customers() {
           <motion.div variants={item}>
             <EmptyState
               icon={UsersIcon}
-              title={search || statusFilter !== "ALL" ? "No matching customers" : "No customers yet"}
+              title={hasFilters ? "No matching customers" : "No customers yet"}
               description={
-                search || statusFilter !== "ALL"
+                hasFilters
                   ? "Adjust your search or filter to find what you're looking for."
                   : "Add your first customer to start tracking subscriptions and revenue."
               }
               action={
                 <Button
-                  onClick={() => {
-                    if (search || statusFilter !== "ALL") {
-                      setSearch("");
-                      setStatusFilter("ALL");
-                    } else {
-                      setShowAdd(true);
-                    }
-                  }}
+                  onClick={() => hasFilters ? clearFilters() : setShowAdd(true)}
                   className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white"
                 >
                   <Plus className="w-4 h-4" />
-                  {search || statusFilter !== "ALL" ? "Clear Filters" : "Add New Customer"}
+                  {hasFilters ? "Clear Filters" : "Add New Customer"}
                 </Button>
               }
             />
@@ -542,7 +573,7 @@ export function Customers() {
                 />
               </div>
 
-              {/* Status filter */}
+              {/* Status filter pills */}
               <div className="flex items-center gap-1.5 overflow-x-auto">
                 <Filter className="w-3.5 h-3.5 text-neutral-400 shrink-0" />
                 <div className="flex items-center gap-1">
@@ -560,6 +591,56 @@ export function Customers() {
                     </button>
                   ))}
                 </div>
+              </div>
+
+              {/* Additional dropdown filters */}
+              <div className="flex items-center gap-2 flex-wrap">
+                {propertyOptions.length > 0 && (
+                  <select
+                    value={propertyFilter}
+                    onChange={(e) => setPropertyFilter(e.target.value)}
+                    className="h-9 px-2.5 border border-neutral-200 bg-white rounded-lg text-[12px] text-neutral-700 focus:outline-none focus:ring-1 focus:ring-emerald-500/30"
+                  >
+                    <option value="ALL">All Properties</option>
+                    {propertyOptions.map((p) => <option key={p} value={p}>{p}</option>)}
+                  </select>
+                )}
+                {landSizeOptions.length > 0 && (
+                  <select
+                    value={landSizeFilter}
+                    onChange={(e) => setLandSizeFilter(e.target.value)}
+                    className="h-9 px-2.5 border border-neutral-200 bg-white rounded-lg text-[12px] text-neutral-700 focus:outline-none focus:ring-1 focus:ring-emerald-500/30"
+                  >
+                    <option value="ALL">All Land Sizes</option>
+                    {landSizeOptions.map((ls) => <option key={ls} value={ls}>{ls} sqm</option>)}
+                  </select>
+                )}
+                {salesRepOptions.length > 0 && (
+                  <select
+                    value={salesRepFilter}
+                    onChange={(e) => setSalesRepFilter(e.target.value)}
+                    className="h-9 px-2.5 border border-neutral-200 bg-white rounded-lg text-[12px] text-neutral-700 focus:outline-none focus:ring-1 focus:ring-emerald-500/30"
+                  >
+                    <option value="ALL">All Sales Reps</option>
+                    {salesRepOptions.map((r) => <option key={r} value={r}>{r}</option>)}
+                  </select>
+                )}
+                {custRepOptions.length > 0 && (
+                  <select
+                    value={custRepFilter}
+                    onChange={(e) => setCustRepFilter(e.target.value)}
+                    className="h-9 px-2.5 border border-neutral-200 bg-white rounded-lg text-[12px] text-neutral-700 focus:outline-none focus:ring-1 focus:ring-emerald-500/30"
+                  >
+                    <option value="ALL">All Customer Reps</option>
+                    {custRepOptions.map((r) => <option key={r} value={r}>{r}</option>)}
+                  </select>
+                )}
+                {hasFilters && (
+                  <button onClick={clearFilters}
+                    className="h-9 px-2.5 flex items-center gap-1 border border-neutral-200 bg-white rounded-lg text-[12px] text-neutral-500 hover:text-red-600 hover:border-red-200 hover:bg-red-50 transition-colors">
+                    <X className="w-3 h-3" /> Clear
+                  </button>
+                )}
               </div>
             </motion.div>
 
@@ -664,6 +745,7 @@ export function Customers() {
                       <th className="px-5 py-3 text-[10.5px] font-semibold tracking-wider text-neutral-400 uppercase whitespace-nowrap hidden lg:table-cell">Property</th>
                       <th className="px-5 py-3 text-[10.5px] font-semibold tracking-wider text-neutral-400 uppercase whitespace-nowrap hidden lg:table-cell">Land Size</th>
                       <th className="px-5 py-3 text-[10.5px] font-semibold tracking-wider text-neutral-400 uppercase whitespace-nowrap hidden xl:table-cell">Plan</th>
+                      <th className="px-5 py-3 text-[10.5px] font-semibold tracking-wider text-neutral-400 uppercase whitespace-nowrap hidden xl:table-cell">Locked Price</th>
                       <th className="px-5 py-3 text-[10.5px] font-semibold tracking-wider text-neutral-400 uppercase whitespace-nowrap hidden xl:table-cell">Amount Paid</th>
                       <th className="px-5 py-3 text-[10.5px] font-semibold tracking-wider text-neutral-400 uppercase whitespace-nowrap hidden xl:table-cell">Balance</th>
                       <th className="px-5 py-3 text-[10.5px] font-semibold tracking-wider text-neutral-400 uppercase whitespace-nowrap">Status</th>
@@ -701,6 +783,9 @@ export function Customers() {
                           </td>
                           <td className="px-5 py-3.5 whitespace-nowrap hidden xl:table-cell">
                             <span className="text-[12.5px] text-neutral-700">{dash(ps?.plan_name)}</span>
+                          </td>
+                          <td className="px-5 py-3.5 whitespace-nowrap hidden xl:table-cell">
+                            <span className="text-[12.5px] font-medium text-neutral-800">{fmt(ps?.locked_price)}</span>
                           </td>
                           <td className="px-5 py-3.5 whitespace-nowrap hidden xl:table-cell">
                             <span className="text-[12.5px] font-medium text-emerald-700">{fmt(ps?.amount_paid)}</span>

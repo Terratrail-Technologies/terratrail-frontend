@@ -2,8 +2,8 @@ import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate, Link } from "react-router";
 import {
   ArrowLeft, Users, Building2, TrendingUp, DollarSign,
-  Phone, Mail, Calendar, Shield, Search, ChevronRight,
-  Edit2, UserX, RefreshCw, Eye, AlertCircle, CheckCircle,
+  Phone, Mail, Calendar, Shield, Search,
+  UserX, RefreshCw, Eye, AlertCircle, CheckCircle,
   Clock, XCircle, BarChart2, Activity,
 } from "lucide-react";
 import { api } from "../services/api";
@@ -231,7 +231,7 @@ function OverviewTab({
 
 function PropertiesTab({ customers }: { customers: CustomerItem[] }) {
   // Derive unique properties from customer subscriptions
-  const propMap = new Map<string, PropertyItem & { _revenue: number }>();
+  const propMap = new Map<string, PropertyItem & { _revenue: number; _outstanding: number }>();
   customers.forEach((c) => {
     const sub = c.primary_subscription;
     if (!sub) return;
@@ -239,13 +239,14 @@ function PropertiesTab({ customers }: { customers: CustomerItem[] }) {
     if (!propMap.has(key)) {
       propMap.set(key, {
         id: key, name: sub.property_name, property_type: "", city: "", state: "",
-        customers_count: 0, active_subs: 0, _revenue: 0,
+        customers_count: 0, active_subs: 0, _revenue: 0, _outstanding: 0,
       });
     }
     const p = propMap.get(key)!;
     p.customers_count = (p.customers_count ?? 0) + 1;
     if (sub.status === "ACTIVE") p.active_subs = (p.active_subs ?? 0) + 1;
     p._revenue += parseFloat(sub.amount_paid || "0");
+    p._outstanding += parseFloat(sub.balance || "0");
   });
   const properties = Array.from(propMap.values());
 
@@ -258,37 +259,78 @@ function PropertiesTab({ customers }: { customers: CustomerItem[] }) {
       </div>
     );
   }
-
   return (
-    <div className="bg-white rounded-xl border border-neutral-100 shadow-sm overflow-hidden">
-      <div className="overflow-x-auto">
-        <table className="w-full text-[13px]">
-          <thead>
-            <tr className="border-b border-neutral-100 bg-neutral-50">
-              <th className="text-left px-4 py-3 text-[11px] font-bold text-neutral-500 uppercase tracking-wide">Property</th>
-              <th className="text-center px-4 py-3 text-[11px] font-bold text-neutral-500 uppercase tracking-wide">Customers</th>
-              <th className="text-center px-4 py-3 text-[11px] font-bold text-neutral-500 uppercase tracking-wide">Active Subs</th>
-              <th className="text-right px-4 py-3 text-[11px] font-bold text-neutral-500 uppercase tracking-wide">Revenue Collected</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-neutral-50">
-            {properties.map((p) => (
-              <tr key={p.id} className="hover:bg-neutral-50 transition-colors">
-                <td className="px-4 py-3">
-                  <div className="flex items-center gap-2">
-                    <div className="p-1.5 rounded-lg bg-blue-50">
-                      <Building2 className="size-3.5 text-blue-600" />
-                    </div>
-                    <span className="font-semibold text-neutral-800">{p.name}</span>
-                  </div>
-                </td>
-                <td className="px-4 py-3 text-center font-semibold text-neutral-700">{p.customers_count}</td>
-                <td className="px-4 py-3 text-center font-semibold text-neutral-700">{p.active_subs}</td>
-                <td className="px-4 py-3 text-right font-semibold text-emerald-700">{fmt(p._revenue)}</td>
+    <div className="space-y-3">
+      {/* Mobile cards (< md) */}
+      <div className="md:hidden space-y-3">
+        {properties.map((p) => (
+          <div key={p.id} className="bg-white rounded-xl border border-neutral-100 p-4 shadow-sm">
+            <div className="flex items-center gap-2 mb-3">
+              <div className="p-1.5 rounded-lg bg-blue-50">
+                <Building2 className="size-3.5 text-blue-600" />
+              </div>
+              <span className="font-bold text-neutral-800 text-[14px]">{p.name}</span>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <p className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wider">Customers</p>
+                <p className="text-[13px] font-bold text-neutral-700">{p.customers_count}</p>
+              </div>
+              <div>
+                <p className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wider">Active Subs</p>
+                <p className="text-[13px] font-bold text-neutral-700">{p.active_subs}</p>
+              </div>
+              <div className="col-span-2 pt-2 border-t border-neutral-50 flex justify-between items-center">
+                <p className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wider">Total Revenue</p>
+                <p className="text-[13px] font-bold text-emerald-700">{fmt(p._revenue)}</p>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Desktop table (≥ md) */}
+      <div className="hidden md:block bg-white rounded-xl border border-neutral-100 shadow-sm overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-[13px]">
+            <thead>
+              <tr className="border-b border-neutral-100 bg-neutral-50">
+                <th className="text-left px-4 py-3 text-[11px] font-bold text-neutral-500 uppercase tracking-wide">Property</th>
+                <th className="text-left px-4 py-3 text-[11px] font-bold text-neutral-500 uppercase tracking-wide">Location</th>
+                <th className="text-center px-4 py-3 text-[11px] font-bold text-neutral-500 uppercase tracking-wide">Customers</th>
+                <th className="text-center px-4 py-3 text-[11px] font-bold text-neutral-500 uppercase tracking-wide">Active Subs</th>
+                <th className="text-right px-4 py-3 text-[11px] font-bold text-neutral-500 uppercase tracking-wide">Revenue Collected</th>
+                <th className="text-right px-4 py-3 text-[11px] font-bold text-neutral-500 uppercase tracking-wide">Outstanding</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className="divide-y divide-neutral-50">
+              {properties.map((p) => (
+                <tr key={p.id} className="hover:bg-neutral-50 transition-colors">
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-2">
+                      <div className="p-1.5 rounded-lg bg-blue-50">
+                        <Building2 className="size-3.5 text-blue-600" />
+                      </div>
+                      <div>
+                        <span className="font-semibold text-neutral-800">{p.name}</span>
+                        {p.property_type && (
+                          <p className="text-[11px] text-neutral-400 capitalize">{p.property_type.replace(/_/g," ").toLowerCase()}</p>
+                        )}
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 text-neutral-500 text-[12px]">
+                    {[p.city, p.state].filter(Boolean).join(", ") || "—"}
+                  </td>
+                  <td className="px-4 py-3 text-center font-semibold text-neutral-700">{p.customers_count}</td>
+                  <td className="px-4 py-3 text-center font-semibold text-neutral-700">{p.active_subs}</td>
+                  <td className="px-4 py-3 text-right font-semibold text-emerald-700">{fmt(p._revenue)}</td>
+                  <td className="px-4 py-3 text-right font-semibold text-red-600">{fmt(p._outstanding ?? 0)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );
@@ -296,7 +338,7 @@ function PropertiesTab({ customers }: { customers: CustomerItem[] }) {
 
 // ── Customers Tab ─────────────────────────────────────────────────────────────
 
-function CustomersTab({ customers, repUserId }: { customers: CustomerItem[]; repUserId: string }) {
+function CustomersTab({ customers }: { customers: CustomerItem[] }) {
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
@@ -329,7 +371,44 @@ function CustomersTab({ customers, repUserId }: { customers: CustomerItem[]; rep
         </div>
       </div>
 
-      <div className="bg-white rounded-xl border border-neutral-100 shadow-sm overflow-hidden">
+      {/* Mobile cards (< md) */}
+      <div className="md:hidden space-y-3">
+        {filtered.length === 0 ? (
+          <div className="py-12 text-center text-neutral-400 text-[13px]">No customers found.</div>
+        ) : filtered.map((c) => {
+          const sub = c.primary_subscription;
+          return (
+            <div key={c.id} className="bg-white rounded-xl border border-neutral-100 p-4 shadow-sm" onClick={() => navigate(`/customers/${c.id}`)}>
+              <div className="flex justify-between items-start mb-3">
+                <div className="min-w-0 flex-1">
+                  <p className="font-bold text-neutral-900 text-[14px] truncate">{c.full_name}</p>
+                  <p className="text-[11px] text-neutral-400 truncate">{c.email}</p>
+                </div>
+                {sub && <SubStatusBadge status={sub.status} />}
+              </div>
+              <div className="grid grid-cols-2 gap-3 text-[12px] mb-3">
+                <div>
+                  <p className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wider">Property</p>
+                  <p className="text-neutral-700 font-medium truncate">{sub?.property_name || "—"}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wider">Balance</p>
+                  <p className="text-red-600 font-bold">{sub ? fmt(parseFloat(sub.balance || "0")) : "—"}</p>
+                </div>
+              </div>
+              <div className="flex justify-between items-center pt-3 border-t border-neutral-50">
+                <div className="text-[11px] text-neutral-500">Next Due: {sub?.next_due_date ? fmtDate(sub.next_due_date) : "—"}</div>
+                <button className="p-1.5 rounded-lg bg-neutral-50 text-emerald-600">
+                  <Eye className="size-4" />
+                </button>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Desktop table (≥ md) */}
+      <div className="hidden md:block bg-white rounded-xl border border-neutral-100 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-[13px]">
             <thead>
@@ -338,8 +417,9 @@ function CustomersTab({ customers, repUserId }: { customers: CustomerItem[]; rep
                 <th className="text-left px-4 py-3 text-[11px] font-bold text-neutral-500 uppercase tracking-wide">Phone</th>
                 <th className="text-left px-4 py-3 text-[11px] font-bold text-neutral-500 uppercase tracking-wide">Property</th>
                 <th className="text-left px-4 py-3 text-[11px] font-bold text-neutral-500 uppercase tracking-wide">Plan</th>
-                <th className="text-right px-4 py-3 text-[11px] font-bold text-neutral-500 uppercase tracking-wide">Paid</th>
-                <th className="text-right px-4 py-3 text-[11px] font-bold text-neutral-500 uppercase tracking-wide">Balance</th>
+                <th className="text-right px-4 py-3 text-[11px] font-bold text-neutral-500 uppercase tracking-wide">Locked Price</th>
+                <th className="text-right px-4 py-3 text-[11px] font-bold text-neutral-500 uppercase tracking-wide">Amount Paid</th>
+                <th className="text-right px-4 py-3 text-[11px] font-bold text-neutral-500 uppercase tracking-wide">Outstanding</th>
                 <th className="text-left px-4 py-3 text-[11px] font-bold text-neutral-500 uppercase tracking-wide">Next Due</th>
                 <th className="text-center px-4 py-3 text-[11px] font-bold text-neutral-500 uppercase tracking-wide">Status</th>
                 <th className="px-4 py-3" />
@@ -348,7 +428,7 @@ function CustomersTab({ customers, repUserId }: { customers: CustomerItem[]; rep
             <tbody className="divide-y divide-neutral-50">
               {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="px-4 py-12 text-center text-neutral-400 text-[13px]">
+                  <td colSpan={10} className="px-4 py-12 text-center text-neutral-400 text-[13px]">
                     {search || statusFilter !== "ALL" ? "No customers match your filters." : "No customers assigned to this rep."}
                   </td>
                 </tr>
@@ -371,6 +451,9 @@ function CustomersTab({ customers, repUserId }: { customers: CustomerItem[]; rep
                           <p className="text-[11px] text-neutral-400">{sub.land_size ? `${sub.land_size} SQM` : ""}</p>
                         </div>
                       ) : "—"}
+                    </td>
+                    <td className="px-4 py-3 text-right font-semibold text-neutral-800">
+                      {sub ? fmt(parseFloat(sub.locked_price || "0")) : "—"}
                     </td>
                     <td className="px-4 py-3 text-right font-semibold text-emerald-700">
                       {sub ? fmt(parseFloat(sub.amount_paid || "0")) : "—"}
@@ -517,7 +600,6 @@ function ProfileTab({ rep }: { rep: RepMember }) {
 
 export function CustomerRepDetail() {
   const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
   const { role, loading: roleLoading } = useWorkspaceRole();
 
   const [rep, setRep] = useState<RepMember | null>(null);
@@ -539,21 +621,16 @@ export function CustomerRepDetail() {
       ]);
 
       if (membersRaw.status === "fulfilled") {
-        const found = membersRaw.value.find((m: RepMember) => m.id === id);
+        const members = membersRaw.value as RepMember[];
+        const found = members.find((m) => m.id === id);
         setRep(found ?? null);
       }
       if (customersRaw.status === "fulfilled") {
-        const all: CustomerItem[] = customersRaw.value;
-        // Filter customers whose primary subscription is managed by this rep
-        // Since the list endpoint doesn't filter by rep, we accept all for now
-        // and filter client-side if assigned_rep field is present
+        const all = customersRaw.value as CustomerItem[];
         const repMember = membersRaw.status === "fulfilled"
-          ? membersRaw.value.find((m: RepMember) => m.id === id)
+          ? (membersRaw.value as RepMember[]).find((m) => m.id === id)
           : null;
         const repUserId = repMember?.user;
-        const filtered = repUserId
-          ? all.filter((c: any) => c.assigned_rep === repUserId || !c.assigned_rep)
-          : all;
         setCustomers(repUserId ? all.filter((c: any) => c.assigned_rep === repUserId) : []);
       }
       if (settingsRaw.status === "fulfilled") {
@@ -608,7 +685,7 @@ export function CustomerRepDetail() {
         <Link to="/customer-reps" className="inline-flex items-center gap-1.5 text-[12px] text-neutral-500 hover:text-neutral-800 mb-3 transition-colors">
           <ArrowLeft className="size-3.5" /> Customer Representatives
         </Link>
-        <div className="flex items-start justify-between gap-4">
+        <div className="flex flex-col sm:flex-row items-start justify-between gap-4">
           <div className="flex items-center gap-4">
             <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center text-[18px] font-bold text-white shrink-0">
               {initials}
@@ -656,7 +733,7 @@ export function CustomerRepDetail() {
       <div>
         {tab === "overview"   && <OverviewTab    rep={rep} customers={customers} settings={settings} />}
         {tab === "properties" && <PropertiesTab  customers={customers} />}
-        {tab === "customers"  && <CustomersTab   customers={customers} repUserId={rep.user} />}
+        {tab === "customers"  && <CustomersTab   customers={customers} />}
         {tab === "activity"   && <ActivityTab    repUserId={rep.user} repName={rep.user_name} />}
         {tab === "profile"    && <ProfileTab     rep={rep} />}
       </div>

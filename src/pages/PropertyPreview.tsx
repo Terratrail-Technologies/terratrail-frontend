@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router";
 import {
   ArrowLeft, MapPin, CheckCircle2, Clock, ChevronLeft, ChevronRight,
   Building as BuildingIcon, Layers, Home, CreditCard, FileText, Shield,
-  TrendingUp, Plus, X, Calendar,
+  TrendingUp, Plus, X, Calendar, Loader2,
 } from "lucide-react";
 import { api } from "../services/api";
 import { Badge } from "../components/ui/badge";
@@ -242,11 +242,26 @@ export default function PropertyPreview() {
   const navigate = useNavigate();
   const [property, setProperty] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [publishing, setPublishing] = useState(false);
   const [showAppreciation, setShowAppreciation] = useState(false);
   const [appreciationHistory, setAppreciationHistory] = useState<AppreciationEntry[]>([]);
   const { role } = useWorkspaceRole();
   const isAdmin = role === "ADMIN" || role === "OWNER";
   usePageTitle(property ? `Preview: ${property.name}` : "Property Preview");
+
+  const handleStatusChange = async (status: "PUBLISHED" | "DRAFT") => {
+    if (!id) return;
+    setPublishing(true);
+    try {
+      await api.properties.update(id, { status });
+      setProperty((p: any) => ({ ...p, status }));
+      toast.success(status === "PUBLISHED" ? "Property published successfully." : "Property saved as draft.");
+    } catch {
+      toast.error("Failed to update property status.");
+    } finally {
+      setPublishing(false);
+    }
+  };
 
   useEffect(() => {
     if (!id) return;
@@ -301,10 +316,32 @@ export default function PropertyPreview() {
             {typeLabel && <p className="text-sm text-neutral-500 mt-0.5">{typeLabel}</p>}
           </div>
         </div>
-        <Button onClick={() => navigate(`/properties/${id}/edit`)}
-          variant="outline" className="shrink-0 text-sm bg-white">
-          Edit Property
-        </Button>
+        <div className="flex items-center gap-2 flex-wrap shrink-0">
+          {isAdmin && (
+            isPublished ? (
+              <Button
+                variant="outline"
+                onClick={() => handleStatusChange("DRAFT")}
+                disabled={publishing}
+                className="text-sm bg-white text-neutral-700"
+              >
+                {publishing ? <Loader2 className="w-4 h-4 animate-spin" /> : "Save as Draft"}
+              </Button>
+            ) : (
+              <Button
+                onClick={() => handleStatusChange("PUBLISHED")}
+                disabled={publishing}
+                className="text-sm bg-emerald-600 hover:bg-emerald-700 text-white gap-1.5"
+              >
+                {publishing ? <Loader2 className="w-4 h-4 animate-spin" /> : <><CheckCircle2 className="w-4 h-4" />Publish</>}
+              </Button>
+            )
+          )}
+          <Button onClick={() => navigate(`/properties/${id}/edit`)}
+            variant="outline" className="text-sm bg-white">
+            Edit Property
+          </Button>
+        </div>
       </div>
 
       {/* Gallery */}

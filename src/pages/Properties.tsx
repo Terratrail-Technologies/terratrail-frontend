@@ -3,7 +3,7 @@ import { usePolling } from "../hooks/usePolling";
 import { usePageTitle } from "../hooks/usePageTitle";
 import { Link, useNavigate } from "react-router";
 import {
-  Plus, Search, Filter, MapPin, CheckCircle2, Clock,
+  Plus, Search, MapPin, CheckCircle2, Clock,
   Building as BuildingIcon, Loader2, MoreHorizontal, Pencil, Eye,
 } from "lucide-react";
 import { Skeleton } from "../components/ui/skeleton";
@@ -25,7 +25,7 @@ const item = {
 } as const;
 
 // ── Property card 3-dot dropdown ─────────────────────────────────────────────
-function PropertyMenu({ propertyId, onDelete }: { propertyId: string; onDelete?: (id: string) => void }) {
+function PropertyMenu({ propertyId }: { propertyId: string; onDelete?: (id: string) => void }) {
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -221,7 +221,7 @@ export function Properties() {
     }
   };
 
-  usePolling(fetchProperties, 30_000);
+  usePolling(fetchProperties, 300_000);
 
   const filtered = properties.filter((p) => {
     const matchSearch =

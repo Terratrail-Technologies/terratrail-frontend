@@ -116,33 +116,19 @@ export function SelectPlan() {
         <p className={s.subtext}>Start free and upgrade as you grow. No credit card required.</p>
 
         {/* Billing toggle */}
-        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
+        <div className={s.billingToggle}>
           <button
             type="button"
             onClick={() => setBilling("monthly")}
-            style={{
-              padding: "5px 14px", borderRadius: 20,
-              border: billing === "monthly" ? "1.5px solid #1c2268" : "1.5px solid #e2e8f0",
-              background: billing === "monthly" ? "#1c2268" : "#fff",
-              color: billing === "monthly" ? "#fff" : "#64748b",
-              fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit",
-              transition: "all 0.15s",
-            }}
+            className={[s.billingBtn, billing === "monthly" ? s.billingBtnActive : ""].join(" ")}
           >Monthly</button>
           <button
             type="button"
             onClick={() => setBilling("yearly")}
-            style={{
-              padding: "5px 14px", borderRadius: 20,
-              border: billing === "yearly" ? "1.5px solid #1c2268" : "1.5px solid #e2e8f0",
-              background: billing === "yearly" ? "#1c2268" : "#fff",
-              color: billing === "yearly" ? "#fff" : "#64748b",
-              fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit",
-              transition: "all 0.15s",
-            }}
+            className={[s.billingBtn, billing === "yearly" ? s.billingBtnActive : ""].join(" ")}
           >
             Yearly
-            <span style={{ marginLeft: 5, fontSize: 10, background: "#16a34a", color: "#fff", padding: "1px 6px", borderRadius: 10, fontWeight: 700 }}>
+            <span className={s.discountBadge}>
               Save 17%
             </span>
           </button>
@@ -226,7 +212,8 @@ export function SelectPlan() {
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.18, duration: 0.22 }}
-        style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 16 }}
+        className={s.form}
+        style={{ marginTop: 16 }}
       >
         {selectedPlan && selectedPlan.key !== "FREE" && (
           <div className={s.infoBox}>
