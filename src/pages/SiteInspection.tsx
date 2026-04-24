@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { usePolling } from "../hooks/usePolling";
 import { usePageTitle } from "../hooks/usePageTitle";
 import { useWorkspaceRole } from "../hooks/useWorkspaceRole";
@@ -202,8 +202,18 @@ function AddInspectionModal({
   onClose: () => void;
   onCreated: (item: SiteInspection) => void;
 }) {
-  const [form, setForm] = useState(BLANK_FORM);
+  const [form, setForm] = useState({ ...BLANK_FORM, linked_property: "" });
   const [saving, setSaving] = useState(false);
+  const [properties, setProperties] = useState<{ id: string; name: string }[]>([]);
+
+  useEffect(() => {
+    api.properties.list().then((list: any[]) => {
+      const published = list.filter(
+        (p) => p.status === "PUBLISHED" || p.status === "published"
+      );
+      setProperties(published.map((p) => ({ id: p.id, name: p.name })));
+    }).catch(() => {});
+  }, []);
 
   const set =
     (k: keyof typeof BLANK_FORM) =>
@@ -230,7 +240,7 @@ function AddInspectionModal({
     }
     setSaving(true);
     try {
-      const payload = {
+      const payload: any = {
         name: form.name.trim(),
         phone: form.phone.trim(),
         email: form.email.trim(),
@@ -243,6 +253,7 @@ function AddInspectionModal({
         notes: form.notes.trim(),
         status: "PENDING",
       };
+      if (form.linked_property) payload.linked_property = form.linked_property;
       const created = await api.siteInspections.create(payload);
       onCreated(created);
       toast.success("Inspection request created.");
@@ -318,17 +329,37 @@ function AddInspectionModal({
             />
           </div>
 
-          {/* Property name */}
+          {/* Property — dropdown of published properties */}
           <div>
             <label className="block text-[11.5px] font-semibold text-neutral-600 mb-1.5">
-              Property Name <span className="text-red-500">*</span>
+              Property <span className="text-red-500">*</span>
             </label>
-            <input
-              className={inputCls}
-              placeholder="e.g. Lekki Phase 1 Duplex"
-              value={form.property_name}
-              onChange={set("property_name")}
-            />
+            {properties.length > 0 ? (
+              <select
+                className={inputCls}
+                value={form.linked_property}
+                onChange={(e) => {
+                  const selected = properties.find((p) => p.id === e.target.value);
+                  setForm((f) => ({
+                    ...f,
+                    linked_property: e.target.value,
+                    property_name: selected?.name ?? "",
+                  }));
+                }}
+              >
+                <option value="">— Select a property —</option>
+                {properties.map((p) => (
+                  <option key={p.id} value={p.id}>{p.name}</option>
+                ))}
+              </select>
+            ) : (
+              <input
+                className={inputCls}
+                placeholder="e.g. Tehillah Estate Phase 1"
+                value={form.property_name}
+                onChange={set("property_name")}
+              />
+            )}
           </div>
 
           {/* Date + Time */}
@@ -524,6 +555,150 @@ function ActionConfirmModal({
   );
 }
 
+// ── Inspection Config Modal ───────────────────────────────────────────────────
+const DAYS = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"];
+
+function InspectionConfigModal({ onClose }: { onClose: () => void }) {
+  const [properties, setProperties] = useState<{ id: string; name: string }[]>([]);
+  const [selectedPropId, setSelectedPropId] = useState("");
+  const [meetingPoint, setMeetingPoint] = useState("");
+  const [virtualLink, setVirtualLink] = useState("");
+  const [availableDays, setAvailableDays] = useState<string[]>([]);
+  const [timeFrom, setTimeFrom] = useState("09:00");
+  const [timeTo, setTimeTo] = useState("17:00");
+  const [maxPersons, setMaxPersons] = useState("20");
+  const [notes, setNotes] = useState("");
+
+  const inputCls = "w-full px-3 py-2 text-[13px] border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400 bg-white";
+
+  useEffect(() => {
+    api.properties.list().then((list: any[]) => {
+      setProperties(list.filter((p) => p.status === "PUBLISHED" || p.status === "published").map((p) => ({ id: p.id, name: p.name })));
+    }).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    if (!selectedPropId) return;
+    try {
+      const saved = localStorage.getItem(`tt_inspection_config_${selectedPropId}`);
+      if (saved) {
+        const cfg = JSON.parse(saved);
+        setMeetingPoint(cfg.meetingPoint ?? "");
+        setVirtualLink(cfg.virtualLink ?? "");
+        setAvailableDays(cfg.availableDays ?? []);
+        setTimeFrom(cfg.timeFrom ?? "09:00");
+        setTimeTo(cfg.timeTo ?? "17:00");
+        setMaxPersons(cfg.maxPersons ?? "20");
+        setNotes(cfg.notes ?? "");
+      } else {
+        setMeetingPoint(""); setVirtualLink(""); setAvailableDays([]);
+        setTimeFrom("09:00"); setTimeTo("17:00"); setMaxPersons("20"); setNotes("");
+      }
+    } catch {}
+  }, [selectedPropId]);
+
+  const handleSave = () => {
+    if (!selectedPropId) { toast.error("Select a property first."); return; }
+    const cfg = { meetingPoint, virtualLink, availableDays, timeFrom, timeTo, maxPersons, notes };
+    localStorage.setItem(`tt_inspection_config_${selectedPropId}`, JSON.stringify(cfg));
+    toast.success("Inspection settings saved.");
+    onClose();
+  };
+
+  const toggleDay = (d: string) =>
+    setAvailableDays((prev) => prev.includes(d) ? prev.filter((x) => x !== d) : [...prev, d]);
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-black/40 backdrop-blur-sm overflow-y-auto">
+      <motion.div
+        initial={{ opacity: 0, y: 30 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: 30 }}
+        className="w-full max-w-lg bg-white rounded-2xl shadow-xl my-auto"
+      >
+        <div className="flex items-center justify-between px-5 py-4 border-b border-neutral-100">
+          <div>
+            <h3 className="text-[14px] font-semibold text-neutral-900">Inspection Settings</h3>
+            <p className="text-[11.5px] text-neutral-400 mt-0.5">Configure per-property inspection details</p>
+          </div>
+          <button onClick={onClose} className="p-1 rounded-lg hover:bg-neutral-100 text-neutral-400"><X className="w-4 h-4" /></button>
+        </div>
+
+        <div className="p-5 space-y-4 max-h-[70vh] overflow-y-auto">
+          {/* Property select */}
+          <div>
+            <label className="block text-[11.5px] font-semibold text-neutral-600 mb-1.5">Property <span className="text-red-500">*</span></label>
+            <select className={inputCls} value={selectedPropId} onChange={(e) => setSelectedPropId(e.target.value)}>
+              <option value="">— Select a property —</option>
+              {properties.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+            </select>
+          </div>
+
+          {selectedPropId && (
+            <>
+              {/* Meeting point */}
+              <div>
+                <label className="block text-[11.5px] font-semibold text-neutral-600 mb-1.5">Physical Meeting Point</label>
+                <input className={inputCls} placeholder="e.g. Main gate, Km 15 Lekki-Epe Expressway" value={meetingPoint} onChange={(e) => setMeetingPoint(e.target.value)} />
+              </div>
+
+              {/* Virtual link */}
+              <div>
+                <label className="block text-[11.5px] font-semibold text-neutral-600 mb-1.5">Virtual Meeting Link</label>
+                <input className={inputCls} placeholder="e.g. https://meet.google.com/xyz" value={virtualLink} onChange={(e) => setVirtualLink(e.target.value)} />
+              </div>
+
+              {/* Available days */}
+              <div>
+                <label className="block text-[11.5px] font-semibold text-neutral-600 mb-2">Available Inspection Days</label>
+                <div className="flex flex-wrap gap-2">
+                  {DAYS.map((d) => (
+                    <button key={d} type="button" onClick={() => toggleDay(d)}
+                      className={`px-2.5 py-1 rounded-lg text-[11.5px] font-medium border transition-colors ${availableDays.includes(d) ? "bg-emerald-600 text-white border-emerald-600" : "bg-white border-neutral-200 text-neutral-600 hover:border-emerald-300"}`}>
+                      {d.slice(0, 3)}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Time range */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[11.5px] font-semibold text-neutral-600 mb-1.5">Available From</label>
+                  <input type="time" className={inputCls} value={timeFrom} onChange={(e) => setTimeFrom(e.target.value)} />
+                </div>
+                <div>
+                  <label className="block text-[11.5px] font-semibold text-neutral-600 mb-1.5">Available To</label>
+                  <input type="time" className={inputCls} value={timeTo} onChange={(e) => setTimeTo(e.target.value)} />
+                </div>
+              </div>
+
+              {/* Max persons */}
+              <div>
+                <label className="block text-[11.5px] font-semibold text-neutral-600 mb-1.5">Max Persons per Inspection</label>
+                <input type="number" min="1" className={inputCls} value={maxPersons} onChange={(e) => setMaxPersons(e.target.value)} />
+              </div>
+
+              {/* Notes */}
+              <div>
+                <label className="block text-[11.5px] font-semibold text-neutral-600 mb-1.5">Additional Notes / Instructions</label>
+                <textarea rows={3} className={`${inputCls} resize-none`}
+                  placeholder="Any special instructions for inspectors or visitors…"
+                  value={notes} onChange={(e) => setNotes(e.target.value)} />
+              </div>
+            </>
+          )}
+        </div>
+
+        <div className="flex gap-3 px-5 pb-5">
+          <button onClick={onClose} className="flex-1 py-2.5 rounded-xl border border-neutral-200 text-[13px] font-medium text-neutral-600 hover:bg-neutral-50 transition-colors">Cancel</button>
+          <button onClick={handleSave} className="flex-1 py-2.5 rounded-xl bg-emerald-600 text-white text-[13px] font-semibold hover:bg-emerald-700 transition-colors shadow-sm">Save Settings</button>
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+
 // ── Main Page ─────────────────────────────────────────────────────────────────
 type StatusFilter = "ALL" | "PENDING" | "ATTENDED" | "CANCELLED";
 type TypeFilter = "ALL" | "PHYSICAL" | "VIRTUAL";
@@ -539,6 +714,7 @@ export function SiteInspection() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("ALL");
   const [typeFilter, setTypeFilter] = useState<TypeFilter>("ALL");
   const [showAdd, setShowAdd] = useState(false);
+  const [showConfig, setShowConfig] = useState(false);
   const [detailTarget, setDetailTarget] = useState<SiteInspection | null>(
     null
   );
@@ -653,6 +829,15 @@ export function SiteInspection() {
           <div className="flex items-center gap-2">
             {loading && (
               <Loader2 className="w-3.5 h-3.5 text-emerald-500 animate-spin" />
+            )}
+            {isAdmin && (
+              <button
+                onClick={() => setShowConfig(true)}
+                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-neutral-200 bg-white text-neutral-600 text-[12px] font-medium hover:bg-neutral-50 transition-colors"
+              >
+                <Calendar className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Inspection Settings</span>
+              </button>
             )}
             <button
               onClick={() => setShowAdd(true)}
@@ -1031,6 +1216,9 @@ export function SiteInspection() {
 
       {/* ── Modals ── */}
       <AnimatePresence>
+        {showConfig && (
+          <InspectionConfigModal onClose={() => setShowConfig(false)} />
+        )}
         {showAdd && (
           <AddInspectionModal
             onClose={() => setShowAdd(false)}

@@ -117,13 +117,13 @@ export function Overview() {
     return (
       <div className="flex flex-col min-h-[calc(100vh-60px)] w-full">
         {/* Header skeleton */}
-        <div className="bg-white border-b border-neutral-100 px-6 lg:px-8 py-4 hidden md:block">
+        <div className="bg-white border-b border-neutral-100 px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
             <div className="space-y-1.5">
               <Skeleton className="h-5 w-28 bg-neutral-100" />
-              <Skeleton className="h-3.5 w-40 bg-neutral-100" />
+              <Skeleton className="h-3.5 w-40 bg-neutral-100 hidden sm:block" />
             </div>
-            <Skeleton className="h-8 w-52 rounded-lg bg-neutral-100" />
+            <Skeleton className="h-8 w-8 sm:w-52 rounded-lg bg-neutral-100" />
           </div>
         </div>
 
@@ -220,21 +220,27 @@ export function Overview() {
   return (
     <div className="flex flex-col min-h-[calc(100vh-60px)] w-full">
       {/* ── Page header ─────────────────────────────────────────── */}
-      <div className="bg-white border-b border-neutral-100 px-6 lg:px-8 py-4 hidden md:block">
+      <div className="bg-white border-b border-neutral-100 px-4 sm:px-6 lg:px-8 py-4">
         <div className="flex flex-col gap-3">
           {/* Title row */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div>
-                <h1 className="text-[18px] font-semibold text-neutral-900 tracking-tight">Overview</h1>
-                <p className="text-[12px] text-neutral-400 mt-0.5">Analytics dashboard</p>
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="min-w-0">
+                <div className="flex items-center gap-2">
+                  <h1 className="text-[17px] font-semibold text-neutral-900 tracking-tight">Overview</h1>
+                  {loading && <Loader2 className="w-3.5 h-3.5 text-emerald-500 animate-spin shrink-0" />}
+                </div>
+                <p className="text-[12px] text-neutral-400 mt-0.5 hidden sm:block">Analytics dashboard</p>
               </div>
-              {loading && (
-                <Loader2 className="w-4 h-4 text-emerald-500 animate-spin" />
-              )}
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 shrink-0">
+              {/* Pending badge — hidden on very small screens */}
+              {!isFiltered && (
+                <div className="hidden sm:flex text-[11px] text-neutral-500 bg-neutral-50 border border-neutral-100 px-2.5 py-1 rounded-full whitespace-nowrap">
+                  Pending: <span className="font-semibold text-neutral-700 ml-1">{safeStats.pending_payments}</span>
+                </div>
+              )}
               {/* Visibility toggle */}
               <button
                 type="button"
@@ -245,22 +251,17 @@ export function Overview() {
                 {valuesHidden ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
                 <span className="hidden sm:inline">{valuesHidden ? "Show" : "Hide"}</span>
               </button>
-
-              {/* Recent payments badge */}
-              {!isFiltered && (
-                <div className="text-[11.5px] text-neutral-500 bg-neutral-50 border border-neutral-100 px-2.5 py-1 rounded-full">
-                  Pending: <span className="font-semibold text-neutral-700">{safeStats.pending_payments} payments</span>
-                </div>
-              )}
             </div>
           </div>
 
-          {/* Date filter row */}
-          <DateRangeFilter
-            preset={preset}
-            customRange={customRange}
-            onPresetChange={handlePresetChange}
-          />
+          {/* Date filter row — scrollable on mobile */}
+          <div className="overflow-x-auto -mx-4 sm:mx-0 px-4 sm:px-0">
+            <DateRangeFilter
+              preset={preset}
+              customRange={customRange}
+              onPresetChange={handlePresetChange}
+            />
+          </div>
         </div>
       </div>
 
@@ -273,30 +274,35 @@ export function Overview() {
             {
               label: `Active Subscriptions`,
               value: safeStats.active_subscriptions,
+              accentBg: "bg-emerald-500",
               dot: "bg-emerald-500", icon: FileText, iconBg: "bg-emerald-50", iconColor: "text-emerald-600",
               note: isFiltered ? "overall" : undefined,
             },
             {
               label: `Total Customers`,
               value: safeStats.total_customers,
+              accentBg: "bg-blue-500",
               dot: "bg-blue-500", icon: Users, iconBg: "bg-blue-50", iconColor: "text-blue-600",
               note: isFiltered ? "overall" : undefined,
             },
             {
               label: `Overdue`,
               value: safeStats.overdue_installments,
+              accentBg: "bg-red-500",
               dot: "bg-red-500", icon: TrendingDown, iconBg: "bg-red-50", iconColor: "text-red-600",
               note: "action required",
             },
             {
               label: `Pending Payments`,
               value: safeStats.pending_payments,
+              accentBg: "bg-amber-500",
               dot: "bg-amber-500", icon: LayoutDashboard, iconBg: "bg-amber-50", iconColor: "text-amber-600",
               note: "awaiting review",
             },
           ].map((s) => (
             <motion.div key={s.label} variants={item}
-              className="bg-white rounded-xl border border-neutral-100 p-5 shadow-[0_1px_3px_rgba(0,0,0,0.06)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.08)] transition-shadow duration-200">
+              className="relative bg-white rounded-xl border border-neutral-100 p-5 shadow-[0_1px_3px_rgba(0,0,0,0.06)] hover:shadow-[0_6px_16px_rgba(0,0,0,0.09)] transition-all duration-200 overflow-hidden">
+              <div className={`absolute top-0 left-0 right-0 h-0.5 ${s.accentBg}`} />
               <div className="flex items-start justify-between">
                 <div>
                   <div className="text-[12px] font-medium text-neutral-400 mb-1.5">{s.label}</div>
@@ -381,6 +387,7 @@ export function Overview() {
             {
               label: "Approved Referral Payments",
               value: String(fmtNum(safeStats.commission_earned) + fmtNum(safeStats.commission_pending)),
+              accentBg: "bg-emerald-500",
               badge: { text: "Approved", color: "bg-emerald-50 text-emerald-700" },
               badgeIcon: TrendingUp,
               footer: "Total from approved payments",
@@ -388,24 +395,28 @@ export function Overview() {
             {
               label: "Payouts",
               value: safeStats.commission_earned,
+              accentBg: "bg-blue-500",
               badge: { text: "Disbursed", color: "bg-blue-50 text-blue-700" },
               footer: "Paid to realtors",
             },
             {
               label: "Pending Payouts",
               value: safeStats.commission_pending,
+              accentBg: "bg-amber-500",
               badge: { text: "Awaiting payout", color: "bg-amber-50 text-amber-700" },
               footer: "Earned but not yet paid",
             },
             {
               label: "Potential Referral Payments",
               value: safeStats.commission_potential,
+              accentBg: "bg-violet-500",
               badge: { text: "All subs complete", color: "bg-violet-50 text-violet-700" },
               footer: "If all subscriptions complete",
             },
           ].map((c) => (
             <motion.div key={c.label} variants={item}
-              className="bg-white rounded-xl border border-neutral-100 p-5 shadow-[0_1px_3px_rgba(0,0,0,0.06)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.08)] transition-shadow duration-200">
+              className="relative bg-white rounded-xl border border-neutral-100 p-5 shadow-[0_1px_3px_rgba(0,0,0,0.06)] hover:shadow-[0_6px_16px_rgba(0,0,0,0.09)] transition-all duration-200 overflow-hidden">
+              <div className={`absolute top-0 left-0 right-0 h-0.5 ${c.accentBg}`} />
               <div className="text-[12px] font-medium text-neutral-400 mb-2 leading-snug">{c.label}</div>
               <div className="text-[20px] font-bold text-neutral-900 tracking-tight leading-none">
                 {maskStr(c.value)}
@@ -458,7 +469,7 @@ export function Overview() {
             },
           ].map((board) => (
             <motion.div key={board.title} variants={item}
-              className="bg-white rounded-xl border border-neutral-100 shadow-[0_1px_3px_rgba(0,0,0,0.06)] overflow-hidden">
+              className="bg-white rounded-xl border border-neutral-100 shadow-[0_1px_3px_rgba(0,0,0,0.06)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.08)] transition-shadow duration-200 overflow-hidden">
               <div className="px-5 py-3.5 border-b border-neutral-50 flex items-center justify-between">
                 <h3 className="text-[13px] font-semibold text-neutral-800">{board.title}</h3>
                 {isFiltered && (

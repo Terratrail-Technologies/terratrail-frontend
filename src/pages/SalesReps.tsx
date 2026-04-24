@@ -5,7 +5,7 @@ import { usePageTitle } from "../hooks/usePageTitle";
 import { useWorkspaceRole } from "../hooks/useWorkspaceRole";
 import {
   Search, Plus, X, AlertCircle, Copy, Check,
-  Loader2, MoreVertical, Eye, ChevronDown,
+  Loader2, MoreVertical, Eye, ChevronDown, Pencil,
   Users, TrendingUp, Wallet, Banknote,
 } from "lucide-react";
 import { Skeleton } from "../components/ui/skeleton";
@@ -725,8 +725,70 @@ export function SalesReps() {
             </select>
           </div>
 
-          {/* ── Table ─────────────────────────────────────────────────────────── */}
-          <div className="bg-white rounded-xl border border-neutral-100 shadow-sm overflow-hidden">
+          {/* ── Mobile cards (< md) ───────────────────────────────────────────── */}
+          {filtered.length > 0 && (
+            <div className="md:hidden space-y-3">
+              {filtered.map((rep) => {
+                const stats = repStats[rep.id];
+                return (
+                  <motion.div key={rep.id} variants={item}
+                    className="bg-white rounded-xl border border-neutral-100 p-4 shadow-[0_1px_3px_rgba(0,0,0,0.05)]">
+                    <div className="flex items-start justify-between gap-3 mb-3">
+                      <div className="min-w-0">
+                        <div className="text-[13.5px] font-semibold text-neutral-900 truncate">{rep.name}</div>
+                        <div className="text-[11.5px] text-neutral-400 truncate">{rep.email}</div>
+                        <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                          <span className={`inline-flex px-2 py-0.5 rounded-full text-[11px] font-semibold ${TIER_COLORS[rep.tier] ?? "bg-neutral-100 text-neutral-600"}`}>
+                            {TIER_LABELS[rep.tier] ?? rep.tier}
+                          </span>
+                          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold ${rep.is_active ? "bg-emerald-50 text-emerald-700" : "bg-neutral-100 text-neutral-500"}`}>
+                            <span className={`w-1.5 h-1.5 rounded-full inline-block ${rep.is_active ? "bg-emerald-500" : "bg-neutral-400"}`} />
+                            {rep.is_active ? "Active" : "Inactive"}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 mb-3">
+                      <div>
+                        <div className="text-[10px] font-semibold uppercase tracking-wider text-neutral-400">Referral Code</div>
+                        <div className="font-mono text-[12px] text-neutral-600 bg-neutral-100 px-1.5 py-0.5 rounded mt-0.5 inline-block">{rep.referral_code ?? "—"}</div>
+                      </div>
+                      <div>
+                        <div className="text-[10px] font-semibold uppercase tracking-wider text-neutral-400">Total Earned</div>
+                        <div className="text-[13px] font-bold text-neutral-900">{fmt(rep.total_earned ?? 0)}</div>
+                      </div>
+                      <div>
+                        <div className="text-[10px] font-semibold uppercase tracking-wider text-neutral-400">Pending Payout</div>
+                        <div className="text-[13px] font-bold text-amber-600">{fmt(rep.total_pending ?? 0)}</div>
+                      </div>
+                      {stats?.total_referrals != null && (
+                        <div>
+                          <div className="text-[10px] font-semibold uppercase tracking-wider text-neutral-400">Referrals</div>
+                          <div className="text-[13px] font-bold text-neutral-900">{stats.total_referrals}</div>
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex gap-2 pt-3 border-t border-neutral-50">
+                      <button onClick={() => navigate(`/sales-reps/${rep.id}`)}
+                        className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg border border-neutral-200 text-[12px] font-medium text-neutral-600 hover:bg-neutral-50 transition-colors">
+                        <Eye className="w-3.5 h-3.5" /> View
+                      </button>
+                      <button onClick={() => setEditRep(rep)}
+                        className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg border border-blue-100 bg-blue-50/50 text-[12px] font-medium text-blue-700 hover:bg-blue-100 transition-colors">
+                        <Pencil className="w-3.5 h-3.5" /> Edit
+                      </button>
+                    </div>
+                  </motion.div>
+                );
+              })}
+              <p className="text-[11px] text-neutral-400 text-center py-1">
+                {filtered.length} of {reps.length} rep{reps.length !== 1 ? "s" : ""}
+              </p>
+            </div>
+          )}
+
+          {/* ── Desktop table (≥ md) ───────────────────────────────────────────── */}
+          <div className="hidden md:block bg-white rounded-xl border border-neutral-100 shadow-sm overflow-hidden">
             <div className="flex items-center justify-between px-5 py-3 border-b border-neutral-100">
               <p className="text-sm font-medium text-neutral-700">
                 All Sales Representatives
@@ -933,3 +995,4 @@ export function SalesReps() {
     </>
   );
 }
+

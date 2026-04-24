@@ -21,6 +21,8 @@ import {
   ChevronRight,
   Loader2,
   UsersRound,
+  ClipboardList,
+  Globe,
 } from "lucide-react";
 import { cn } from "../components/ui/utils";
 import {
@@ -43,11 +45,22 @@ import { Button } from "../components/ui/button";
 import { motion, AnimatePresence } from "motion/react";
 
 // ── Notification Bell dropdown ────────────────────────────────────────────────
+interface NotificationItem {
+  id: string;
+  type: "inspection" | "customer";
+  title: string;
+  subtitle: string;
+  time: string;
+  href: string;
+}
+
 function NotificationBell() {
-  const [open, setOpen]         = useState(false);
-  const [items, setItems]       = useState<any[]>([]);
-  const [loading, setLoading]   = useState(false);
-  const [unread, setUnread]     = useState(true);
+  const navigate = useNavigate();
+  const [open, setOpen]       = useState(false);
+  const [items, setItems]     = useState<NotificationItem[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [unread, setUnread]   = useState(0);
+  const [fetched, setFetched] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -58,27 +71,70 @@ function NotificationBell() {
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  const handleOpen = async () => {
-    const next = !open;
-    setOpen(next);
-    if (next && items.length === 0) {
-      setLoading(true);
-      try {
-        const res = await api.workspaces.activity(1);
-        const list = Array.isArray(res) ? res : (res as any)?.results ?? [];
-        setItems(list.slice(0, 10));
-        setUnread(false);
-      } catch {
-        setItems([]);
-      } finally {
-        setLoading(false);
+  const fetchEvents = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [inspections, customers] = await Promise.allSettled([
+        api.siteInspections.list(),
+        api.customers.list(),
+      ]);
+
+      const events: NotificationItem[] = [];
+
+      if (inspections.status === "fulfilled") {
+        const pending = (inspections.value as any[]).filter((i: any) =>
+          i.status === "PENDING" || i.status === "pending"
+        );
+        pending.slice(0, 5).forEach((i: any) => {
+          events.push({
+            id: `insp-${i.id}`,
+            type: "inspection",
+            title: "Site Inspection Request",
+            subtitle: i.property_name ?? i.customer_name ?? "Inspection pending",
+            time: i.created_at ?? i.inspection_date ?? "",
+            href: "/site-inspections",
+          });
+        });
       }
-    } else if (next) {
-      setUnread(false);
+
+      if (customers.status === "fulfilled") {
+        const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+        const recent = (customers.value as any[]).filter((c: any) => {
+          const t = c.created_at ? new Date(c.created_at).getTime() : 0;
+          return t > sevenDaysAgo;
+        });
+        recent.slice(0, 5).forEach((c: any) => {
+          events.push({
+            id: `cust-${c.id}`,
+            type: "customer",
+            title: "New Customer",
+            subtitle: `${c.first_name ?? ""} ${c.last_name ?? ""}`.trim() || c.email || "Customer added",
+            time: c.created_at ?? "",
+            href: "/customers",
+          });
+        });
+      }
+
+      events.sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime());
+      setItems(events.slice(0, 10));
+      setUnread(events.length);
+      setFetched(true);
+    } catch {
+      setItems([]);
+    } finally {
+      setLoading(false);
     }
+  }, []);
+
+  useEffect(() => { fetchEvents(); }, [fetchEvents]);
+
+  const handleOpen = () => {
+    setOpen((o) => !o);
+    if (!open) setUnread(0);
   };
 
   const relativeTime = (iso: string) => {
+    if (!iso) return "";
     const diff = Date.now() - new Date(iso).getTime();
     const m = Math.floor(diff / 60000);
     if (m < 1)  return "just now";
@@ -87,6 +143,9 @@ function NotificationBell() {
     if (h < 24) return `${h}h ago`;
     return `${Math.floor(h / 24)}d ago`;
   };
+
+  const typeColor = (type: NotificationItem["type"]) =>
+    type === "inspection" ? "bg-amber-100 text-amber-700" : "bg-blue-100 text-blue-700";
 
   return (
     <div ref={ref} style={{ position: "relative" }}>
@@ -98,20 +157,22 @@ function NotificationBell() {
         title="Notifications"
       >
         <Bell className="size-[15px]" />
-        {unread && (
-          <span className="absolute top-1.5 right-1.5 h-1.5 w-1.5 rounded-full bg-red-500 ring-1 ring-white" />
+        {unread > 0 && (
+          <span className="absolute top-1 right-1 min-w-[14px] h-3.5 rounded-full bg-red-500 ring-1 ring-white text-white text-[8px] font-bold flex items-center justify-center px-0.5">
+            {unread > 9 ? "9+" : unread}
+          </span>
         )}
       </Button>
 
       {open && (
-        <div className="absolute right-0 top-full mt-1.5 w-[320px] rounded-xl border border-neutral-100 bg-white shadow-lg shadow-neutral-900/10 z-50 overflow-hidden">
+        <div className="absolute right-0 top-full mt-1.5 w-[340px] rounded-xl border border-neutral-100 bg-white shadow-lg shadow-neutral-900/10 z-50 overflow-hidden">
           <div className="px-4 py-3 border-b border-neutral-50 flex items-center justify-between">
-            <span className="text-[12.5px] font-semibold text-neutral-800">Recent Activity</span>
+            <span className="text-[12.5px] font-semibold text-neutral-800">Notifications</span>
             <button
-              onClick={() => setOpen(false)}
+              onClick={() => { setOpen(false); fetchEvents(); }}
               className="text-[11px] text-emerald-600 hover:text-emerald-700 font-medium"
             >
-              Close
+              Refresh
             </button>
           </div>
 
@@ -120,31 +181,31 @@ function NotificationBell() {
               <div className="flex items-center justify-center py-8">
                 <Loader2 className="w-4 h-4 animate-spin text-neutral-300" />
               </div>
-            ) : items.length === 0 ? (
+            ) : fetched && items.length === 0 ? (
               <div className="text-center py-8 text-[12px] text-neutral-400">
-                No recent activity
+                No new notifications
               </div>
             ) : (
               <div className="py-1.5">
-                {items.map((act: any, i: number) => (
-                  <div
-                    key={act.id ?? i}
-                    className="px-4 py-2.5 hover:bg-neutral-50 transition-colors cursor-default"
+                {items.map((n) => (
+                  <button
+                    key={n.id}
+                    onClick={() => { setOpen(false); navigate(n.href); }}
+                    className="w-full px-4 py-2.5 hover:bg-neutral-50 transition-colors text-left"
                   >
-                    <div className="flex items-start justify-between gap-2">
-                      <p className="text-[12px] text-neutral-700 leading-snug flex-1">
-                        {act.description ?? act.action ?? act.message ?? "Activity recorded"}
-                      </p>
-                      {act.created_at && (
-                        <span className="text-[10.5px] text-neutral-400 shrink-0 mt-0.5">
-                          {relativeTime(act.created_at)}
-                        </span>
+                    <div className="flex items-start gap-2.5">
+                      <span className={cn("text-[9.5px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded mt-0.5 shrink-0", typeColor(n.type))}>
+                        {n.type === "inspection" ? "Inspection" : "Customer"}
+                      </span>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[12px] text-neutral-700 font-medium leading-snug truncate">{n.title}</p>
+                        <p className="text-[11px] text-neutral-400 mt-0.5 truncate">{n.subtitle}</p>
+                      </div>
+                      {n.time && (
+                        <span className="text-[10px] text-neutral-400 shrink-0 mt-0.5">{relativeTime(n.time)}</span>
                       )}
                     </div>
-                    {act.actor && (
-                      <p className="text-[11px] text-neutral-400 mt-0.5">{act.actor}</p>
-                    )}
-                  </div>
+                  </button>
                 ))}
               </div>
             )}
@@ -152,10 +213,10 @@ function NotificationBell() {
 
           <div className="border-t border-neutral-50 px-4 py-2.5">
             <button
-              onClick={() => { setOpen(false); window.location.href = "/settings/activity"; }}
+              onClick={() => { setOpen(false); navigate("/settings/activity"); }}
               className="text-[11.5px] text-emerald-600 hover:text-emerald-700 font-medium w-full text-center"
             >
-              View all activity →
+              View activity log →
             </button>
           </div>
         </div>
@@ -247,7 +308,7 @@ const ALL_NAV_ITEMS = [
   { icon: Users,           label: "Customers",       href: "/customers",      roles: ["OWNER","ADMIN"] },
   { icon: UsersRound,      label: "Customer Reps",   href: "/customer-reps",  roles: ["OWNER","ADMIN"] },
   { icon: UserCheck,       label: "Sales Reps",      href: "/sales-reps",     roles: ["OWNER","ADMIN"] },
-  { icon: Calendar,        label: "Site Inspection", href: "/site-inspection",roles: ["OWNER","ADMIN","SALES_REP"] },
+  { icon: ClipboardList,   label: "Site Inspection", href: "/site-inspection",roles: ["OWNER","ADMIN","SALES_REP"] },
   { icon: Download,        label: "Data Export",     href: "/data-export",    roles: ["OWNER","ADMIN"] },
 ];
 
@@ -257,12 +318,61 @@ const ALL_BOTTOM_ITEMS = [
   { icon: User,        label: "Account",   href: "/account",  roles: ["OWNER","ADMIN","SALES_REP","CUSTOMER"] },
 ];
 
+// Priority items shown in the mobile bottom nav (max 5 slots)
+const MOBILE_NAV_PRIORITY = ["/", "/properties", "/customers", "/site-inspection"];
+
+// ── Mobile Bottom Navigation ──────────────────────────────────────────────────
+function MobileBottomNav() {
+  const location = useLocation();
+  const { role } = useWorkspaceRole();
+
+  const isActive = (href: string) =>
+    href === "/" ? location.pathname === "/" : location.pathname.startsWith(href);
+
+  // Get priority nav items filtered by role
+  const priorityItems = MOBILE_NAV_PRIORITY
+    .map((href) => ALL_NAV_ITEMS.find((n) => n.href === href))
+    .filter((n): n is typeof ALL_NAV_ITEMS[0] => !!n && (!role || n.roles.includes(role)));
+
+  // Add Account as the last slot
+  const accountItem = { icon: User, label: "Account", href: "/account", roles: ["OWNER","ADMIN","SALES_REP","CUSTOMER"] };
+  const navItems = [...priorityItems.slice(0, 4), accountItem];
+
+  return (
+    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-neutral-100 shadow-[0_-1px_0_rgba(0,0,0,0.04),0_-4px_16px_rgba(0,0,0,0.06)]">
+      <div className="flex items-stretch h-16" style={{ paddingBottom: "env(safe-area-inset-bottom)" }}>
+        {navItems.map((navItem) => {
+          const active = isActive(navItem.href);
+          return (
+            <Link
+              key={navItem.href}
+              to={navItem.href}
+              className={cn(
+                "flex-1 flex flex-col items-center justify-center gap-1 pt-2 pb-1 transition-all duration-150 relative",
+                active ? "text-emerald-600" : "text-neutral-400 hover:text-neutral-600"
+              )}
+            >
+              {active && (
+                <span className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-0.5 rounded-full bg-emerald-500" />
+              )}
+              <navItem.icon className={cn("size-[20px] transition-transform duration-150", active && "scale-110")} />
+              <span className={cn("text-[10px] font-semibold tracking-tight leading-none", active ? "text-emerald-600" : "text-neutral-400")}>
+                {navItem.label === "Site Inspection" ? "Inspections" : navItem.label}
+              </span>
+            </Link>
+          );
+        })}
+      </div>
+    </nav>
+  );
+}
+
 function NavContent() {
   const location = useLocation();
   const navigate = useNavigate();
   const { setOpenMobile } = useSidebar();
   const { displayName, initials, user } = useCurrentUser();
-  const { name: workspaceName, domain } = useWorkspace();
+  const { name: workspaceName, domain, slug } = useWorkspace();
   const { role } = useWorkspaceRole();
   const [planUsage, setPlanUsage] = useState<any>(null);
 
@@ -302,8 +412,8 @@ function NavContent() {
       {/* ── Logo / brand ─────────────────────────────────────────── */}
       <SidebarHeader className="h-[60px] border-b border-sidebar-border">
         <div className="flex items-center gap-2.5 px-3 h-full">
-          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-emerald-600 shadow-sm">
-            <Building2 className="size-[14px] text-white" />
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-700 shadow-md shadow-emerald-200/60">
+            <Building2 className="size-[15px] text-white" />
           </div>
           <div className="flex flex-col leading-tight min-w-0">
             <span className="text-[13px] font-semibold tracking-tight text-neutral-900 truncate">
@@ -354,6 +464,27 @@ function NavContent() {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+
+        {/* ── View Estate public page ──────────────────────────────── */}
+        {slug && (
+          <SidebarGroup>
+            <SidebarGroupContent>
+              <div className="mx-3 mb-1">
+                <a
+                  href={`/${slug}/estates`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() => setOpenMobile(false)}
+                  className="flex items-center gap-2.5 px-3 h-9 rounded-lg text-[13px] font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 transition-colors border border-emerald-100"
+                >
+                  <Globe className="size-[15px] text-emerald-600" />
+                  <span>View Estate</span>
+                  <span className="ml-auto text-[10px] text-emerald-500 font-medium">↗</span>
+                </a>
+              </div>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
 
         {/* ── Growth plan + bottom nav ──────────────────────────────── */}
         <SidebarGroup className="mt-auto">
@@ -475,7 +606,7 @@ export function MainLayout() {
 
         <SidebarInset className="flex flex-col min-w-0">
           {/* ── Top header ─────────────────────────────────────────── */}
-          <header className="flex h-[60px] shrink-0 items-center justify-between gap-2 border-b border-neutral-100 bg-white px-4 md:px-6 sticky top-0 z-10 shadow-[0_1px_0_rgba(0,0,0,0.04)]">
+          <header className="flex h-[60px] shrink-0 items-center justify-between gap-2 border-b border-neutral-100 bg-white px-4 md:px-6 sticky top-0 z-30 shadow-[0_1px_0_rgba(0,0,0,0.04)]">
             <div className="flex items-center gap-2.5">
               {/* Hamburger / collapse trigger */}
               <SidebarTrigger className="-ml-1 h-8 w-8 text-neutral-500 hover:text-neutral-800 hover:bg-neutral-100 rounded-lg transition-colors" />
@@ -500,7 +631,7 @@ export function MainLayout() {
           </header>
 
           {/* ── Page content ─────────────────────────────────────────── */}
-          <main className="flex-1 overflow-x-hidden">
+          <main className="flex-1 overflow-x-hidden pb-16 md:pb-0">
             <AnimatePresence mode="wait">
               <motion.div
                 key={location.pathname}
@@ -516,6 +647,9 @@ export function MainLayout() {
           </main>
         </SidebarInset>
       </div>
+
+      {/* ── Mobile Bottom Navigation ─────────────────────────────────── */}
+      <MobileBottomNav />
     </SidebarProvider>
   );
 }

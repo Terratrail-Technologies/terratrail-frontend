@@ -39,6 +39,7 @@ const steps = [
   { id: 6, name: "Land Inventory",   icon: Layers     },
   { id: 7, name: "Pricing Plans",    icon: DollarSign },
   { id: 8, name: "Payment Methods",  icon: CreditCard },
+  { id: 9, name: "Preview",          icon: Eye        },
 ];
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -50,10 +51,17 @@ interface Doc {
 interface LandSizeEntry { id: string; landSize: string; totalSlots: string; description: string; }
 
 const DOCUMENT_TYPES = [
-  { value: "C_OF_O",             label: "Certificate of Occupancy (C of O)" },
-  { value: "DEED_OF_ASSIGNMENT", label: "Deed of Assignment" },
-  { value: "SURVEY_PLAN",        label: "Survey Plan" },
-  { value: "OTHER",              label: "Other" },
+  { value: "PROVISIONAL_SURVEY",  label: "Provisional Survey" },
+  { value: "REGISTERED_SURVEY",   label: "Registered Survey" },
+  { value: "SURVEY_PLAN",         label: "Survey Plan" },
+  { value: "C_OF_O",              label: "Certificate of Occupancy (CofO)" },
+  { value: "ALLOCATION_LETTER",   label: "Allocation Letter" },
+  { value: "CONTRACT_OF_SALES",   label: "Contract of Sales" },
+  { value: "LAND_RECEIPT",        label: "Land Receipt" },
+  { value: "DEED_OF_ASSIGNMENT",  label: "Deed of Assignment" },
+  { value: "GOVERNORS_CONSENT",   label: "Governor's Consent" },
+  { value: "EXCISION",            label: "Excision" },
+  { value: "OTHER",               label: "Other" },
 ];
 const DOCUMENT_STATUSES = [
   { value: "NOT_STARTED", label: "Not Started" },
@@ -559,8 +567,6 @@ export function PropertyWizard() {
     if (err) { toast.error(err); return; }
     if (currentStep < steps.length) {
       setCurrentStep(currentStep + 1);
-    } else {
-      handleSubmit();
     }
   };
 
@@ -595,12 +601,12 @@ export function PropertyWizard() {
             return (
               <div key={step.id} className="flex items-center flex-1 min-w-0">
                 <button
-                  onClick={() => { if (step.id < currentStep) setCurrentStep(step.id); }}
+                  onClick={() => { if (isEditing || step.id <= currentStep) setCurrentStep(step.id); }}
                   title={step.name}
                   className={cn(
                     "flex items-center gap-1.5 px-2.5 py-2 rounded-md text-xs font-medium flex-1 min-w-0 transition-colors truncate",
                     active  ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                            : done  ? "bg-neutral-100 text-neutral-600 cursor-pointer hover:bg-neutral-200"
+                            : (done || isEditing) ? "bg-neutral-100 text-neutral-600 cursor-pointer hover:bg-neutral-200"
                                     : "bg-white text-neutral-400 border border-neutral-100 cursor-default"
                   )}
                 >
@@ -663,11 +669,6 @@ export function PropertyWizard() {
                     <label className="block text-sm font-medium text-neutral-700 mb-1.5">Description</label>
                     <Textarea rows={5} value={description} onChange={(e) => setDescription(e.target.value)}
                       placeholder="Describe your property…" className="bg-white resize-y min-h-[100px]" />
-                    <p className="text-xs text-neutral-400 mt-1">Supports Markdown & HTML</p>
-                  </div>
-                  <div className="p-4 bg-neutral-50 border border-neutral-200 rounded-lg text-sm text-neutral-500">
-                    <span className="font-medium text-neutral-700">Total SQMs & Available Units</span> are
-                    automatically calculated from the Land Inventory you define in step 6.
                   </div>
                 </div>
               )}
@@ -1042,9 +1043,18 @@ export function PropertyWizard() {
                                     {p.active ? "Active" : "Inactive"}
                                   </Badge>
                                 </div>
-                                <div className="text-sm text-neutral-500 mt-0.5">{p.landSize} sqm · {p.currency}</div>
+                                <div className="text-sm text-neutral-500 mt-0.5">{p.paymentType === "outright" ? "Outright" : "Installment"}</div>
                               </div>
                               <div className="flex gap-1">
+                                <button
+                                  onClick={() => setPricingPlans((prev) => prev.map((x) => x.id === p.id ? { ...x, active: !x.active } : x))}
+                                  title={p.active ? "Set Inactive" : "Set Active"}
+                                  className={`p-2 rounded-md transition-colors ${p.active ? "hover:bg-amber-50 text-emerald-600" : "hover:bg-emerald-50 text-neutral-400"}`}
+                                >
+                                  <div className={`w-8 h-4 rounded-full flex items-center transition-colors ${p.active ? "bg-emerald-500" : "bg-neutral-300"}`}>
+                                    <div className={`w-3 h-3 rounded-full bg-white shadow mx-0.5 transition-transform ${p.active ? "translate-x-4" : "translate-x-0"}`} />
+                                  </div>
+                                </button>
                                 <button onClick={() => openEditPricing(p)} className="p-2 hover:bg-neutral-100 rounded-md">
                                   <Pencil className="w-4 h-4 text-neutral-500" />
                                 </button>
@@ -1057,13 +1067,17 @@ export function PropertyWizard() {
                             <div className="text-2xl font-bold text-neutral-900 mb-2">{fmt(Number(p.totalPrice))}</div>
                             {p.paymentType === "installment" && monthly !== null && (
                               <div className="flex gap-4 text-sm text-neutral-500">
+                                <span>{p.landSize} SQM</span>
                                 <span>Initial: {fmt(Number(p.initialPayment))}</span>
                                 <span>Monthly: {fmt(Math.round(monthly))}</span>
                                 <span>{p.duration} months</span>
                               </div>
                             )}
                             {p.paymentType === "outright" && (
-                              <Badge variant="secondary" className="text-xs">Outright</Badge>
+                              <div className="flex gap-3 text-sm text-neutral-500">
+                                <span>{p.landSize} SQM</span>
+                                <Badge variant="secondary" className="text-xs">Outright</Badge>
+                              </div>
                             )}
                           </div>
                         );
@@ -1135,6 +1149,124 @@ export function PropertyWizard() {
                 </div>
               )}
 
+              {/* ── Step 9: Preview ── */}
+              {currentStep === 9 && (
+                <div className="space-y-4">
+                  <div className="bg-white rounded-xl border border-neutral-200 p-6 sm:p-8">
+                    <h3 className="font-semibold text-neutral-900 mb-5 text-lg">Property Summary</h3>
+                    <div className="space-y-5">
+                      {/* Basic */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                          <div className="text-[11px] font-semibold text-neutral-400 uppercase tracking-wide mb-1">Property Name</div>
+                          <div className="text-[14px] font-semibold text-neutral-900">{propertyName || "—"}</div>
+                        </div>
+                        <div>
+                          <div className="text-[11px] font-semibold text-neutral-400 uppercase tracking-wide mb-1">Type</div>
+                          <div className="text-[14px] font-semibold text-neutral-900 capitalize">{propertyType.replace(/_/g, " ").toLowerCase()}</div>
+                        </div>
+                        <div className="sm:col-span-2">
+                          <div className="text-[11px] font-semibold text-neutral-400 uppercase tracking-wide mb-1">Location</div>
+                          <div className="text-[13px] text-neutral-700">{[streetAddress, city, state].filter(Boolean).join(", ") || "—"}</div>
+                        </div>
+                        {description && (
+                          <div className="sm:col-span-2">
+                            <div className="text-[11px] font-semibold text-neutral-400 uppercase tracking-wide mb-1">Description</div>
+                            <div className="text-[13px] text-neutral-600 line-clamp-3">{description}</div>
+                          </div>
+                        )}
+                      </div>
+                      <div className="border-t border-neutral-100" />
+                      {/* Stats grid */}
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                        <div className="p-3 bg-neutral-50 rounded-lg text-center">
+                          <div className="text-[22px] font-bold text-neutral-900">{landSizes.length}</div>
+                          <div className="text-[11px] text-neutral-500 mt-0.5">Land Sizes</div>
+                        </div>
+                        <div className="p-3 bg-neutral-50 rounded-lg text-center">
+                          <div className="text-[22px] font-bold text-neutral-900">{computedAvailableUnits}</div>
+                          <div className="text-[11px] text-neutral-500 mt-0.5">Total Slots</div>
+                        </div>
+                        <div className="p-3 bg-neutral-50 rounded-lg text-center">
+                          <div className="text-[22px] font-bold text-neutral-900">{pricingPlans.length}</div>
+                          <div className="text-[11px] text-neutral-500 mt-0.5">Pricing Plans</div>
+                        </div>
+                        <div className="p-3 bg-neutral-50 rounded-lg text-center">
+                          <div className="text-[22px] font-bold text-neutral-900">{amenities.length}</div>
+                          <div className="text-[11px] text-neutral-500 mt-0.5">Amenities</div>
+                        </div>
+                      </div>
+                      {/* Land sizes */}
+                      {landSizes.length > 0 && (
+                        <>
+                          <div className="border-t border-neutral-100" />
+                          <div>
+                            <div className="text-[11px] font-semibold text-neutral-400 uppercase tracking-wide mb-2">Land Inventory</div>
+                            <div className="flex flex-wrap gap-2">
+                              {landSizes.map((ls) => (
+                                <span key={ls.id} className="px-2.5 py-1 bg-emerald-50 text-emerald-700 rounded-lg text-[12px] font-medium border border-emerald-100">
+                                  {ls.landSize} SQM × {ls.totalSlots} slots
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        </>
+                      )}
+                      {/* Pricing */}
+                      {pricingPlans.length > 0 && (
+                        <>
+                          <div className="border-t border-neutral-100" />
+                          <div>
+                            <div className="text-[11px] font-semibold text-neutral-400 uppercase tracking-wide mb-2">Pricing Plans</div>
+                            <div className="space-y-2">
+                              {pricingPlans.map((p) => (
+                                <div key={p.id} className="flex items-center justify-between p-3 bg-neutral-50 rounded-lg">
+                                  <div>
+                                    <div className="text-[13px] font-semibold text-neutral-900">{p.name}</div>
+                                    <div className="text-[11px] text-neutral-500">{p.landSize} SQM · {p.paymentType}</div>
+                                  </div>
+                                  <div className="text-right">
+                                    <div className="text-[14px] font-bold text-emerald-700">{fmt(Number(p.totalPrice))}</div>
+                                    <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ${p.active ? "bg-emerald-100 text-emerald-700" : "bg-neutral-200 text-neutral-500"}`}>
+                                      {p.active ? "Active" : "Inactive"}
+                                    </span>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </>
+                      )}
+                      {/* Cover image preview */}
+                      {coverPreview && (
+                        <>
+                          <div className="border-t border-neutral-100" />
+                          <div>
+                            <div className="text-[11px] font-semibold text-neutral-400 uppercase tracking-wide mb-2">Cover Image</div>
+                            <img src={coverPreview} alt="Cover" className="h-32 w-full object-cover rounded-lg" />
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                  {/* Publish actions */}
+                  <div className="bg-gradient-to-br from-emerald-50 via-white to-emerald-50 border border-emerald-100 rounded-xl p-6">
+                    <h4 className="font-semibold text-emerald-900 mb-1">Ready to publish?</h4>
+                    <p className="text-[13px] text-emerald-700/70 mb-4">Publishing makes this property visible on your public estate page.</p>
+                    <div className="flex gap-3 flex-wrap">
+                      <Button disabled={submitting} onClick={() => handleSubmit("DRAFT")}
+                        variant="outline" className="border-neutral-300 bg-white text-neutral-700">
+                        {submitting ? <><Loader2 className="w-4 h-4 animate-spin mr-1.5" />Saving…</> : "Save as Draft"}
+                      </Button>
+                      <Button disabled={submitting} onClick={() => handleSubmit("PUBLISHED")}
+                        className="bg-emerald-600 hover:bg-emerald-700 text-white">
+                        {submitting ? <><Loader2 className="w-4 h-4 animate-spin mr-1.5" />Publishing…</> : <><Check className="w-4 h-4 mr-1.5" />Publish Property</>}
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* ── Navigation ── */}
               <div className="flex items-center justify-between mt-6">
                 <Button variant="outline" onClick={handleBack}
@@ -1143,14 +1275,14 @@ export function PropertyWizard() {
                   {currentStep === 1 ? "Cancel" : "Back"}
                 </Button>
                 <div className="flex items-center gap-3">
-                  {(isEditing || currentStep === steps.length) && (
+                  {(isEditing || currentStep === steps.length) && currentStep !== 9 && (
                     <Button variant="outline" disabled={submitting}
                       onClick={() => handleSubmit("DRAFT")}
                       className="inline-flex items-center gap-2 px-6 bg-white text-neutral-700 border-neutral-300">
                       Save as Draft
                     </Button>
                   )}
-                  {isEditing && (
+                  {isEditing && currentStep !== 9 && (
                     <Button disabled={submitting}
                       onClick={() => handleSubmit("PUBLISHED")}
                       className="inline-flex items-center gap-2 px-6 bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-70">
@@ -1161,22 +1293,14 @@ export function PropertyWizard() {
                       )}
                     </Button>
                   )}
-                  {!isEditing && (
+                  {currentStep !== 9 && (
                     <Button onClick={handleNext} disabled={submitting}
                       className="inline-flex items-center gap-2 px-6 bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-70">
                       {submitting ? (
                         <><Loader2 className="w-4 h-4 animate-spin" /> Saving…</>
-                      ) : currentStep === steps.length ? (
-                        <><Eye className="w-4 h-4" /> Publish Property</>
                       ) : (
                         <>Save & Continue <ArrowRight className="w-4 h-4" /></>
                       )}
-                    </Button>
-                  )}
-                  {isEditing && currentStep < steps.length && (
-                    <Button variant="outline" onClick={handleNext} disabled={submitting}
-                      className="inline-flex items-center gap-2 px-4 bg-white text-neutral-700 border-neutral-300">
-                      Next <ArrowRight className="w-4 h-4" />
                     </Button>
                   )}
                 </div>

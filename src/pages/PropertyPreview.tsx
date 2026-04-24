@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router";
 import {
   ArrowLeft, MapPin, CheckCircle2, Clock, ChevronLeft, ChevronRight,
   Building as BuildingIcon, Layers, Home, CreditCard, FileText, Shield,
+  TrendingUp, Plus, X, Calendar,
 } from "lucide-react";
 import { api } from "../services/api";
 import { Badge } from "../components/ui/badge";
@@ -11,6 +12,8 @@ import { usePageTitle } from "../hooks/usePageTitle";
 import { Skeleton } from "../components/ui/skeleton";
 import { motion, AnimatePresence } from "motion/react";
 import { cn } from "../components/ui/utils";
+import { useWorkspaceRole } from "../hooks/useWorkspaceRole";
+import { toast } from "sonner";
 
 const fmt = (n: number | string) => `₦${Number(n).toLocaleString("en-NG")}`;
 
@@ -135,18 +138,124 @@ const docStatusColor = (s: string) =>
   s === "IN_PROGRESS" ? "bg-amber-100 text-amber-700" :
   "bg-neutral-100 text-neutral-500";
 
+// ── Appreciation ─────────────────────────────────────────────────────────────
+interface AppreciationEntry {
+  id: string;
+  date: string;
+  old_price: number;
+  new_price: number;
+  notes: string;
+  recorded_at: string;
+}
+
+function loadAppreciation(propertyId: string): AppreciationEntry[] {
+  try {
+    const raw = localStorage.getItem(`tt_appreciation_${propertyId}`);
+    return raw ? JSON.parse(raw) : [];
+  } catch { return []; }
+}
+
+function saveAppreciation(propertyId: string, entries: AppreciationEntry[]) {
+  localStorage.setItem(`tt_appreciation_${propertyId}`, JSON.stringify(entries));
+}
+
+function AppreciationModal({ propertyId, onClose, onSave }: { propertyId: string; onClose: () => void; onSave: (e: AppreciationEntry) => void }) {
+  const [form, setForm] = useState({ date: new Date().toISOString().slice(0, 10), old_price: "", new_price: "", notes: "" });
+
+  const pct = (() => {
+    const o = Number(form.old_price), n = Number(form.new_price);
+    if (!o || !n) return null;
+    return (((n - o) / o) * 100).toFixed(2);
+  })();
+
+  const handleSubmit = () => {
+    if (!form.date || !form.old_price || !form.new_price) {
+      toast.error("Please fill in date, old price, and new price.");
+      return;
+    }
+    const entry: AppreciationEntry = {
+      id: crypto.randomUUID(),
+      date: form.date,
+      old_price: Number(form.old_price),
+      new_price: Number(form.new_price),
+      notes: form.notes,
+      recorded_at: new Date().toISOString(),
+    };
+    onSave(entry);
+    onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+      <motion.div initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.96 }}
+        className="bg-white rounded-2xl shadow-2xl w-full max-w-md border border-neutral-100">
+        <div className="flex items-center justify-between p-5 border-b border-neutral-100">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 bg-emerald-50 rounded-lg flex items-center justify-center">
+              <TrendingUp className="w-4 h-4 text-emerald-600" />
+            </div>
+            <h2 className="font-semibold text-neutral-900">Record Appreciation</h2>
+          </div>
+          <button onClick={onClose} className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-neutral-100 transition-colors">
+            <X className="w-4 h-4 text-neutral-500" />
+          </button>
+        </div>
+
+        <div className="p-5 space-y-4">
+          <div>
+            <label className="text-[12px] font-medium text-neutral-600 block mb-1.5">Effective Date</label>
+            <input type="date" value={form.date} onChange={e => setForm(f => ({ ...f, date: e.target.value }))}
+              className="w-full h-9 px-3 rounded-lg border border-neutral-200 text-[13px] focus:outline-none focus:ring-1 focus:ring-emerald-500/40 focus:border-emerald-400" />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-[12px] font-medium text-neutral-600 block mb-1.5">Previous Price (₦)</label>
+              <input type="number" min="0" placeholder="0" value={form.old_price} onChange={e => setForm(f => ({ ...f, old_price: e.target.value }))}
+                className="w-full h-9 px-3 rounded-lg border border-neutral-200 text-[13px] focus:outline-none focus:ring-1 focus:ring-emerald-500/40 focus:border-emerald-400" />
+            </div>
+            <div>
+              <label className="text-[12px] font-medium text-neutral-600 block mb-1.5">New Price (₦)</label>
+              <input type="number" min="0" placeholder="0" value={form.new_price} onChange={e => setForm(f => ({ ...f, new_price: e.target.value }))}
+                className="w-full h-9 px-3 rounded-lg border border-neutral-200 text-[13px] focus:outline-none focus:ring-1 focus:ring-emerald-500/40 focus:border-emerald-400" />
+            </div>
+          </div>
+          {pct !== null && (
+            <div className={cn("text-[12.5px] font-semibold px-3 py-2 rounded-lg", Number(pct) >= 0 ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-700")}>
+              {Number(pct) >= 0 ? "+" : ""}{pct}% change
+            </div>
+          )}
+          <div>
+            <label className="text-[12px] font-medium text-neutral-600 block mb-1.5">Notes (optional)</label>
+            <textarea rows={2} placeholder="Reason for appreciation…" value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))}
+              className="w-full px-3 py-2 rounded-lg border border-neutral-200 text-[13px] resize-none focus:outline-none focus:ring-1 focus:ring-emerald-500/40 focus:border-emerald-400" />
+          </div>
+        </div>
+
+        <div className="flex items-center justify-end gap-2.5 p-5 border-t border-neutral-100">
+          <Button variant="outline" onClick={onClose} className="text-[13px] h-9">Cancel</Button>
+          <Button onClick={handleSubmit} className="bg-emerald-600 hover:bg-emerald-700 text-white text-[13px] h-9">Save Record</Button>
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 export default function PropertyPreview() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [property, setProperty] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [showAppreciation, setShowAppreciation] = useState(false);
+  const [appreciationHistory, setAppreciationHistory] = useState<AppreciationEntry[]>([]);
+  const { role } = useWorkspaceRole();
+  const isAdmin = role === "ADMIN" || role === "OWNER";
   usePageTitle(property ? `Preview: ${property.name}` : "Property Preview");
 
   useEffect(() => {
     if (!id) return;
     api.properties.get(id)
-      .then(setProperty)
+      .then((p) => { setProperty(p); setAppreciationHistory(loadAppreciation(id)); })
       .catch(() => navigate("/properties"))
       .finally(() => setLoading(false));
   }, [id]);
@@ -345,6 +454,69 @@ export default function PropertyPreview() {
           </div>
         </Section>
       )}
+
+      {/* Price Appreciation */}
+      <Section title="Price Appreciation" icon={TrendingUp}>
+        <div className="space-y-4">
+          {isAdmin && (
+            <div className="flex justify-end">
+              <Button onClick={() => setShowAppreciation(true)}
+                className="h-8 gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-[12px] rounded-lg px-3">
+                <Plus className="w-3.5 h-3.5" />
+                Record Update
+              </Button>
+            </div>
+          )}
+          {appreciationHistory.length === 0 ? (
+            <div className="text-center py-8 text-neutral-400 text-[13px]">
+              No appreciation updates recorded yet.
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {[...appreciationHistory].reverse().map((entry) => {
+                const pct = (((entry.new_price - entry.old_price) / entry.old_price) * 100).toFixed(2);
+                const up = Number(pct) >= 0;
+                return (
+                  <div key={entry.id} className="border border-neutral-100 rounded-xl p-4">
+                    <div className="flex items-start justify-between mb-2 gap-3">
+                      <div className="flex items-center gap-2 text-[12px] text-neutral-500">
+                        <Calendar className="w-3.5 h-3.5" />
+                        {new Date(entry.date).toLocaleDateString("en-NG", { year: "numeric", month: "long", day: "numeric" })}
+                      </div>
+                      <span className={cn("text-[12px] font-bold px-2 py-0.5 rounded-md", up ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-700")}>
+                        {up ? "+" : ""}{pct}%
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-3 text-[13px]">
+                      <span className="text-neutral-500 line-through">{fmt(entry.old_price)}</span>
+                      <span className="text-neutral-300">→</span>
+                      <span className="font-bold text-neutral-900">{fmt(entry.new_price)}</span>
+                    </div>
+                    {entry.notes && (
+                      <p className="text-[12px] text-neutral-500 mt-2 leading-relaxed">{entry.notes}</p>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </Section>
+
+      <AnimatePresence>
+        {showAppreciation && (
+          <AppreciationModal
+            propertyId={id!}
+            onClose={() => setShowAppreciation(false)}
+            onSave={(entry) => {
+              const updated = [...appreciationHistory, entry];
+              saveAppreciation(id!, updated);
+              setAppreciationHistory(updated);
+              toast.success("Appreciation update recorded.");
+            }}
+          />
+        )}
+      </AnimatePresence>
 
       <div className="pb-8" />
     </div>

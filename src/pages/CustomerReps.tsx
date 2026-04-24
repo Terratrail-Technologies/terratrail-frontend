@@ -49,8 +49,15 @@ function SummaryCard({
     violet:  "bg-violet-50 text-violet-600",
     amber:   "bg-amber-50 text-amber-600",
   };
+  const accents = {
+    emerald: "bg-emerald-500",
+    blue:    "bg-blue-500",
+    violet:  "bg-violet-500",
+    amber:   "bg-amber-500",
+  };
   return (
-    <div className="bg-white rounded-xl border border-neutral-100 p-4 flex items-start gap-3 shadow-sm">
+    <div className="relative bg-white rounded-xl border border-neutral-100 p-4 flex items-start gap-3 shadow-sm hover:shadow-[0_4px_12px_rgba(0,0,0,0.08)] transition-shadow duration-200 overflow-hidden">
+      <div className={`absolute top-0 left-0 right-0 h-0.5 ${accents[color]}`} />
       <div className={`p-2.5 rounded-xl shrink-0 ${colors[color]}`}>
         <Icon className="size-4" />
       </div>
@@ -210,59 +217,115 @@ export function CustomerReps() {
   }
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="flex flex-col min-h-[calc(100vh-60px)] w-full">
       {showInvite && (
         <InviteModal onClose={() => setShowInvite(false)} onSuccess={loadMembers} />
       )}
 
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-[20px] font-bold text-neutral-900">Customer Representatives</h1>
-          <p className="text-[13px] text-neutral-500 mt-0.5">Manage your team and their assigned properties</p>
-        </div>
-        <button
-          onClick={() => setShowInvite(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-[13px] font-semibold rounded-lg transition-colors shadow-sm"
-        >
-          <UserPlus className="size-3.5" />
-          Invite Rep
-        </button>
-      </div>
-
-      {/* Summary cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <SummaryCard label="Total Reps"          value={totalReps}    icon={Users}      color="emerald" sub={`${activeReps} active`} />
-        <SummaryCard label="Properties Managed"  value={totalProps}   icon={Building2}  color="blue"    />
-        <SummaryCard label="Customers Managed"   value={totalCustomers} icon={ShoppingBag} color="violet" />
-        <SummaryCard label="Active Subscriptions"
-          value={members.reduce((s, m) => s + (m.active_subscriptions_count || 0), 0)}
-          icon={TrendingUp} color="amber" />
-      </div>
-
-      {/* Filters */}
-      <div className="flex items-center gap-3 flex-wrap">
-        <div className="relative flex-1 min-w-[220px] max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-neutral-400" />
-          <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search by name or email..."
-            className="w-full pl-9 pr-4 py-2 text-[13px] border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white"
-          />
-        </div>
-        <div className="flex gap-1">
-          {(["ALL", "ACTIVE", "INACTIVE"] as const).map((s) => (
-            <button key={s} onClick={() => setStatusFilter(s)}
-              className={`px-3 py-2 text-[12px] font-semibold rounded-lg transition-colors ${statusFilter === s ? "bg-emerald-600 text-white" : "bg-white border border-neutral-200 text-neutral-600 hover:border-emerald-300"}`}>
-              {s === "ALL" ? "All" : s.charAt(0) + s.slice(1).toLowerCase()}
-            </button>
-          ))}
+      {/* Page header */}
+      <div className="bg-white border-b border-neutral-100 px-4 sm:px-6 lg:px-8 py-4 md:py-5">
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <h1 className="text-[17px] font-semibold text-neutral-900 tracking-tight">Customer Reps</h1>
+            <p className="text-[12px] text-neutral-400 mt-0.5 hidden sm:block">Manage your team and their assigned properties</p>
+          </div>
+          <button
+            onClick={() => setShowInvite(true)}
+            className="flex items-center gap-1.5 px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-[12px] font-semibold rounded-lg transition-colors shadow-sm"
+          >
+            <UserPlus className="size-3.5" />
+            <span className="hidden sm:inline">Invite Rep</span>
+            <span className="sm:hidden">Invite</span>
+          </button>
         </div>
       </div>
 
-      {/* Table */}
-      <div className="bg-white rounded-xl border border-neutral-100 shadow-sm overflow-hidden">
+      <div className="p-4 sm:p-6 lg:p-8 space-y-5 flex-1">
+        {/* Summary cards */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <SummaryCard label="Total Reps"          value={totalReps}    icon={Users}      color="emerald" sub={`${activeReps} active`} />
+          <SummaryCard label="Properties Managed"  value={totalProps}   icon={Building2}  color="blue"    />
+          <SummaryCard label="Customers Managed"   value={totalCustomers} icon={ShoppingBag} color="violet" />
+          <SummaryCard label="Active Subscriptions"
+            value={members.reduce((s, m) => s + (m.active_subscriptions_count || 0), 0)}
+            icon={TrendingUp} color="amber" />
+        </div>
+
+        {/* Filters */}
+        <div className="flex items-center gap-3 flex-wrap">
+          <div className="relative flex-1 min-w-[200px] max-w-sm">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-neutral-400" />
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search by name or email..."
+              className="w-full pl-9 pr-4 py-2 text-[13px] border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400 bg-white"
+            />
+          </div>
+          <div className="flex gap-1">
+            {(["ALL", "ACTIVE", "INACTIVE"] as const).map((s) => (
+              <button key={s} onClick={() => setStatusFilter(s)}
+                className={`px-3 py-2 text-[12px] font-semibold rounded-lg transition-colors ${statusFilter === s ? "bg-emerald-600 text-white" : "bg-white border border-neutral-200 text-neutral-600 hover:border-emerald-300"}`}>
+                {s === "ALL" ? "All" : s.charAt(0) + s.slice(1).toLowerCase()}
+              </button>
+            ))}
+          </div>
+        </div>
+
+      {/* Mobile cards (< md) */}
+      {!loading && filtered.length > 0 && (
+        <div className="md:hidden space-y-3">
+          {filtered.map((m) => {
+            const initials = m.user_name.split(" ").slice(0, 2).map((w) => w[0]?.toUpperCase()).join("");
+            return (
+              <div key={m.id} className="bg-white rounded-xl border border-neutral-100 p-4 shadow-[0_1px_3px_rgba(0,0,0,0.05)]">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center text-[12px] font-bold text-white shrink-0">
+                    {initials}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="text-[13.5px] font-semibold text-neutral-900 truncate">{m.user_name}</div>
+                    <div className="text-[11.5px] text-neutral-400 truncate">{m.user_email}</div>
+                  </div>
+                  <span className={`inline-flex px-2.5 py-0.5 rounded-full text-[11px] font-bold shrink-0 ${m.is_active ? "bg-emerald-100 text-emerald-700" : "bg-neutral-100 text-neutral-500"}`}>
+                    {m.is_active ? "Active" : "Inactive"}
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 gap-2 mb-3 text-[12px]">
+                  <div>
+                    <div className="text-[10px] font-semibold uppercase tracking-wider text-neutral-400">Properties</div>
+                    <div className="text-neutral-800 font-semibold">{m.properties_count ?? 0}</div>
+                  </div>
+                  <div>
+                    <div className="text-[10px] font-semibold uppercase tracking-wider text-neutral-400">Customers</div>
+                    <div className="text-neutral-800 font-semibold">{m.managed_customers_count}</div>
+                  </div>
+                  <div>
+                    <div className="text-[10px] font-semibold uppercase tracking-wider text-neutral-400">Active Subs</div>
+                    <div className="text-neutral-800 font-semibold">{m.active_subscriptions_count ?? 0}</div>
+                  </div>
+                  <div>
+                    <div className="text-[10px] font-semibold uppercase tracking-wider text-neutral-400">Revenue</div>
+                    <div className="text-emerald-700 font-semibold">{fmt(m.total_revenue_managed ?? 0)}</div>
+                  </div>
+                </div>
+                <div className="flex gap-2 pt-3 border-t border-neutral-50">
+                  <button onClick={() => navigate(`/customer-reps/${m.id}`)}
+                    className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg border border-neutral-200 text-[12px] font-medium text-neutral-600 hover:bg-neutral-50 transition-colors">
+                    <Eye className="size-3.5" /> View Profile
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+          <p className="text-[11px] text-neutral-400 text-center py-1">
+            {filtered.length} rep{filtered.length !== 1 ? "s" : ""}
+          </p>
+        </div>
+      )}
+
+      {/* Desktop table (≥ md) */}
+      <div className="hidden md:block bg-white rounded-xl border border-neutral-100 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-[13px]">
             <thead>
@@ -369,6 +432,8 @@ export function CustomerReps() {
           </div>
         )}
       </div>
+      </div>
     </div>
   );
 }
+

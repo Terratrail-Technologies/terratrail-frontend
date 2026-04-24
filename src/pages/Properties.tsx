@@ -92,7 +92,8 @@ function PropertyCard({ property }: { property: any }) {
   return (
     <motion.div
       variants={item}
-      className="bg-white rounded-xl border border-neutral-100 overflow-hidden
+      onClick={() => navigate(`/properties/${property.id}/preview`)}
+      className="bg-white rounded-xl border border-neutral-100 overflow-hidden cursor-pointer
                  shadow-[0_1px_3px_rgba(0,0,0,0.06)]
                  hover:shadow-[0_6px_20px_rgba(0,0,0,0.09)]
                  hover:-translate-y-0.5 transition-all duration-200 group flex flex-col"
@@ -130,7 +131,7 @@ function PropertyCard({ property }: { property: any }) {
         </div>
 
         {/* 3-dot menu */}
-        <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
+        <div className="absolute top-3 right-3">
           <PropertyMenu propertyId={property.id} />
         </div>
 

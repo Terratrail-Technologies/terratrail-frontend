@@ -277,12 +277,17 @@ interface SummaryCardProps {
   value: number | string;
   sub: string;
   loading: boolean;
+  icon?: React.ElementType;
+  accentBg?: string;
+  iconBg?: string;
+  iconColor?: string;
 }
 
-function SummaryCard({ label, value, sub, loading }: SummaryCardProps) {
+function SummaryCard({ label, value, sub, loading, icon: Icon, accentBg, iconBg, iconColor }: SummaryCardProps) {
   if (loading) {
     return (
-      <div className="bg-white rounded-xl border border-neutral-100 p-4 shadow-sm">
+      <div className="relative bg-white rounded-xl border border-neutral-100 p-4 shadow-sm overflow-hidden">
+        {accentBg && <div className={`absolute top-0 left-0 right-0 h-0.5 ${accentBg}`} />}
         <Skeleton className="h-3 w-24 rounded bg-neutral-100 mb-3" />
         <Skeleton className="h-7 w-16 rounded bg-neutral-100 mb-2" />
         <Skeleton className="h-3 w-32 rounded bg-neutral-100" />
@@ -290,12 +295,20 @@ function SummaryCard({ label, value, sub, loading }: SummaryCardProps) {
     );
   }
   return (
-    <div className="bg-white rounded-xl border border-neutral-100 p-4 shadow-sm">
-      <p className="text-[11px] text-neutral-400 uppercase tracking-wider font-semibold mb-1">
-        {label}
-      </p>
-      <p className="text-2xl font-bold text-neutral-900">{value}</p>
-      <p className="text-[11px] text-neutral-400 mt-1">{sub}</p>
+    <div className="relative bg-white rounded-xl border border-neutral-100 p-4 shadow-sm overflow-hidden hover:shadow-[0_4px_12px_rgba(0,0,0,0.08)] transition-shadow duration-200">
+      {accentBg && <div className={`absolute top-0 left-0 right-0 h-0.5 ${accentBg}`} />}
+      <div className="flex items-start justify-between">
+        <div>
+          <p className="text-[11px] text-neutral-400 uppercase tracking-wider font-semibold mb-1">{label}</p>
+          <p className="text-2xl font-bold text-neutral-900">{value}</p>
+          <p className="text-[11px] text-neutral-400 mt-1">{sub}</p>
+        </div>
+        {Icon && iconBg && iconColor && (
+          <div className={`p-2 rounded-xl shrink-0 ${iconBg}`}>
+            <Icon className={`size-4 ${iconColor}`} />
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -362,19 +375,19 @@ export function Customers() {
   return (
     <div className="flex flex-col min-h-[calc(100vh-60px)] w-full">
       {/* ── Page header ──────────────────────────────────────────────────── */}
-      <div className="bg-white border-b border-neutral-100 px-6 lg:px-8 py-5 hidden md:block">
+      <div className="bg-white border-b border-neutral-100 px-4 sm:px-6 lg:px-8 py-4 md:py-5">
         <div className="flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2.5">
             <div>
-              <h1 className="text-[18px] font-semibold text-neutral-900 tracking-tight">
+              <h1 className="text-[17px] font-semibold text-neutral-900 tracking-tight">
                 Customers
               </h1>
-              <p className="text-[12.5px] text-neutral-400 mt-0.5">
+              <p className="text-[12px] text-neutral-400 mt-0.5 hidden sm:block">
                 Customer and subscription management
               </p>
             </div>
             {loading && !isInitialLoad && (
-              <Loader2 className="w-4 h-4 text-emerald-500 animate-spin" />
+              <Loader2 className="w-3.5 h-3.5 text-emerald-500 animate-spin" />
             )}
           </div>
           <Button
@@ -382,7 +395,8 @@ export function Customers() {
             className="h-8 gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-[12px] font-medium rounded-lg px-3 shadow-sm"
           >
             <Plus className="w-3.5 h-3.5" />
-            Add Customer
+            <span className="hidden sm:inline">Add Customer</span>
+            <span className="sm:hidden">Add</span>
           </Button>
         </div>
       </div>
@@ -400,24 +414,40 @@ export function Customers() {
             value={totalCustomers}
             sub="All registered customers"
             loading={isInitialLoad}
+            icon={UsersIcon}
+            accentBg="bg-blue-500"
+            iconBg="bg-blue-50"
+            iconColor="text-blue-600"
           />
           <SummaryCard
             label="Active Subscriptions"
             value={totalActive}
             sub="Currently active plans"
             loading={isInitialLoad}
+            icon={CheckCircle2}
+            accentBg="bg-emerald-500"
+            iconBg="bg-emerald-50"
+            iconColor="text-emerald-600"
           />
           <SummaryCard
             label="Completed Subscriptions"
             value={totalCompleted}
             sub="Fully paid off plans"
             loading={isInitialLoad}
+            icon={CheckCircle2}
+            accentBg="bg-violet-500"
+            iconBg="bg-violet-50"
+            iconColor="text-violet-600"
           />
           <SummaryCard
             label="Defaulting Subscriptions"
             value={totalDefaulting}
             sub="Overdue or missed payments"
             loading={isInitialLoad}
+            icon={AlertTriangle}
+            accentBg="bg-red-500"
+            iconBg="bg-red-50"
+            iconColor="text-red-600"
           />
         </motion.div>
 
@@ -513,14 +543,14 @@ export function Customers() {
               </div>
 
               {/* Status filter */}
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-1.5 overflow-x-auto">
                 <Filter className="w-3.5 h-3.5 text-neutral-400 shrink-0" />
-                <div className="flex items-center gap-1 flex-wrap">
+                <div className="flex items-center gap-1">
                   {STATUS_FILTERS.map((sf) => (
                     <button
                       key={sf.value}
                       onClick={() => setStatusFilter(sf.value)}
-                      className={`px-2.5 py-1 rounded-full text-[11.5px] font-medium transition-colors border ${
+                      className={`px-2.5 py-1 rounded-full text-[11.5px] font-medium transition-colors border whitespace-nowrap ${
                         statusFilter === sf.value
                           ? "bg-emerald-600 text-white border-emerald-600"
                           : "bg-white text-neutral-500 border-neutral-200 hover:bg-neutral-50"
@@ -531,61 +561,113 @@ export function Customers() {
                   ))}
                 </div>
               </div>
-
-              {/* Mobile add button */}
-              <Button
-                onClick={() => setShowAdd(true)}
-                className="h-9 gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-[12px] font-medium rounded-lg px-3 shadow-sm sm:hidden ml-auto"
-              >
-                <Plus className="w-3.5 h-3.5" /> Add
-              </Button>
             </motion.div>
 
-            {/* ── Table ───────────────────────────────────────────────── */}
+            {/* ── Mobile card list (< md) ──────────────────────────────── */}
+            <motion.div variants={item} className="md:hidden space-y-3">
+              {filtered.map((customer) => {
+                const name = customer.full_name ?? customer.name ?? "Unknown";
+                const [bgCls, txtCls] = avatarColor(name);
+                const ps = customer.primary_subscription;
+                const statusCfg = subStatusConfig(ps?.status);
+                return (
+                  <div
+                    key={customer.id}
+                    className="bg-white rounded-xl border border-neutral-100 p-4 shadow-[0_1px_3px_rgba(0,0,0,0.05)]"
+                  >
+                    {/* Header row */}
+                    <div className="flex items-center justify-between gap-3 mb-3">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className={`h-9 w-9 rounded-full ${bgCls} ${txtCls} flex items-center justify-center text-[12px] font-bold uppercase shrink-0`}>
+                          {name.substring(0, 2)}
+                        </div>
+                        <div className="min-w-0">
+                          <div className="text-[13.5px] font-semibold text-neutral-900 truncate">{name}</div>
+                          <div className="text-[11.5px] text-neutral-400 truncate">{customer.phone ?? "—"}</div>
+                        </div>
+                      </div>
+                      {statusCfg ? (
+                        <Badge className={`text-[11px] border gap-1 shrink-0 ${statusCfg.cls}`}>
+                          {statusCfg.dot && <span className={`w-1.5 h-1.5 rounded-full ${statusCfg.dot} inline-block`} />}
+                          {statusCfg.label}
+                        </Badge>
+                      ) : (
+                        <span className="text-[11px] text-neutral-300 shrink-0">—</span>
+                      )}
+                    </div>
+
+                    {/* Detail grid */}
+                    {ps && (
+                      <div className="grid grid-cols-2 gap-2 mb-3 text-[12px]">
+                        {ps.property_name && (
+                          <div>
+                            <span className="text-[10px] font-semibold uppercase tracking-wider text-neutral-400">Property</span>
+                            <div className="text-neutral-700 font-medium truncate">{ps.property_name}</div>
+                          </div>
+                        )}
+                        {ps.plan_name && (
+                          <div>
+                            <span className="text-[10px] font-semibold uppercase tracking-wider text-neutral-400">Plan</span>
+                            <div className="text-neutral-700 font-medium truncate">{ps.plan_name}</div>
+                          </div>
+                        )}
+                        {ps.amount_paid != null && (
+                          <div>
+                            <span className="text-[10px] font-semibold uppercase tracking-wider text-neutral-400">Paid</span>
+                            <div className="text-emerald-700 font-semibold">{fmt(ps.amount_paid)}</div>
+                          </div>
+                        )}
+                        {ps.balance != null && (
+                          <div>
+                            <span className="text-[10px] font-semibold uppercase tracking-wider text-neutral-400">Balance</span>
+                            <div className={`font-semibold ${ps.balance > 0 ? "text-red-600" : "text-neutral-700"}`}>{fmt(ps.balance)}</div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Actions */}
+                    <div className="flex gap-2 pt-3 border-t border-neutral-50">
+                      <button
+                        onClick={() => navigate(`/customers/${customer.id}`)}
+                        className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg border border-neutral-200 text-[12px] font-medium text-neutral-600 hover:bg-neutral-50 transition-colors"
+                      >
+                        <Eye className="w-3.5 h-3.5" /> View
+                      </button>
+                      <button
+                        onClick={() => navigate(`/customers/${customer.id}/edit`)}
+                        className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg border border-blue-100 bg-blue-50/50 text-[12px] font-medium text-blue-700 hover:bg-blue-100 transition-colors"
+                      >
+                        <Pencil className="w-3.5 h-3.5" /> Edit
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+              <p className="text-[11px] text-neutral-400 text-center py-1">
+                {filtered.length} of {customers.length} customer{customers.length !== 1 ? "s" : ""}
+              </p>
+            </motion.div>
+
+            {/* ── Desktop table (≥ md) ─────────────────────────────────── */}
             <motion.div
               variants={item}
-              className="bg-white rounded-xl border border-neutral-100 overflow-hidden shadow-[0_1px_3px_rgba(0,0,0,0.06)]"
+              className="hidden md:block bg-white rounded-xl border border-neutral-100 overflow-hidden shadow-[0_1px_3px_rgba(0,0,0,0.06)]"
             >
               <div className="overflow-x-auto">
                 <table className="w-full text-sm text-left">
                   <thead>
                     <tr className="border-b border-neutral-100 bg-neutral-50/70">
-                      <th className="px-5 py-3 text-[10.5px] font-semibold tracking-wider text-neutral-400 uppercase whitespace-nowrap">
-                        Customer Name
-                      </th>
-                      <th className="px-5 py-3 text-[10.5px] font-semibold tracking-wider text-neutral-400 uppercase whitespace-nowrap hidden sm:table-cell">
-                        Phone
-                      </th>
-                      <th className="px-5 py-3 text-[10.5px] font-semibold tracking-wider text-neutral-400 uppercase whitespace-nowrap hidden sm:table-cell">
-                        Email
-                      </th>
-                      <th className="px-5 py-3 text-[10.5px] font-semibold tracking-wider text-neutral-400 uppercase whitespace-nowrap hidden md:table-cell">
-                        Property
-                      </th>
-                      <th className="px-5 py-3 text-[10.5px] font-semibold tracking-wider text-neutral-400 uppercase whitespace-nowrap hidden md:table-cell">
-                        Land Size
-                      </th>
-                      <th className="px-5 py-3 text-[10.5px] font-semibold tracking-wider text-neutral-400 uppercase whitespace-nowrap hidden lg:table-cell">
-                        Plan
-                      </th>
-                      <th className="px-5 py-3 text-[10.5px] font-semibold tracking-wider text-neutral-400 uppercase whitespace-nowrap hidden lg:table-cell">
-                        Locked Price
-                      </th>
-                      <th className="px-5 py-3 text-[10.5px] font-semibold tracking-wider text-neutral-400 uppercase whitespace-nowrap hidden lg:table-cell">
-                        Amount Paid
-                      </th>
-                      <th className="px-5 py-3 text-[10.5px] font-semibold tracking-wider text-neutral-400 uppercase whitespace-nowrap hidden xl:table-cell">
-                        Outstanding Balance
-                      </th>
-                      <th className="px-5 py-3 text-[10.5px] font-semibold tracking-wider text-neutral-400 uppercase whitespace-nowrap hidden xl:table-cell">
-                        Next Due Date
-                      </th>
-                      <th className="px-5 py-3 text-[10.5px] font-semibold tracking-wider text-neutral-400 uppercase whitespace-nowrap">
-                        Status
-                      </th>
-                      <th className="px-5 py-3 text-[10.5px] font-semibold tracking-wider text-neutral-400 uppercase text-right whitespace-nowrap">
-                        Actions
-                      </th>
+                      <th className="px-5 py-3 text-[10.5px] font-semibold tracking-wider text-neutral-400 uppercase whitespace-nowrap">Customer Name</th>
+                      <th className="px-5 py-3 text-[10.5px] font-semibold tracking-wider text-neutral-400 uppercase whitespace-nowrap">Phone</th>
+                      <th className="px-5 py-3 text-[10.5px] font-semibold tracking-wider text-neutral-400 uppercase whitespace-nowrap">Email</th>
+                      <th className="px-5 py-3 text-[10.5px] font-semibold tracking-wider text-neutral-400 uppercase whitespace-nowrap hidden lg:table-cell">Property</th>
+                      <th className="px-5 py-3 text-[10.5px] font-semibold tracking-wider text-neutral-400 uppercase whitespace-nowrap hidden lg:table-cell">Land Size</th>
+                      <th className="px-5 py-3 text-[10.5px] font-semibold tracking-wider text-neutral-400 uppercase whitespace-nowrap hidden xl:table-cell">Plan</th>
+                      <th className="px-5 py-3 text-[10.5px] font-semibold tracking-wider text-neutral-400 uppercase whitespace-nowrap hidden xl:table-cell">Amount Paid</th>
+                      <th className="px-5 py-3 text-[10.5px] font-semibold tracking-wider text-neutral-400 uppercase whitespace-nowrap hidden xl:table-cell">Balance</th>
+                      <th className="px-5 py-3 text-[10.5px] font-semibold tracking-wider text-neutral-400 uppercase whitespace-nowrap">Status</th>
+                      <th className="px-5 py-3 text-[10.5px] font-semibold tracking-wider text-neutral-400 uppercase text-right whitespace-nowrap">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-neutral-50">
@@ -596,138 +678,57 @@ export function Customers() {
                       const statusCfg = subStatusConfig(ps?.status);
 
                       return (
-                        <tr
-                          key={customer.id}
-                          className="hover:bg-neutral-50/60 transition-colors group"
-                        >
-                          {/* Customer Name */}
+                        <tr key={customer.id} className="hover:bg-neutral-50/60 transition-colors group">
                           <td className="px-5 py-3.5 whitespace-nowrap">
                             <div className="flex items-center gap-3">
-                              <div
-                                className={`h-8 w-8 rounded-full ${bgCls} ${txtCls} flex items-center justify-center text-[11px] font-bold uppercase shrink-0`}
-                              >
+                              <div className={`h-8 w-8 rounded-full ${bgCls} ${txtCls} flex items-center justify-center text-[11px] font-bold uppercase shrink-0`}>
                                 {name.substring(0, 2)}
                               </div>
-                              <div>
-                                <div className="text-[13px] font-semibold text-neutral-900">
-                                  {name}
-                                </div>
-                                <div className="text-[11px] text-neutral-400 mt-0.5 sm:hidden">
-                                  {customer.phone ?? "—"}
-                                </div>
-                              </div>
+                              <div className="text-[13px] font-semibold text-neutral-900">{name}</div>
                             </div>
                           </td>
-
-                          {/* Phone */}
-                          <td className="px-5 py-3.5 whitespace-nowrap hidden sm:table-cell">
-                            <span className="text-[12.5px] text-neutral-700">
-                              {dash(customer.phone)}
-                            </span>
+                          <td className="px-5 py-3.5 whitespace-nowrap">
+                            <span className="text-[12.5px] text-neutral-700">{dash(customer.phone)}</span>
                           </td>
-
-                          {/* Email */}
-                          <td className="px-5 py-3.5 whitespace-nowrap hidden sm:table-cell">
-                            <span className="text-[12.5px] text-neutral-700">
-                              {dash(customer.email)}
-                            </span>
+                          <td className="px-5 py-3.5 whitespace-nowrap">
+                            <span className="text-[12.5px] text-neutral-700">{dash(customer.email)}</span>
                           </td>
-
-                          {/* Property */}
-                          <td className="px-5 py-3.5 whitespace-nowrap hidden md:table-cell">
-                            <span className="text-[12.5px] text-neutral-700">
-                              {dash(ps?.property_name)}
-                            </span>
-                          </td>
-
-                          {/* Land Size */}
-                          <td className="px-5 py-3.5 whitespace-nowrap hidden md:table-cell">
-                            <span className="text-[12.5px] text-neutral-700">
-                              {dash(ps?.land_size)}
-                            </span>
-                          </td>
-
-                          {/* Plan */}
                           <td className="px-5 py-3.5 whitespace-nowrap hidden lg:table-cell">
-                            <span className="text-[12.5px] text-neutral-700">
-                              {dash(ps?.plan_name)}
-                            </span>
+                            <span className="text-[12.5px] text-neutral-700">{dash(ps?.property_name)}</span>
                           </td>
-
-                          {/* Locked Price */}
                           <td className="px-5 py-3.5 whitespace-nowrap hidden lg:table-cell">
-                            <span className="text-[12.5px] font-medium text-neutral-800">
-                              {fmt(ps?.locked_price)}
-                            </span>
+                            <span className="text-[12.5px] text-neutral-700">{dash(ps?.land_size)}</span>
                           </td>
-
-                          {/* Amount Paid */}
-                          <td className="px-5 py-3.5 whitespace-nowrap hidden lg:table-cell">
-                            <span className="text-[12.5px] font-medium text-emerald-700">
-                              {fmt(ps?.amount_paid)}
-                            </span>
-                          </td>
-
-                          {/* Outstanding Balance */}
                           <td className="px-5 py-3.5 whitespace-nowrap hidden xl:table-cell">
-                            <span
-                              className={`text-[12.5px] font-medium ${
-                                ps?.balance > 0 ? "text-red-600" : "text-neutral-700"
-                              }`}
-                            >
-                              {fmt(ps?.balance)}
-                            </span>
+                            <span className="text-[12.5px] text-neutral-700">{dash(ps?.plan_name)}</span>
                           </td>
-
-                          {/* Next Due Date */}
                           <td className="px-5 py-3.5 whitespace-nowrap hidden xl:table-cell">
-                            <span className="text-[12.5px] text-neutral-700">
-                              {dash(ps?.next_due_date)}
-                            </span>
+                            <span className="text-[12.5px] font-medium text-emerald-700">{fmt(ps?.amount_paid)}</span>
                           </td>
-
-                          {/* Status */}
+                          <td className="px-5 py-3.5 whitespace-nowrap hidden xl:table-cell">
+                            <span className={`text-[12.5px] font-medium ${ps?.balance > 0 ? "text-red-600" : "text-neutral-700"}`}>{fmt(ps?.balance)}</span>
+                          </td>
                           <td className="px-5 py-3.5 whitespace-nowrap">
                             {statusCfg ? (
-                              <Badge
-                                className={`text-[11px] border gap-1.5 ${statusCfg.cls}`}
-                              >
-                                {statusCfg.dot && (
-                                  <span
-                                    className={`w-1.5 h-1.5 rounded-full ${statusCfg.dot} inline-block`}
-                                  />
-                                )}
-                                {ps?.status === "COMPLETED" && (
-                                  <CheckCircle2 className="w-3 h-3" />
-                                )}
-                                {ps?.status === "DEFAULTING" && (
-                                  <AlertTriangle className="w-3 h-3" />
-                                )}
-                                {ps?.status === "CANCELLED" && (
-                                  <XCircle className="w-3 h-3" />
-                                )}
+                              <Badge className={`text-[11px] border gap-1.5 ${statusCfg.cls}`}>
+                                {statusCfg.dot && <span className={`w-1.5 h-1.5 rounded-full ${statusCfg.dot} inline-block`} />}
+                                {ps?.status === "COMPLETED" && <CheckCircle2 className="w-3 h-3" />}
+                                {ps?.status === "DEFAULTING" && <AlertTriangle className="w-3 h-3" />}
+                                {ps?.status === "CANCELLED" && <XCircle className="w-3 h-3" />}
                                 {statusCfg.label}
                               </Badge>
                             ) : (
                               <span className="text-[11px] text-neutral-300">—</span>
                             )}
                           </td>
-
-                          {/* Actions */}
                           <td className="px-5 py-3.5 whitespace-nowrap text-right">
                             <div className="flex items-center justify-end gap-1">
-                              <button
-                                onClick={() => navigate(`/customers/${customer.id}`)}
-                                title="View customer"
-                                className="h-7 w-7 flex items-center justify-center rounded-lg text-neutral-400 hover:text-emerald-700 hover:bg-emerald-50 transition-colors"
-                              >
+                              <button onClick={() => navigate(`/customers/${customer.id}`)} title="View customer"
+                                className="h-7 w-7 flex items-center justify-center rounded-lg text-neutral-400 hover:text-emerald-700 hover:bg-emerald-50 transition-colors">
                                 <Eye className="w-3.5 h-3.5" />
                               </button>
-                              <button
-                                onClick={() => navigate(`/customers/${customer.id}/edit`)}
-                                title="Edit customer"
-                                className="h-7 w-7 flex items-center justify-center rounded-lg text-neutral-400 hover:text-blue-700 hover:bg-blue-50 transition-colors"
-                              >
+                              <button onClick={() => navigate(`/customers/${customer.id}/edit`)} title="Edit customer"
+                                className="h-7 w-7 flex items-center justify-center rounded-lg text-neutral-400 hover:text-blue-700 hover:bg-blue-50 transition-colors">
                                 <Pencil className="w-3.5 h-3.5" />
                               </button>
                             </div>
@@ -738,12 +739,9 @@ export function Customers() {
                   </tbody>
                 </table>
               </div>
-
-              {/* Row count footer */}
               <div className="px-5 py-2.5 border-t border-neutral-50 bg-neutral-50/40">
                 <p className="text-[11px] text-neutral-400">
-                  Showing {filtered.length} of {customers.length} customer
-                  {customers.length !== 1 ? "s" : ""}
+                  Showing {filtered.length} of {customers.length} customer{customers.length !== 1 ? "s" : ""}
                 </p>
               </div>
             </motion.div>
