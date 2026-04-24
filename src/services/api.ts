@@ -480,7 +480,31 @@ export const api = {
       request<{ account_name: string; account_number: string }>(
         `/payments/verify-account/${buildParams({ account_number: accountNumber, bank_code: bankCode })}`
       ),
-    listBanks: () => request<{ banks: { name: string; code: string }[] }>("/payments/banks/"),
+    /**
+     * Fetches the Nigerian bank list directly from Paystack's public API.
+     * Uses the public key — no backend proxy needed, avoids the 502 from
+     * backend→Paystack network issues in dev environments.
+     */
+    listBanks: async (): Promise<{ banks: { name: string; code: string }[] }> => {
+      const publicKey = (import.meta.env.VITE_PAYSTACK_PUBLIC_KEY as string | undefined) ?? "";
+      const res = await fetch(
+        "https://api.paystack.co/bank?country=nigeria&perPage=100&use_cursor=false",
+        publicKey ? { headers: { Authorization: `Bearer ${publicKey}` } } : {},
+      );
+      if (!res.ok) throw new Error(`Paystack banks: HTTP ${res.status}`);
+      const json = await res.json();
+      // Deduplicate by code — Paystack occasionally returns multiple entries
+      // with the same bank code, which would cause React duplicate-key warnings.
+      const seen = new Set<string>();
+      const banks = (json?.data ?? [])
+        .map((b: any) => ({ name: b.name as string, code: b.code as string }))
+        .filter(({ code }: { code: string }) => {
+          if (seen.has(code)) return false;
+          seen.add(code);
+          return true;
+        });
+      return { banks };
+    },
   },
 
   // ── Auth ──────────────────────────────────────────────────────────────────

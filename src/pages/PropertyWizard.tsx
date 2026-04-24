@@ -87,34 +87,24 @@ interface PricingPlan {
 }
 interface PaymentMethod { id: string; bankName: string; bankCode: string; accountName: string; accountNumber: string; active: boolean; }
 
-const NIGERIAN_BANKS = [
-  { name: "Access Bank",                   code: "044" },
-  { name: "Citibank Nigeria",              code: "023" },
-  { name: "Ecobank Nigeria",               code: "050" },
-  { name: "Fidelity Bank",                 code: "070" },
-  { name: "First Bank of Nigeria",         code: "011" },
-  { name: "First City Monument Bank",      code: "214" },
-  { name: "Globus Bank",                   code: "00103" },
-  { name: "Guaranty Trust Bank",           code: "058" },
-  { name: "Heritage Bank",                 code: "030" },
-  { name: "Keystone Bank",                 code: "082" },
-  { name: "Kuda Bank",                     code: "50211" },
-  { name: "Lotus Bank",                    code: "303" },
-  { name: "Moniepoint MFB",               code: "50515" },
-  { name: "Opay",                          code: "100004" },
-  { name: "Palmpay",                       code: "100033" },
-  { name: "Polaris Bank",                  code: "076" },
-  { name: "Providus Bank",                 code: "101" },
-  { name: "Stanbic IBTC Bank",             code: "221" },
-  { name: "Standard Chartered Bank",       code: "068" },
-  { name: "Sterling Bank",                 code: "232" },
-  { name: "Titan Trust Bank",              code: "102" },
-  { name: "Union Bank of Nigeria",         code: "032" },
-  { name: "United Bank for Africa",        code: "033" },
-  { name: "Unity Bank",                    code: "215" },
-  { name: "VFD Microfinance Bank",         code: "566" },
-  { name: "Wema Bank",                     code: "035" },
-  { name: "Zenith Bank",                   code: "057" },
+// Bank list is fetched live from Paystack via the backend — see useEffect below.
+// This fallback is used only if the API call fails on first mount.
+const FALLBACK_BANKS = [
+  { name: "Access Bank",             code: "044" },
+  { name: "Ecobank Nigeria",         code: "050" },
+  { name: "Fidelity Bank",           code: "070" },
+  { name: "First Bank of Nigeria",   code: "011" },
+  { name: "First City Monument Bank",code: "214" },
+  { name: "Guaranty Trust Bank",     code: "058" },
+  { name: "Keystone Bank",           code: "082" },
+  { name: "Polaris Bank",            code: "076" },
+  { name: "Stanbic IBTC Bank",       code: "221" },
+  { name: "Sterling Bank",           code: "232" },
+  { name: "Union Bank of Nigeria",   code: "032" },
+  { name: "United Bank for Africa",  code: "033" },
+  { name: "Unity Bank",              code: "215" },
+  { name: "Wema Bank",               code: "035" },
+  { name: "Zenith Bank",             code: "057" },
 ];
 
 const NIGERIAN_STATES = [
@@ -224,6 +214,10 @@ export function PropertyWizard() {
   const [paymentForm, setPaymentForm]           = useState({ bankName: "", bankCode: "", accountName: "", accountNumber: "" });
   const [verifyingAccount, setVerifyingAccount] = useState(false);
   const [verifyError, setVerifyError]           = useState("");
+  const [verifyFailed, setVerifyFailed]         = useState(false); // true → show manual name input
+  // Bank list — fetched live from Paystack on mount
+  const [banks, setBanks]       = useState<{ name: string; code: string }[]>(FALLBACK_BANKS);
+  const [banksLoading, setBanksLoading] = useState(false);
 
   // ── Helpers ───────────────────────────────────────────────────────────────
   const monthlyInstallment = useCallback((p: Omit<PricingPlan, "id" | "active">) => {
@@ -234,6 +228,15 @@ export function PropertyWizard() {
     return p.spreadMethod === "separate"
       ? (total - init) / dur
       : (total - init) / (dur - 1 || 1);
+  }, []);
+
+  // ── Fetch live bank list from Paystack (via backend) ─────────────────────
+  useEffect(() => {
+    setBanksLoading(true);
+    api.banking.listBanks()
+      .then((res) => { if (res.banks?.length) setBanks(res.banks); })
+      .catch(() => { /* keep FALLBACK_BANKS on error */ })
+      .finally(() => setBanksLoading(false));
   }, []);
 
   // ── Load property data for editing ───────────────────────────────────────
@@ -447,18 +450,34 @@ export function PropertyWizard() {
     if (paymentForm.accountNumber.length !== 10) { setVerifyError("Account number must be exactly 10 digits."); return; }
     setVerifyingAccount(true);
     setVerifyError("");
+    setVerifyFailed(false);
     try {
       const res = await api.banking.verifyAccount(paymentForm.accountNumber, paymentForm.bankCode);
       setPaymentForm((f) => ({ ...f, accountName: res.account_name }));
+      setVerifyFailed(false);
     } catch (err: any) {
-      setVerifyError(err.message ?? "Could not verify account. Check the number and try again.");
+      // Some banks (Opay, Palmpay, Kuda, etc.) don't support NUBAN lookup via Paystack.
+      // In that case, let the user type the account name manually.
+      setVerifyFailed(true);
+      setVerifyError(
+        "Auto-verification unavailable for this bank. Enter the account name manually below."
+      );
+      setPaymentForm((f) => ({ ...f, accountName: "" }));
     } finally {
       setVerifyingAccount(false);
     }
   };
   const savePayment = () => {
-    if (!paymentForm.bankName.trim() || !paymentForm.accountName.trim() || paymentForm.accountNumber.length < 10) {
-      toast.error("Please select a bank, enter a valid account number, and verify the account name.");
+    if (!paymentForm.bankName.trim()) {
+      toast.error("Please select a bank.");
+      return;
+    }
+    if (paymentForm.accountNumber.length < 10) {
+      toast.error("Please enter a valid 10-digit account number.");
+      return;
+    }
+    if (!paymentForm.accountName.trim()) {
+      toast.error("Account name is required. Verify the account or enter the name manually.");
       return;
     }
     if (editingPaymentId) {
@@ -469,6 +488,7 @@ export function PropertyWizard() {
       toast.success("Payment method added.");
     }
     setShowPaymentModal(false);
+    setVerifyFailed(false);
   };
 
   // ── Submit to API ─────────────────────────────────────────────────────────
@@ -1639,14 +1659,16 @@ export function PropertyWizard() {
               <div>
                 <label className="block text-sm font-medium text-neutral-700 mb-1.5">Bank <span className="text-red-500">*</span></label>
                 <select value={paymentForm.bankCode}
+                  disabled={banksLoading}
                   onChange={(e) => {
-                    const bank = NIGERIAN_BANKS.find((b) => b.code === e.target.value);
+                    const bank = banks.find((b) => b.code === e.target.value);
                     setPaymentForm((f) => ({ ...f, bankCode: e.target.value, bankName: bank?.name ?? "", accountName: "" }));
                     setVerifyError("");
+                    setVerifyFailed(false);
                   }}
-                  className="w-full px-3 py-2 border border-neutral-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400 transition-colors">
-                  <option value="">— Select a bank —</option>
-                  {NIGERIAN_BANKS.map((b) => <option key={b.code} value={b.code}>{b.name}</option>)}
+                  className="w-full px-3 py-2 border border-neutral-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400 transition-colors disabled:opacity-60">
+                  <option value="">{banksLoading ? "Loading banks…" : "— Select a bank —"}</option>
+                  {banks.map((b, i) => <option key={`${b.code}-${i}`} value={b.code}>{b.name}</option>)}
                 </select>
               </div>
               <div>
@@ -1659,6 +1681,7 @@ export function PropertyWizard() {
                       const val = e.target.value.replace(/\D/g, "");
                       setPaymentForm((f) => ({ ...f, accountNumber: val, accountName: "" }));
                       setVerifyError("");
+                      setVerifyFailed(false);
                     }}
                     placeholder="10-digit account number"
                     maxLength={10}
@@ -1677,23 +1700,37 @@ export function PropertyWizard() {
                   </p>
                 )}
                 {verifyError && (
-                  <p className="text-xs text-red-600 mt-1 flex items-center gap-1">
+                  <p className={`text-xs mt-1 flex items-center gap-1 ${verifyFailed ? "text-amber-600" : "text-red-600"}`}>
                     <AlertCircle className="w-3 h-3" /> {verifyError}
                   </p>
                 )}
               </div>
               <div>
                 <label className="block text-sm font-medium text-neutral-700 mb-1.5">
-                  Account Name <span className="text-neutral-400 text-xs">(auto-verified)</span>
+                  Account Name
+                  {verifyFailed
+                    ? <span className="text-amber-600 text-xs ml-1">(enter manually)</span>
+                    : <span className="text-neutral-400 text-xs ml-1">(auto-verified)</span>}
+                  <span className="text-red-500 ml-0.5">*</span>
                 </label>
-                <div className={`w-full px-3 py-2 border rounded-md text-sm min-h-[38px] flex items-center ${
-                  paymentForm.accountName
-                    ? "border-emerald-300 bg-emerald-50 text-emerald-800 font-medium"
-                    : "border-neutral-200 bg-neutral-50 text-neutral-400"
-                }`}>
-                  {paymentForm.accountName || "Will appear after verification"}
-                </div>
-                {paymentForm.accountName && (
+                {verifyFailed ? (
+                  <input
+                    type="text"
+                    value={paymentForm.accountName}
+                    onChange={(e) => setPaymentForm((f) => ({ ...f, accountName: e.target.value }))}
+                    placeholder="Enter account holder name"
+                    className="w-full px-3 py-2 border border-amber-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-400 transition-colors"
+                  />
+                ) : (
+                  <div className={`w-full px-3 py-2 border rounded-md text-sm min-h-[38px] flex items-center ${
+                    paymentForm.accountName
+                      ? "border-emerald-300 bg-emerald-50 text-emerald-800 font-medium"
+                      : "border-neutral-200 bg-neutral-50 text-neutral-400"
+                  }`}>
+                    {paymentForm.accountName || "Will appear after verification"}
+                  </div>
+                )}
+                {paymentForm.accountName && !verifyFailed && (
                   <p className="text-xs text-emerald-600 mt-1 flex items-center gap-1">
                     <span className="w-3 h-3 rounded-full bg-emerald-500 flex items-center justify-center text-white text-[8px] font-bold">✓</span>
                     Account verified
@@ -1702,9 +1739,9 @@ export function PropertyWizard() {
               </div>
             </div>
             <div className="flex gap-2 mt-6">
-              <button onClick={() => setShowPaymentModal(false)}
+              <button onClick={() => { setShowPaymentModal(false); setVerifyFailed(false); }}
                 className="flex-1 px-4 py-2 border border-neutral-300 text-neutral-700 rounded-md text-sm hover:bg-neutral-50">Cancel</button>
-              <button onClick={savePayment} disabled={!paymentForm.accountName}
+              <button onClick={savePayment} disabled={!paymentForm.accountName.trim()}
                 className="flex-1 px-4 py-2 bg-emerald-600 text-white rounded-md text-sm hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
                 {editingPaymentId ? "Update" : "Add Method"}
               </button>
