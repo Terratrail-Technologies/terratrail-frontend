@@ -648,6 +648,7 @@ export function SalesReps() {
                     Pending to Earn
                   </p>
                   <p className="text-2xl font-bold text-neutral-900">{fmt(totalPending)}</p>
+                  <p className="text-[11px] text-neutral-400 mt-1">From unpaid referral commissions</p>
                 </div>
                 <div className="w-8 h-8 bg-amber-50 rounded-lg flex items-center justify-center shrink-0">
                   <Wallet className="w-4 h-4 text-amber-600" />
@@ -663,6 +664,7 @@ export function SalesReps() {
                     Total Earned
                   </p>
                   <p className="text-2xl font-bold text-neutral-900">{fmt(totalEarned)}</p>
+                  <p className="text-[11px] text-neutral-400 mt-1">From paid commission payouts</p>
                 </div>
                 <div className="w-8 h-8 bg-blue-50 rounded-lg flex items-center justify-center shrink-0">
                   <TrendingUp className="w-4 h-4 text-blue-600" />
@@ -678,6 +680,7 @@ export function SalesReps() {
                     Earning Potential
                   </p>
                   <p className="text-2xl font-bold text-neutral-900">{fmt(totalPotential)}</p>
+                  <p className="text-[11px] text-neutral-400 mt-1">If all referrals complete payment</p>
                 </div>
                 <div className="w-8 h-8 bg-purple-50 rounded-lg flex items-center justify-center shrink-0">
                   <Banknote className="w-4 h-4 text-purple-600" />

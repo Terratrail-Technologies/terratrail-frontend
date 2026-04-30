@@ -5,6 +5,7 @@ import { Properties } from "./pages/Properties";
 import { PropertyWizard } from "./pages/PropertyWizard";
 import PropertyPreview from "./pages/PropertyPreview";
 import { Customers } from "./pages/Customers";
+import { CustomerDetail } from "./pages/CustomerDetail";
 import { SalesReps } from "./pages/SalesReps";
 import { SalesRepDetail } from "./pages/SalesRepDetail";
 import { CustomerReps } from "./pages/CustomerReps";
@@ -63,6 +64,7 @@ export const router = createBrowserRouter([
           { path: "properties/:id/edit", Component: PropertyWizard },
           { path: "properties/:id/preview", Component: PropertyPreview },
           { path: "customers", Component: Customers },
+          { path: "customers/:id", Component: CustomerDetail },
           { path: "customer-reps", Component: CustomerReps },
           { path: "customer-reps/:id", Component: CustomerRepDetail },
           { path: "sales-reps", Component: SalesReps },

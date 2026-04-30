@@ -64,13 +64,27 @@ function FadeIn({ children, delay = 0, className = "" }: { children: React.React
 
 // ── Inspection modal ──────────────────────────────────────────────────────────
 function InspectionModal({ property, workspaceSlug, onClose }: { property: Property; workspaceSlug: string; onClose: () => void }) {
-  const [form, setForm] = useState({ name: "", email: "", phone: "", date: "", persons: "1", message: "" });
+  const [form, setForm] = useState({ name: "", email: "", phone: "", date: "", timeSlot: "", persons: "1", message: "" });
   const [sent, setSent] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [config, setConfig] = useState<{ time_slots?: string[]; available_days?: string[]; max_persons?: number; meeting_point?: string } | null>(null);
   const set = (k: string, v: string) => setForm((f) => ({ ...f, [k]: v }));
+
+  useEffect(() => {
+    api.public.inspectionConfig(workspaceSlug, property.id)
+      .then((cfg: any) => setConfig(cfg ?? null))
+      .catch(() => setConfig(null));
+  }, [workspaceSlug, property.id]);
+
+  const timeSlots: string[] = config?.time_slots?.length ? config.time_slots : [];
+  const maxPersons = config?.max_persons ?? 10;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (timeSlots.length > 0 && !form.timeSlot) {
+      alert("Please select a time slot.");
+      return;
+    }
     setLoading(true);
     try {
       await api.siteInspections.create({
@@ -79,6 +93,7 @@ function InspectionModal({ property, workspaceSlug, onClose }: { property: Prope
         email: form.email,
         phone: form.phone,
         inspection_date: form.date || new Date().toISOString().slice(0, 10),
+        inspection_time: form.timeSlot || undefined,
         persons: Number(form.persons),
         notes: form.message,
         linked_property: property.id,
@@ -94,6 +109,8 @@ function InspectionModal({ property, workspaceSlug, onClose }: { property: Prope
       setLoading(false);
     }
   };
+
+  const inputCls = "w-full px-3 py-2.5 text-[13px] border border-neutral-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400 transition-all";
 
   return (
     <motion.div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-sm"
@@ -130,45 +147,87 @@ function InspectionModal({ property, workspaceSlug, onClose }: { property: Prope
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="p-5 space-y-3.5">
+            {/* Meeting point info */}
+            {config?.meeting_point && (
+              <div className="flex items-start gap-2 px-3 py-2.5 bg-emerald-50 rounded-xl border border-emerald-100">
+                <MapPin className="size-3.5 text-emerald-600 mt-0.5 shrink-0" />
+                <p className="text-[12px] text-emerald-800 font-medium">{config.meeting_point}</p>
+              </div>
+            )}
+
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block text-[11px] font-semibold text-neutral-600 mb-1.5 uppercase tracking-wide">Full Name *</label>
                 <input required value={form.name} onChange={(e) => set("name", e.target.value)}
-                  className="w-full px-3 py-2.5 text-[13px] border border-neutral-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400 transition-all"
-                  placeholder="John Doe" />
+                  className={inputCls} placeholder="John Doe" />
               </div>
               <div>
                 <label className="block text-[11px] font-semibold text-neutral-600 mb-1.5 uppercase tracking-wide">Phone *</label>
                 <input required value={form.phone} onChange={(e) => set("phone", e.target.value)}
-                  className="w-full px-3 py-2.5 text-[13px] border border-neutral-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400 transition-all"
-                  placeholder="+234..." />
+                  className={inputCls} placeholder="+234..." />
               </div>
             </div>
             <div>
               <label className="block text-[11px] font-semibold text-neutral-600 mb-1.5 uppercase tracking-wide">Email</label>
               <input type="email" value={form.email} onChange={(e) => set("email", e.target.value)}
-                className="w-full px-3 py-2.5 text-[13px] border border-neutral-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400 transition-all"
-                placeholder="you@example.com" />
+                className={inputCls} placeholder="you@example.com" />
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-[11px] font-semibold text-neutral-600 mb-1.5 uppercase tracking-wide">Preferred Date</label>
-                <input type="date" value={form.date} onChange={(e) => set("date", e.target.value)}
-                  min={new Date().toISOString().split("T")[0]}
-                  className="w-full px-3 py-2.5 text-[13px] border border-neutral-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400 transition-all" />
-              </div>
-              <div>
-                <label className="block text-[11px] font-semibold text-neutral-600 mb-1.5 uppercase tracking-wide">Persons</label>
-                <select value={form.persons} onChange={(e) => set("persons", e.target.value)}
-                  className="w-full px-3 py-2.5 text-[13px] border border-neutral-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400 transition-all bg-white">
-                  {[1,2,3,4,5,6].map(n => <option key={n} value={n}>{n} {n === 1 ? "person" : "people"}</option>)}
-                </select>
-              </div>
+
+            {/* Date */}
+            <div>
+              <label className="block text-[11px] font-semibold text-neutral-600 mb-1.5 uppercase tracking-wide">
+                Preferred Date {config?.available_days?.length ? `(${config.available_days.map(d => d.slice(0,3)).join(", ")})` : ""}
+              </label>
+              <input type="date" required value={form.date} onChange={(e) => set("date", e.target.value)}
+                min={new Date().toISOString().split("T")[0]}
+                className={inputCls} />
             </div>
+
+            {/* Time slot — show configured slots or free-text if none configured */}
+            {timeSlots.length > 0 ? (
+              <div>
+                <label className="block text-[11px] font-semibold text-neutral-600 mb-1.5 uppercase tracking-wide">
+                  Select Time Slot *
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {timeSlots.map((slot) => (
+                    <button key={slot} type="button"
+                      onClick={() => set("timeSlot", slot)}
+                      className={`px-3 py-1.5 rounded-xl text-[12.5px] font-semibold border transition-all ${
+                        form.timeSlot === slot
+                          ? "bg-emerald-600 text-white border-emerald-600 shadow-sm"
+                          : "bg-white text-neutral-700 border-neutral-200 hover:border-emerald-300 hover:text-emerald-700"
+                      }`}>
+                      {slot}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div>
+                <label className="block text-[11px] font-semibold text-neutral-600 mb-1.5 uppercase tracking-wide">Preferred Time</label>
+                <input type="time" value={form.timeSlot} onChange={(e) => set("timeSlot", e.target.value)}
+                  className={inputCls} />
+              </div>
+            )}
+
+            {/* Persons */}
+            <div>
+              <label className="block text-[11px] font-semibold text-neutral-600 mb-1.5 uppercase tracking-wide">
+                Number of Persons {config?.max_persons ? `(max ${maxPersons})` : ""}
+              </label>
+              <select value={form.persons} onChange={(e) => set("persons", e.target.value)}
+                className={`${inputCls} bg-white`}>
+                {Array.from({ length: Math.min(maxPersons, 10) }, (_, i) => i + 1).map(n => (
+                  <option key={n} value={n}>{n} {n === 1 ? "person" : "people"}</option>
+                ))}
+              </select>
+            </div>
+
             <div>
               <label className="block text-[11px] font-semibold text-neutral-600 mb-1.5 uppercase tracking-wide">Additional Notes</label>
               <textarea value={form.message} onChange={(e) => set("message", e.target.value)} rows={2}
-                className="w-full px-3 py-2.5 text-[13px] border border-neutral-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400 transition-all resize-none"
+                className={`${inputCls} resize-none`}
                 placeholder="Any specific questions or requirements..." />
             </div>
             <button type="submit" disabled={loading}

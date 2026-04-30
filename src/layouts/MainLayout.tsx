@@ -407,7 +407,7 @@ function NavContent() {
                   onClick={() => setOpenMobile(false)}
                   className="h-10 rounded-lg px-3 text-[13.5px] font-bold transition-all duration-200 text-white bg-emerald-600 hover:bg-emerald-700 shadow-md shadow-emerald-200/50 border border-emerald-500"
                 >
-                  <a href={`/estates/${slug}`} target="_blank" rel="noopener noreferrer hover:bg-emerald-700 transition-all text-[13px]">
+                  <a href={`/estates/${slug}`} target="_blank" rel="noopener noreferrer">
                     <Globe className="size-[16px] text-emerald-100" />
                     <span>View Estate</span>
                     <span className="ml-auto text-[10px] text-emerald-200 font-medium">↗</span>

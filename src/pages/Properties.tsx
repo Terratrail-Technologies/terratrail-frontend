@@ -5,6 +5,7 @@ import { Link, useNavigate } from "react-router";
 import {
   Plus, Search, MapPin, CheckCircle2, Clock,
   Building as BuildingIcon, Loader2, MoreHorizontal, Pencil, Eye,
+  LayoutGrid, List, Home, TrendingUp, Package, AlertCircle,
 } from "lucide-react";
 import { Skeleton } from "../components/ui/skeleton";
 import { api } from "../services/api";
@@ -79,7 +80,7 @@ function PropertyMenu({ propertyId }: { propertyId: string; onDelete?: (id: stri
   );
 }
 
-// ── Property card ─────────────────────────────────────────────────────────────
+// ── Property card (grid view) ─────────────────────────────────────────────────
 function PropertyCard({ property }: { property: any }) {
   const navigate = useNavigate();
   const fmt = (n: number | string) => `₦${Number(n).toLocaleString("en-NG")}`;
@@ -201,6 +202,115 @@ function PropertyCard({ property }: { property: any }) {
   );
 }
 
+// ── Property row (list view) ──────────────────────────────────────────────────
+function PropertyRow({ property }: { property: any }) {
+  const navigate = useNavigate();
+  const fmt = (n: number | string) => `₦${Number(n).toLocaleString("en-NG")}`;
+  const isPublished = property.status === "PUBLISHED" || property.status === "published";
+  const typeLabel = (property.property_type ?? property.type ?? "")
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (c: string) => c.toUpperCase());
+
+  return (
+    <motion.tr
+      variants={item}
+      onClick={() => navigate(`/properties/${property.id}/preview`)}
+      className="hover:bg-neutral-50/60 transition-colors cursor-pointer group border-b border-neutral-50 last:border-0"
+    >
+      <td className="px-4 py-3 whitespace-nowrap">
+        <div className="flex items-center gap-3">
+          {property.featured_image ? (
+            <img src={property.featured_image} alt={property.name}
+              className="h-10 w-14 object-cover rounded-lg border border-neutral-100 shrink-0" />
+          ) : (
+            <div className="h-10 w-14 rounded-lg bg-emerald-50 border border-neutral-100 flex items-center justify-center shrink-0">
+              <BuildingIcon className="w-4 h-4 text-emerald-400" />
+            </div>
+          )}
+          <div className="min-w-0">
+            <div className="text-[13px] font-semibold text-neutral-900 group-hover:text-emerald-600 transition-colors truncate">
+              {property.name}
+            </div>
+            {typeLabel && (
+              <div className="text-[11px] text-emerald-700 font-medium">{typeLabel}</div>
+            )}
+          </div>
+        </div>
+      </td>
+      <td className="px-4 py-3 whitespace-nowrap hidden sm:table-cell">
+        <div className="flex items-center gap-1.5 text-[12.5px] text-neutral-500">
+          <MapPin className="w-3 h-3 text-neutral-400 shrink-0" />
+          <span className="truncate max-w-[160px]">
+            {property.location?.city && property.location?.state
+              ? `${property.location.city}, ${property.location.state}`
+              : property.location?.city || property.location?.state || "—"}
+          </span>
+        </div>
+      </td>
+      <td className="px-4 py-3 whitespace-nowrap">
+        <Badge className={isPublished
+          ? "bg-emerald-50 text-emerald-700 border border-emerald-100 text-[10.5px] gap-1"
+          : "bg-neutral-100 text-neutral-500 border border-neutral-200 text-[10.5px] gap-1"}>
+          {isPublished ? <CheckCircle2 className="w-2.5 h-2.5" /> : <Clock className="w-2.5 h-2.5" />}
+          {isPublished ? "Published" : "Draft"}
+        </Badge>
+      </td>
+      <td className="px-4 py-3 whitespace-nowrap hidden md:table-cell text-[12.5px] text-neutral-700">
+        {(property.total_sqms ?? property.totalSqm ?? property.total_sqm ?? 0).toLocaleString()} sqm
+      </td>
+      <td className="px-4 py-3 whitespace-nowrap hidden lg:table-cell text-[12.5px] text-neutral-700">
+        {property.subscription_count ?? property.subscriptions ?? 0}
+      </td>
+      <td className="px-4 py-3 whitespace-nowrap hidden lg:table-cell text-[12.5px] font-semibold text-emerald-700">
+        {fmt(property.total_revenue ?? property.revenue ?? 0)}
+      </td>
+      <td className="px-4 py-3 whitespace-nowrap text-right" onClick={(e) => e.stopPropagation()}>
+        <PropertyMenu propertyId={property.id} />
+      </td>
+    </motion.tr>
+  );
+}
+
+// ── Stat card ─────────────────────────────────────────────────────────────────
+interface StatCardProps {
+  label: string;
+  value: number | string;
+  sub?: string;
+  icon: React.ElementType;
+  accentBg: string;
+  iconBg: string;
+  iconColor: string;
+  loading: boolean;
+}
+
+function StatCard({ label, value, sub, icon: Icon, accentBg, iconBg, iconColor, loading }: StatCardProps) {
+  if (loading) {
+    return (
+      <div className="relative bg-white rounded-xl border border-neutral-100 p-4 shadow-sm overflow-hidden">
+        <div className={`absolute top-0 left-0 right-0 h-0.5 ${accentBg}`} />
+        <Skeleton className="h-3 w-24 rounded bg-neutral-100 mb-3" />
+        <Skeleton className="h-7 w-12 rounded bg-neutral-100 mb-2" />
+        <Skeleton className="h-3 w-28 rounded bg-neutral-100" />
+      </div>
+    );
+  }
+  return (
+    <div className="relative bg-white rounded-xl border border-neutral-100 p-4 shadow-sm overflow-hidden hover:shadow-[0_4px_12px_rgba(0,0,0,0.08)] transition-shadow">
+      <div className={`absolute top-0 left-0 right-0 h-0.5 ${accentBg}`} />
+      <div className="flex items-start justify-between">
+        <div>
+          <p className="text-[11px] text-neutral-400 uppercase tracking-wider font-semibold mb-1">{label}</p>
+          <p className="text-2xl font-bold text-neutral-900">{value}</p>
+          {sub && <p className="text-[11px] text-neutral-400 mt-1">{sub}</p>}
+        </div>
+        <div className={`p-2 rounded-xl shrink-0 ${iconBg}`}>
+          <Icon className={`size-4 ${iconColor}`} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Main page ─────────────────────────────────────────────────────────────────
 export function Properties() {
   usePageTitle("Properties");
@@ -208,6 +318,8 @@ export function Properties() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<"ALL" | "PUBLISHED" | "DRAFT">("ALL");
+  const [typeFilter, setTypeFilter] = useState("ALL");
+  const [view, setView] = useState<"grid" | "list">("grid");
 
   const fetchProperties = async () => {
     setLoading((prev) => prev || properties.length === 0);
@@ -223,19 +335,38 @@ export function Properties() {
 
   usePolling(fetchProperties, 300_000);
 
+  // ── Derived stats ────────────────────────────────────────────────────────
+  const totalProperties     = properties.length;
+  const totalUnitsAvailable = properties.reduce((s, p) => s + (p.available_units ?? 0), 0);
+  const totalUnitsSold      = properties.reduce((s, p) => s + (p.subscription_count ?? p.subscriptions ?? 0), 0);
+  const totalUnitsPending   = properties.reduce((s, p) => s + (p.pending_units ?? 0), 0);
+
+  const publishedCount = properties.filter((p) => p.status === "PUBLISHED" || p.status === "published").length;
+  const draftCount     = properties.filter((p) => p.status === "DRAFT" || p.status === "draft").length;
+
+  const typeOptions = Array.from(
+    new Set(properties.map((p) => p.property_type ?? p.type).filter(Boolean))
+  ).sort() as string[];
+
   const filtered = properties.filter((p) => {
+    const q = search.toLowerCase();
     const matchSearch =
-      p.name?.toLowerCase().includes(search.toLowerCase()) ||
-      (p.property_type ?? p.type ?? "").toLowerCase().includes(search.toLowerCase());
+      !q ||
+      p.name?.toLowerCase().includes(q) ||
+      (p.property_type ?? p.type ?? "").toLowerCase().includes(q) ||
+      p.location?.city?.toLowerCase().includes(q) ||
+      p.location?.state?.toLowerCase().includes(q) ||
+      p.location?.address?.toLowerCase().includes(q);
     const matchStatus =
       statusFilter === "ALL" ||
       (statusFilter === "PUBLISHED" && (p.status === "PUBLISHED" || p.status === "published")) ||
       (statusFilter === "DRAFT" && (p.status === "DRAFT" || p.status === "draft"));
-    return matchSearch && matchStatus;
+    const matchType =
+      typeFilter === "ALL" || (p.property_type ?? p.type) === typeFilter;
+    return matchSearch && matchStatus && matchType;
   });
 
-  const publishedCount = properties.filter((p) => p.status === "PUBLISHED" || p.status === "published").length;
-  const draftCount = properties.filter((p) => p.status === "DRAFT" || p.status === "draft").length;
+  const isInitialLoad = loading && properties.length === 0;
 
   return (
     <div className="flex flex-col min-h-[calc(100vh-60px)] w-full">
@@ -265,9 +396,19 @@ export function Properties() {
       </div>
 
       <div className="p-4 sm:p-6 lg:p-8 space-y-5 flex-1">
-        {loading && properties.length === 0 ? (
-          /* Skeleton grid */
+        {isInitialLoad ? (
+          /* Skeleton */
           <>
+            {/* Stats skeleton */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="bg-white rounded-xl border border-neutral-100 p-4 shadow-sm">
+                  <Skeleton className="h-3 w-24 rounded bg-neutral-100 mb-3" />
+                  <Skeleton className="h-7 w-12 rounded bg-neutral-100 mb-2" />
+                  <Skeleton className="h-3 w-28 rounded bg-neutral-100" />
+                </div>
+              ))}
+            </div>
             <div className="flex flex-col sm:flex-row items-center gap-2.5">
               <Skeleton className="h-9 w-full sm:w-80 rounded-lg bg-neutral-100" />
               <Skeleton className="h-9 w-24 rounded-lg bg-neutral-100" />
@@ -299,12 +440,57 @@ export function Properties() {
           </>
         ) : (
           <>
-            {/* Search + filter bar */}
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
+            {/* ── Stats row ─────────────────────────────────────────────── */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              <StatCard
+                label="Total Properties"
+                value={totalProperties}
+                sub={`${publishedCount} published · ${draftCount} draft`}
+                icon={Home}
+                accentBg="bg-blue-500"
+                iconBg="bg-blue-50"
+                iconColor="text-blue-600"
+                loading={false}
+              />
+              <StatCard
+                label="Units Available"
+                value={totalUnitsAvailable}
+                sub="Across all properties"
+                icon={Package}
+                accentBg="bg-emerald-500"
+                iconBg="bg-emerald-50"
+                iconColor="text-emerald-600"
+                loading={false}
+              />
+              <StatCard
+                label="Units Sold"
+                value={totalUnitsSold}
+                sub="Active subscriptions"
+                icon={TrendingUp}
+                accentBg="bg-violet-500"
+                iconBg="bg-violet-50"
+                iconColor="text-violet-600"
+                loading={false}
+              />
+              <StatCard
+                label="Pending Allocation"
+                value={totalUnitsPending}
+                sub="Awaiting assignment"
+                icon={AlertCircle}
+                accentBg="bg-amber-500"
+                iconBg="bg-amber-50"
+                iconColor="text-amber-600"
+                loading={false}
+              />
+            </div>
+
+            {/* ── Search + filter + view toggle ─────────────────────────── */}
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 flex-wrap">
+              {/* Search */}
               <div className="relative flex-1 sm:max-w-xs">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-neutral-400" />
                 <Input
-                  placeholder="Search properties…"
+                  placeholder="Search by name, location…"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   className="h-9 pl-9 text-[13px] bg-white border-neutral-200 focus-visible:ring-1 focus-visible:ring-emerald-500/30 focus-visible:border-emerald-400 rounded-lg"
@@ -327,13 +513,51 @@ export function Properties() {
                   </button>
                 ))}
               </div>
+
+              {/* Type filter */}
+              {typeOptions.length > 0 && (
+                <select
+                  value={typeFilter}
+                  onChange={(e) => setTypeFilter(e.target.value)}
+                  className="h-9 px-2.5 border border-neutral-200 bg-white rounded-lg text-[12px] text-neutral-700 focus:outline-none focus:ring-1 focus:ring-emerald-500/30 self-start sm:self-auto"
+                >
+                  <option value="ALL">All Types</option>
+                  {typeOptions.map((t) => (
+                    <option key={t} value={t}>
+                      {t.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}
+                    </option>
+                  ))}
+                </select>
+              )}
+
+              {/* Grid/List toggle */}
+              <div className="flex items-center gap-1 bg-neutral-100 rounded-lg p-1 self-start sm:self-auto ml-auto">
+                <button
+                  onClick={() => setView("grid")}
+                  title="Grid view"
+                  className={`p-1.5 rounded-md transition-all ${
+                    view === "grid" ? "bg-white text-neutral-900 shadow-sm" : "text-neutral-500 hover:text-neutral-700"
+                  }`}
+                >
+                  <LayoutGrid className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  onClick={() => setView("list")}
+                  title="List view"
+                  className={`p-1.5 rounded-md transition-all ${
+                    view === "list" ? "bg-white text-neutral-900 shadow-sm" : "text-neutral-500 hover:text-neutral-700"
+                  }`}
+                >
+                  <List className="w-3.5 h-3.5" />
+                </button>
+              </div>
             </div>
 
             {filtered.length === 0 ? (
               <EmptyState
                 icon={BuildingIcon}
-                title={search || statusFilter !== "ALL" ? "No matching properties" : "No properties yet"}
-                description={search || statusFilter !== "ALL"
+                title={search || statusFilter !== "ALL" || typeFilter !== "ALL" ? "No matching properties" : "No properties yet"}
+                description={search || statusFilter !== "ALL" || typeFilter !== "ALL"
                   ? "Try adjusting your search or filter."
                   : "Get started by adding your first property."}
                 action={
@@ -345,7 +569,8 @@ export function Properties() {
                   </Button>
                 }
               />
-            ) : (
+            ) : view === "grid" ? (
+              /* ── Grid view ─────────────────────────────────────────────── */
               <motion.div
                 variants={container} initial="hidden" animate="show"
                 className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5"
@@ -354,6 +579,38 @@ export function Properties() {
                   <PropertyCard key={property.id} property={property} />
                 ))}
               </motion.div>
+            ) : (
+              /* ── List view ─────────────────────────────────────────────── */
+              <div className="bg-white rounded-xl border border-neutral-100 overflow-hidden shadow-[0_1px_3px_rgba(0,0,0,0.06)]">
+                <div className="overflow-x-auto">
+                  <motion.table
+                    variants={container} initial="hidden" animate="show"
+                    className="w-full text-sm text-left"
+                  >
+                    <thead>
+                      <tr className="border-b border-neutral-100 bg-neutral-50/70">
+                        <th className="px-4 py-3 text-[10.5px] font-semibold tracking-wider text-neutral-400 uppercase whitespace-nowrap">Property</th>
+                        <th className="px-4 py-3 text-[10.5px] font-semibold tracking-wider text-neutral-400 uppercase whitespace-nowrap hidden sm:table-cell">Location</th>
+                        <th className="px-4 py-3 text-[10.5px] font-semibold tracking-wider text-neutral-400 uppercase whitespace-nowrap">Status</th>
+                        <th className="px-4 py-3 text-[10.5px] font-semibold tracking-wider text-neutral-400 uppercase whitespace-nowrap hidden md:table-cell">Total SQM</th>
+                        <th className="px-4 py-3 text-[10.5px] font-semibold tracking-wider text-neutral-400 uppercase whitespace-nowrap hidden lg:table-cell">Subscriptions</th>
+                        <th className="px-4 py-3 text-[10.5px] font-semibold tracking-wider text-neutral-400 uppercase whitespace-nowrap hidden lg:table-cell">Revenue</th>
+                        <th className="px-4 py-3 text-[10.5px] font-semibold tracking-wider text-neutral-400 uppercase text-right whitespace-nowrap">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filtered.map((property) => (
+                        <PropertyRow key={property.id} property={property} />
+                      ))}
+                    </tbody>
+                  </motion.table>
+                </div>
+                <div className="px-4 py-2.5 border-t border-neutral-50 bg-neutral-50/40">
+                  <p className="text-[11px] text-neutral-400">
+                    Showing {filtered.length} of {properties.length} propert{properties.length !== 1 ? "ies" : "y"}
+                  </p>
+                </div>
+              </div>
             )}
           </>
         )}

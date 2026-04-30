@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
 import { usePolling } from "../hooks/usePolling";
 import { usePageTitle } from "../hooks/usePageTitle";
@@ -63,12 +63,6 @@ function subStatusConfig(val?: string | null) {
   return STATUS_CONFIG[val.toUpperCase() as SubStatus] ?? null;
 }
 
-// ─── Purchase status config (kept for AddCustomerModal) ────────────────────────
-const PURCHASE_STATUSES = [
-  { value: "BOOKED",            label: "Booked",            cls: "bg-amber-50 text-amber-700 border-amber-100" },
-  { value: "SOLD",              label: "Sold",              cls: "bg-blue-50 text-blue-700 border-blue-100" },
-  { value: "PAYMENT_COMPLETED", label: "Payment Completed", cls: "bg-emerald-50 text-emerald-700 border-emerald-100" },
-];
 
 // ─── Filter options ────────────────────────────────────────────────────────────
 const STATUS_FILTERS = [
@@ -93,46 +87,70 @@ interface AddCustomerModalProps {
   onCreated: () => void;
 }
 
+interface PropertyOption { id: string; name: string; pricing_plans: { id: string; plan_name: string; land_size: string; total_price: string; payment_type: string; is_active: boolean }[] }
+
 function AddCustomerModal({ onClose, onCreated }: AddCustomerModalProps) {
   const [form, setForm] = useState({
-    name: "",
-    email: "",
-    phone: "",
-    purchase_status: "",
+    full_name: "", email: "", phone: "", address: "",
+    next_of_kin_name: "", next_of_kin_phone: "", next_of_kin_relationship: "",
+    referral_source: "", referral_code: "",
+    property_id: "", pricing_plan_id: "",
   });
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [properties, setProperties] = useState<PropertyOption[]>([]);
+  const [showAdvanced, setShowAdvanced] = useState(false);
 
-  const validate = () => {
-    const e: Record<string, string> = {};
-    if (!form.name.trim())  e.name  = "Full name is required.";
-    if (!form.email.trim()) e.email = "Email address is required.";
-    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email))
-      e.email = "Enter a valid email address.";
-    if (!form.phone.trim()) e.phone = "Phone number is required.";
-    return e;
-  };
+  useEffect(() => {
+    api.properties.list().then((list: any[]) => {
+      setProperties(
+        list
+          .filter((p) => p.status === "PUBLISHED" || p.status === "published")
+          .map((p) => ({ id: p.id, name: p.name, pricing_plans: p.pricing_plans ?? [] }))
+      );
+    }).catch(() => {});
+  }, []);
+
+  const selectedProperty = properties.find((p) => p.id === form.property_id);
+  const activePlans = selectedProperty?.pricing_plans.filter((pl) => pl.is_active) ?? [];
 
   const set = (field: string, value: string) => {
     setForm((f) => ({ ...f, [field]: value }));
     setErrors((e) => { const n = { ...e }; delete n[field]; return n; });
   };
 
+  const fmt = (v: string) => v ? `₦${Number(v).toLocaleString("en-NG")}` : "";
+
+  const validate = () => {
+    const e: Record<string, string> = {};
+    if (!form.full_name.trim()) e.full_name = "Full name is required.";
+    if (!form.email.trim()) e.email = "Email address is required.";
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) e.email = "Enter a valid email address.";
+    if (!form.phone.trim()) e.phone = "Phone number is required.";
+    return e;
+  };
+
   const handleSubmit = async () => {
     const errs = validate();
     if (Object.keys(errs).length) { setErrors(errs); return; }
-
     setSaving(true);
     try {
       const payload: any = {
-        full_name: form.name.trim(),
-        email:     form.email.trim().toLowerCase(),
-        phone:     form.phone.trim(),
+        full_name:   form.full_name.trim(),
+        email:       form.email.trim().toLowerCase(),
+        phone:       form.phone.trim(),
       };
-      if (form.purchase_status) payload.purchase_status = form.purchase_status;
+      if (form.address.trim())                 payload.address = form.address.trim();
+      if (form.next_of_kin_name.trim())        payload.next_of_kin_name = form.next_of_kin_name.trim();
+      if (form.next_of_kin_phone.trim())       payload.next_of_kin_phone = form.next_of_kin_phone.trim();
+      if (form.next_of_kin_relationship.trim()) payload.next_of_kin_relationship = form.next_of_kin_relationship.trim();
+      if (form.referral_source.trim())         payload.referral_source = form.referral_source.trim();
+      if (form.referral_code.trim())           payload.referral_code = form.referral_code.trim();
+      if (form.property_id)                    payload.property_id = form.property_id;
+      if (form.pricing_plan_id)                payload.pricing_plan_id = form.pricing_plan_id;
 
       await api.customers.create(payload);
-      toast.success(`Customer "${form.name}" added successfully.`);
+      toast.success(`Customer "${form.full_name}" added successfully.`);
       onCreated();
       onClose();
     } catch (err: any) {
@@ -142,128 +160,151 @@ function AddCustomerModal({ onClose, onCreated }: AddCustomerModalProps) {
     }
   };
 
+  const inputCls = (hasError?: boolean) =>
+    `w-full px-3 py-2 border rounded-lg text-[13px] focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400 transition-colors ${
+      hasError ? "border-red-400 bg-red-50" : "border-neutral-300 bg-white"
+    }`;
+
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl max-w-md w-full p-6 shadow-xl">
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
+      <div className="bg-white rounded-xl max-w-lg w-full shadow-xl my-auto">
         {/* Header */}
-        <div className="flex items-center justify-between mb-5">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-100">
           <div>
             <h3 className="text-[15px] font-semibold text-neutral-900">Add Customer</h3>
-            <p className="text-[12px] text-neutral-400 mt-0.5">Fill in the customer details below.</p>
+            <p className="text-[12px] text-neutral-400 mt-0.5">Fill in the customer's details below.</p>
           </div>
-          <button
-            onClick={onClose}
-            className="p-1.5 hover:bg-neutral-100 rounded-lg transition-colors"
-          >
+          <button onClick={onClose} className="p-1.5 hover:bg-neutral-100 rounded-lg transition-colors">
             <X className="w-4 h-4 text-neutral-500" />
           </button>
         </div>
 
-        <div className="space-y-4">
-          {/* Full Name */}
-          <div>
-            <label className="block text-[12.5px] font-medium text-neutral-700 mb-1.5">
-              Full Name <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="text"
-              value={form.name}
-              onChange={(e) => set("name", e.target.value)}
-              placeholder="e.g. John Adebayo"
-              className={`w-full px-3 py-2 border rounded-lg text-[13px] focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400 transition-colors ${
-                errors.name ? "border-red-400 bg-red-50" : "border-neutral-300 bg-white"
-              }`}
-            />
-            {errors.name && (
-              <p className="text-[11px] text-red-600 mt-1 flex items-center gap-1">
-                <AlertCircle className="w-3 h-3" /> {errors.name}
-              </p>
-            )}
+        <div className="p-6 space-y-5 max-h-[70vh] overflow-y-auto">
+          {/* ── Basic Info ── */}
+          <div className="space-y-4">
+            <p className="text-[11px] font-bold text-neutral-400 uppercase tracking-wider">Customer Information</p>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="sm:col-span-2">
+                <label className="block text-[12px] font-medium text-neutral-700 mb-1.5">Full Name <span className="text-red-500">*</span></label>
+                <input type="text" value={form.full_name} onChange={(e) => set("full_name", e.target.value)}
+                  placeholder="e.g. John Adebayo" className={inputCls(!!errors.full_name)} />
+                {errors.full_name && <p className="text-[11px] text-red-600 mt-1 flex items-center gap-1"><AlertCircle className="w-3 h-3" /> {errors.full_name}</p>}
+              </div>
+              <div>
+                <label className="block text-[12px] font-medium text-neutral-700 mb-1.5">Email <span className="text-red-500">*</span></label>
+                <input type="email" value={form.email} onChange={(e) => set("email", e.target.value)}
+                  placeholder="john@example.com" className={inputCls(!!errors.email)} />
+                {errors.email && <p className="text-[11px] text-red-600 mt-1 flex items-center gap-1"><AlertCircle className="w-3 h-3" /> {errors.email}</p>}
+              </div>
+              <div>
+                <label className="block text-[12px] font-medium text-neutral-700 mb-1.5">Phone <span className="text-red-500">*</span></label>
+                <input type="tel" value={form.phone} onChange={(e) => set("phone", e.target.value)}
+                  placeholder="08012345678" className={inputCls(!!errors.phone)} />
+                {errors.phone && <p className="text-[11px] text-red-500 mt-1 flex items-center gap-1"><AlertCircle className="w-3 h-3" /> {errors.phone}</p>}
+              </div>
+              <div className="sm:col-span-2">
+                <label className="block text-[12px] font-medium text-neutral-700 mb-1.5">Address <span className="text-neutral-400 text-[11px]">(optional)</span></label>
+                <input type="text" value={form.address} onChange={(e) => set("address", e.target.value)}
+                  placeholder="e.g. 12 Allen Ave, Ikeja" className={inputCls()} />
+              </div>
+            </div>
           </div>
 
-          {/* Email */}
-          <div>
-            <label className="block text-[12.5px] font-medium text-neutral-700 mb-1.5">
-              Email Address <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="email"
-              value={form.email}
-              onChange={(e) => set("email", e.target.value)}
-              placeholder="e.g. john@example.com"
-              className={`w-full px-3 py-2 border rounded-lg text-[13px] focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400 transition-colors ${
-                errors.email ? "border-red-400 bg-red-50" : "border-neutral-300 bg-white"
-              }`}
-            />
-            {errors.email && (
-              <p className="text-[11px] text-red-600 mt-1 flex items-center gap-1">
-                <AlertCircle className="w-3 h-3" /> {errors.email}
-              </p>
-            )}
-          </div>
+          {/* ── Property Subscription ── */}
+          {properties.length > 0 && (
+            <div className="space-y-3">
+              <p className="text-[11px] font-bold text-neutral-400 uppercase tracking-wider">Property Subscription <span className="normal-case font-normal">(optional)</span></p>
+              <div>
+                <label className="block text-[12px] font-medium text-neutral-700 mb-1.5">Select Property</label>
+                <select value={form.property_id}
+                  onChange={(e) => { set("property_id", e.target.value); set("pricing_plan_id", ""); }}
+                  className={inputCls()}>
+                  <option value="">— None —</option>
+                  {properties.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                </select>
+              </div>
+              {form.property_id && activePlans.length > 0 && (
+                <div>
+                  <label className="block text-[12px] font-medium text-neutral-700 mb-1.5">Select Plan / Land Size</label>
+                  <div className="space-y-1.5">
+                    {activePlans.map((plan) => (
+                      <label key={plan.id}
+                        className={`flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg border cursor-pointer transition-colors ${
+                          form.pricing_plan_id === plan.id
+                            ? "border-emerald-400 bg-emerald-50/50"
+                            : "border-neutral-200 hover:border-emerald-200"
+                        }`}>
+                        <div className="flex items-center gap-2.5">
+                          <input type="radio" name="pricing_plan" value={plan.id}
+                            checked={form.pricing_plan_id === plan.id}
+                            onChange={(e) => set("pricing_plan_id", e.target.value)}
+                            className="accent-emerald-600" />
+                          <div>
+                            <p className="text-[13px] font-semibold text-neutral-900">{plan.plan_name}</p>
+                            <p className="text-[11px] text-neutral-400">{plan.land_size} sqm · {plan.payment_type === "INSTALLMENT" ? "Installment" : "Outright"}</p>
+                          </div>
+                        </div>
+                        <span className="text-[13px] font-bold text-emerald-700 shrink-0">{fmt(plan.total_price)}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
-          {/* Phone */}
+          {/* ── Advanced (collapsible) ── */}
           <div>
-            <label className="block text-[12.5px] font-medium text-neutral-700 mb-1.5">
-              Phone Number <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="tel"
-              value={form.phone}
-              onChange={(e) => set("phone", e.target.value)}
-              placeholder="e.g. 08012345678"
-              className={`w-full px-3 py-2 border rounded-lg text-[13px] focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400 transition-colors ${
-                errors.phone ? "border-red-400 bg-red-50" : "border-neutral-300 bg-white"
-              }`}
-            />
-            {errors.phone && (
-              <p className="text-[11px] text-red-500 mt-1 flex items-center gap-1">
-                <AlertCircle className="w-3 h-3" /> {errors.phone}
-              </p>
-            )}
-          </div>
+            <button type="button" onClick={() => setShowAdvanced((v) => !v)}
+              className="flex items-center gap-1.5 text-[12px] font-semibold text-neutral-500 hover:text-neutral-700 transition-colors">
+              <span className={`transition-transform ${showAdvanced ? "rotate-90" : ""}`}>▶</span>
+              Additional Details (Next of Kin, Referral)
+            </button>
 
-          {/* Purchase Status */}
-          <div>
-            <label className="block text-[12.5px] font-medium text-neutral-700 mb-1.5">
-              Purchase Status{" "}
-              <span className="text-neutral-400 text-[11px]">(optional)</span>
-            </label>
-            <select
-              value={form.purchase_status}
-              onChange={(e) => set("purchase_status", e.target.value)}
-              className="w-full px-3 py-2 border border-neutral-300 bg-white rounded-lg text-[13px] focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400 transition-colors"
-            >
-              <option value="">— None —</option>
-              {PURCHASE_STATUSES.map((s) => (
-                <option key={s.value} value={s.value}>
-                  {s.label}
-                </option>
-              ))}
-            </select>
+            {showAdvanced && (
+              <div className="mt-3 space-y-3 pl-4 border-l-2 border-neutral-100">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[12px] font-medium text-neutral-700 mb-1.5">Next of Kin Name</label>
+                    <input type="text" value={form.next_of_kin_name} onChange={(e) => set("next_of_kin_name", e.target.value)}
+                      placeholder="e.g. Jane Adebayo" className={inputCls()} />
+                  </div>
+                  <div>
+                    <label className="block text-[12px] font-medium text-neutral-700 mb-1.5">Next of Kin Phone</label>
+                    <input type="tel" value={form.next_of_kin_phone} onChange={(e) => set("next_of_kin_phone", e.target.value)}
+                      placeholder="08011112222" className={inputCls()} />
+                  </div>
+                  <div>
+                    <label className="block text-[12px] font-medium text-neutral-700 mb-1.5">Relationship</label>
+                    <input type="text" value={form.next_of_kin_relationship} onChange={(e) => set("next_of_kin_relationship", e.target.value)}
+                      placeholder="e.g. Spouse" className={inputCls()} />
+                  </div>
+                  <div>
+                    <label className="block text-[12px] font-medium text-neutral-700 mb-1.5">Referral Source</label>
+                    <input type="text" value={form.referral_source} onChange={(e) => set("referral_source", e.target.value)}
+                      placeholder="e.g. Facebook, Friend" className={inputCls()} />
+                  </div>
+                  <div>
+                    <label className="block text-[12px] font-medium text-neutral-700 mb-1.5">Referral Code</label>
+                    <input type="text" value={form.referral_code} onChange={(e) => set("referral_code", e.target.value)}
+                      placeholder="e.g. REF1234" className={inputCls()} />
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
         {/* Actions */}
-        <div className="flex gap-2.5 mt-6">
-          <button
-            onClick={onClose}
-            className="flex-1 px-4 py-2.5 border border-neutral-200 text-neutral-700 rounded-lg text-[13px] font-medium hover:bg-neutral-50 transition-colors"
-          >
+        <div className="flex gap-2.5 px-6 pb-6">
+          <button onClick={onClose}
+            className="flex-1 px-4 py-2.5 border border-neutral-200 text-neutral-700 rounded-lg text-[13px] font-medium hover:bg-neutral-50 transition-colors">
             Cancel
           </button>
-          <button
-            onClick={handleSubmit}
-            disabled={saving}
-            className="flex-1 px-4 py-2.5 bg-emerald-600 text-white rounded-lg text-[13px] font-medium hover:bg-emerald-700 disabled:opacity-60 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
-          >
-            {saving ? (
-              <>
-                <Loader2 className="w-3.5 h-3.5 animate-spin" /> Saving…
-              </>
-            ) : (
-              <>Add Customer</>
-            )}
+          <button onClick={handleSubmit} disabled={saving}
+            className="flex-1 px-4 py-2.5 bg-emerald-600 text-white rounded-lg text-[13px] font-medium hover:bg-emerald-700 disabled:opacity-60 transition-colors flex items-center justify-center gap-2">
+            {saving ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Saving…</> : <>Add Customer</>}
           </button>
         </div>
       </div>
@@ -748,6 +789,7 @@ export function Customers() {
                       <th className="px-5 py-3 text-[10.5px] font-semibold tracking-wider text-neutral-400 uppercase whitespace-nowrap hidden xl:table-cell">Locked Price</th>
                       <th className="px-5 py-3 text-[10.5px] font-semibold tracking-wider text-neutral-400 uppercase whitespace-nowrap hidden xl:table-cell">Amount Paid</th>
                       <th className="px-5 py-3 text-[10.5px] font-semibold tracking-wider text-neutral-400 uppercase whitespace-nowrap hidden xl:table-cell">Balance</th>
+                      <th className="px-5 py-3 text-[10.5px] font-semibold tracking-wider text-neutral-400 uppercase whitespace-nowrap hidden xl:table-cell">Next Due Date</th>
                       <th className="px-5 py-3 text-[10.5px] font-semibold tracking-wider text-neutral-400 uppercase whitespace-nowrap">Status</th>
                       <th className="px-5 py-3 text-[10.5px] font-semibold tracking-wider text-neutral-400 uppercase text-right whitespace-nowrap">Actions</th>
                     </tr>
@@ -792,6 +834,13 @@ export function Customers() {
                           </td>
                           <td className="px-5 py-3.5 whitespace-nowrap hidden xl:table-cell">
                             <span className={`text-[12.5px] font-medium ${ps?.balance > 0 ? "text-red-600" : "text-neutral-700"}`}>{fmt(ps?.balance)}</span>
+                          </td>
+                          <td className="px-5 py-3.5 whitespace-nowrap hidden xl:table-cell">
+                            <span className="text-[12.5px] text-neutral-700">
+                              {ps?.next_due_date
+                                ? new Date(ps.next_due_date).toLocaleDateString("en-NG", { day: "numeric", month: "short", year: "numeric" })
+                                : "—"}
+                            </span>
                           </td>
                           <td className="px-5 py-3.5 whitespace-nowrap">
                             {statusCfg ? (

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Search, Mail, UserPlus, Loader2, X } from "lucide-react";
+import { Search, Mail, UserPlus, Loader2, X, Check, Copy } from "lucide-react";
 import { toast } from "sonner";
 import { api } from "../../../services/api";
 import { Badge } from "../../../components/ui/badge";
@@ -23,6 +23,8 @@ export function PeopleSettings() {
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole,  setInviteRole]  = useState("ADMIN");
   const [inviting,    setInviting]    = useState(false);
+  const [inviteLink,  setInviteLink]  = useState<string | null>(null);
+  const [linkCopied,  setLinkCopied]  = useState(false);
 
   const fetchMembers = () => {
     setLoading(true);
@@ -46,16 +48,35 @@ export function PeopleSettings() {
     if (!inviteEmail.trim()) return;
     setInviting(true);
     try {
-      await api.workspaces.invite({ email: inviteEmail.trim(), role: inviteRole });
+      const res = await api.workspaces.invite({ email: inviteEmail.trim(), role: inviteRole });
       toast.success(`Invitation sent to ${inviteEmail}`);
-      setInviteEmail("");
-      setShowInvite(false);
+      if (res?.token) {
+        setInviteLink(`${window.location.origin}/accept-invite/${res.token}`);
+      } else {
+        setInviteEmail("");
+        setShowInvite(false);
+      }
       fetchMembers();
     } catch (err: any) {
       toast.error(err.message ?? "Failed to send invitation.");
     } finally {
       setInviting(false);
     }
+  };
+
+  const copyInviteLink = () => {
+    if (!inviteLink) return;
+    navigator.clipboard.writeText(inviteLink).then(() => {
+      setLinkCopied(true);
+      setTimeout(() => setLinkCopied(false), 1500);
+    });
+  };
+
+  const closeInviteModal = () => {
+    setShowInvite(false);
+    setInviteEmail("");
+    setInviteLink(null);
+    setLinkCopied(false);
   };
 
   // Serializer returns flat fields: user_name, user_email (not nested user object)
@@ -150,52 +171,79 @@ export function PeopleSettings() {
           <div className="bg-white rounded-xl max-w-md w-full p-6 shadow-xl">
             <div className="flex items-center justify-between mb-5">
               <h3 className="font-semibold text-neutral-900">Invite Team Member</h3>
-              <button onClick={() => setShowInvite(false)} className="p-1 hover:bg-neutral-100 rounded-md">
+              <button onClick={closeInviteModal} className="p-1 hover:bg-neutral-100 rounded-md">
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-neutral-700 mb-1.5">Email Address</label>
-                <input
-                  type="email"
-                  value={inviteEmail}
-                  onChange={(e) => setInviteEmail(e.target.value)}
-                  placeholder="colleague@company.com"
-                  className="w-full px-4 py-2 border border-neutral-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                />
+            {inviteLink ? (
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 p-3 rounded-lg bg-emerald-50 border border-emerald-100">
+                  <Check className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <p className="text-sm text-emerald-800">Invitation sent to <strong>{inviteEmail}</strong></p>
+                </div>
+                <div>
+                  <p className="text-xs font-medium text-neutral-500 mb-1.5">Share this link if the email doesn't arrive</p>
+                  <div className="flex items-center gap-2">
+                    <input readOnly value={inviteLink}
+                      className="flex-1 px-3 py-2 text-xs border border-neutral-200 rounded-md bg-neutral-50 text-neutral-600 truncate" />
+                    <button onClick={copyInviteLink}
+                      className="shrink-0 flex items-center gap-1.5 px-3 py-2 bg-emerald-600 text-white text-sm font-medium rounded-md hover:bg-emerald-700 transition-colors">
+                      {linkCopied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                      {linkCopied ? "Copied!" : "Copy"}
+                    </button>
+                  </div>
+                </div>
+                <button onClick={closeInviteModal}
+                  className="w-full px-4 py-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 rounded-md text-sm transition-colors">
+                  Done
+                </button>
               </div>
+            ) : (
+              <>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-neutral-700 mb-1.5">Email Address</label>
+                    <input
+                      type="email"
+                      value={inviteEmail}
+                      onChange={(e) => setInviteEmail(e.target.value)}
+                      placeholder="colleague@company.com"
+                      className="w-full px-4 py-2 border border-neutral-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    />
+                  </div>
 
-              <div>
-                <label className="block text-sm font-medium text-neutral-700 mb-1.5">Role</label>
-                <select
-                  value={inviteRole}
-                  onChange={(e) => setInviteRole(e.target.value)}
-                  className="w-full px-4 py-2 border border-neutral-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white"
-                >
-                  <option value="ADMIN">Admin</option>
-                  <option value="SALES_REP">Sales Representative</option>
-                </select>
-              </div>
-            </div>
+                  <div>
+                    <label className="block text-sm font-medium text-neutral-700 mb-1.5">Role</label>
+                    <select
+                      value={inviteRole}
+                      onChange={(e) => setInviteRole(e.target.value)}
+                      className="w-full px-4 py-2 border border-neutral-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white"
+                    >
+                      <option value="ADMIN">Admin</option>
+                      <option value="SALES_REP">Customer Rep / Sales Rep</option>
+                    </select>
+                  </div>
+                </div>
 
-            <div className="flex gap-3 mt-6">
-              <button
-                onClick={() => setShowInvite(false)}
-                className="flex-1 px-4 py-2 bg-white border border-neutral-300 text-neutral-700 rounded-md hover:bg-neutral-50 text-sm transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleInvite}
-                disabled={inviting || !inviteEmail.trim()}
-                className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-md hover:bg-emerald-700 disabled:opacity-60 text-sm transition-colors"
-              >
-                {inviting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Mail className="w-4 h-4" />}
-                {inviting ? "Sending…" : "Send Invite"}
-              </button>
-            </div>
+                <div className="flex gap-3 mt-6">
+                  <button
+                    onClick={closeInviteModal}
+                    className="flex-1 px-4 py-2 bg-white border border-neutral-300 text-neutral-700 rounded-md hover:bg-neutral-50 text-sm transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleInvite}
+                    disabled={inviting || !inviteEmail.trim()}
+                    className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-md hover:bg-emerald-700 disabled:opacity-60 text-sm transition-colors"
+                  >
+                    {inviting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Mail className="w-4 h-4" />}
+                    {inviting ? "Sending…" : "Send Invite"}
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}

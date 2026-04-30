@@ -76,20 +76,32 @@ function InviteModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: (
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [inviteLink, setInviteLink] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError("");
     try {
-      await api.workspaces.invite({ email, role: "SALES_REP" });
+      const res = await api.workspaces.invite({ email, role: "SALES_REP" });
+      if (res?.token) {
+        setInviteLink(`${window.location.origin}/accept-invite/${res.token}`);
+      }
       onSuccess();
-      onClose();
     } catch (err: any) {
       setError(err.message ?? "Failed to send invite");
     } finally {
       setLoading(false);
     }
+  };
+
+  const copyLink = () => {
+    if (!inviteLink) return;
+    navigator.clipboard.writeText(inviteLink).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    });
   };
 
   return (
@@ -98,27 +110,57 @@ function InviteModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: (
         <div className="flex items-center justify-between p-5 border-b border-neutral-100">
           <div>
             <h3 className="text-[15px] font-bold text-neutral-900">Invite Customer Rep</h3>
-            <p className="text-[12px] text-neutral-500 mt-0.5">Send an invitation email</p>
+            <p className="text-[12px] text-neutral-500 mt-0.5">
+              {inviteLink ? "Invitation sent" : "Send an invitation email"}
+            </p>
           </div>
           <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-neutral-100 text-neutral-400">
             <X className="size-4" />
           </button>
         </div>
-        <form onSubmit={handleSubmit} className="p-5 space-y-4">
-          <div>
-            <label className="block text-[11px] font-semibold text-neutral-600 mb-1">Email Address *</label>
-            <input
-              type="email" required value={email} onChange={(e) => setEmail(e.target.value)}
-              placeholder="rep@example.com"
-              className="w-full px-3 py-2.5 text-[13px] border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
-            />
+
+        {inviteLink ? (
+          <div className="p-5 space-y-4">
+            <div className="flex items-center gap-2 p-2.5 rounded-xl bg-emerald-50 border border-emerald-100">
+              <Check className="size-4 text-emerald-600 shrink-0" />
+              <p className="text-[12px] text-emerald-800 font-medium">
+                Invitation sent to <strong>{email}</strong>
+              </p>
+            </div>
+            <div>
+              <p className="text-[11px] font-semibold text-neutral-500 mb-1.5">Invite link (share if email doesn't arrive)</p>
+              <div className="flex items-center gap-2">
+                <input readOnly value={inviteLink}
+                  className="flex-1 px-3 py-2 text-[11px] border border-neutral-200 rounded-lg bg-neutral-50 text-neutral-600 truncate" />
+                <button onClick={copyLink}
+                  className="shrink-0 px-3 py-2 bg-emerald-600 text-white text-[12px] font-semibold rounded-lg hover:bg-emerald-700 transition-colors flex items-center gap-1.5">
+                  {copied ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
+                  {copied ? "Copied!" : "Copy"}
+                </button>
+              </div>
+            </div>
+            <button onClick={onClose}
+              className="w-full py-2.5 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 text-[13px] font-semibold rounded-lg transition-colors">
+              Done
+            </button>
           </div>
-          {error && <p className="text-[12px] text-red-600 bg-red-50 rounded-lg px-3 py-2">{error}</p>}
-          <button type="submit" disabled={loading}
-            className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-[13px] font-semibold rounded-lg transition-colors">
-            {loading ? "Sending…" : "Send Invitation"}
-          </button>
-        </form>
+        ) : (
+          <form onSubmit={handleSubmit} className="p-5 space-y-4">
+            <div>
+              <label className="block text-[11px] font-semibold text-neutral-600 mb-1">Email Address *</label>
+              <input
+                type="email" required value={email} onChange={(e) => setEmail(e.target.value)}
+                placeholder="rep@example.com"
+                className="w-full px-3 py-2.5 text-[13px] border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              />
+            </div>
+            {error && <p className="text-[12px] text-red-600 bg-red-50 rounded-lg px-3 py-2">{error}</p>}
+            <button type="submit" disabled={loading}
+              className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-[13px] font-semibold rounded-lg transition-colors">
+              {loading ? "Sending…" : "Send Invitation"}
+            </button>
+          </form>
+        )}
       </div>
     </div>
   );

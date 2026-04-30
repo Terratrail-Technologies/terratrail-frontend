@@ -564,10 +564,12 @@ function InspectionConfigModal({ onClose }: { onClose: () => void }) {
   const [meetingPoint, setMeetingPoint] = useState("");
   const [virtualLink, setVirtualLink] = useState("");
   const [availableDays, setAvailableDays] = useState<string[]>([]);
-  const [timeFrom, setTimeFrom] = useState("09:00");
-  const [timeTo, setTimeTo] = useState("17:00");
+  // Multiple individual start times (replaces time_from/time_to range)
+  const [timeSlots, setTimeSlots] = useState<string[]>(["09:00"]);
+  const [newSlot, setNewSlot] = useState("10:00");
   const [maxPersons, setMaxPersons] = useState("20");
   const [notes, setNotes] = useState("");
+  const [saving, setSaving] = useState(false);
 
   const inputCls = "w-full px-3 py-2 text-[13px] border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400 bg-white";
 
@@ -585,27 +587,46 @@ function InspectionConfigModal({ onClose }: { onClose: () => void }) {
           setMeetingPoint(cfg.meeting_point ?? "");
           setVirtualLink(cfg.virtual_link ?? "");
           setAvailableDays(cfg.available_days ?? []);
-          setTimeFrom(cfg.time_from ?? "09:00");
-          setTimeTo(cfg.time_to ?? "17:00");
+          // Support both new time_slots array and legacy time_from/time_to
+          if (Array.isArray(cfg.time_slots) && cfg.time_slots.length > 0) {
+            setTimeSlots(cfg.time_slots);
+          } else if (cfg.time_from) {
+            setTimeSlots([cfg.time_from]);
+          } else {
+            setTimeSlots(["09:00"]);
+          }
           setMaxPersons(String(cfg.max_persons ?? "20"));
           setNotes(cfg.notes ?? "");
         } else {
           setMeetingPoint(""); setVirtualLink(""); setAvailableDays([]);
-          setTimeFrom("09:00"); setTimeTo("17:00"); setMaxPersons("20"); setNotes("");
+          setTimeSlots(["09:00"]); setMaxPersons("20"); setNotes("");
         }
       })
       .catch(() => {});
   }, [selectedPropId]);
 
+  const addSlot = () => {
+    if (!newSlot) return;
+    if (timeSlots.includes(newSlot)) { return; }
+    setTimeSlots((prev) => [...prev, newSlot].sort());
+  };
+
+  const removeSlot = (slot: string) =>
+    setTimeSlots((prev) => prev.filter((s) => s !== slot));
+
   const handleSave = async () => {
     if (!selectedPropId) { toast.error("Select a property first."); return; }
+    if (timeSlots.length === 0) { toast.error("Add at least one time slot."); return; }
+    setSaving(true);
     try {
       await api.properties.inspectionConfig.save(selectedPropId, {
         meeting_point: meetingPoint,
         virtual_link: virtualLink,
         available_days: availableDays,
-        time_from: timeFrom || null,
-        time_to: timeTo || null,
+        time_slots: timeSlots,
+        // keep legacy fields in sync so backend can support either
+        time_from: timeSlots[0] || null,
+        time_to: timeSlots[timeSlots.length - 1] || null,
         max_persons: Number(maxPersons) || 20,
         notes,
       });
@@ -613,6 +634,8 @@ function InspectionConfigModal({ onClose }: { onClose: () => void }) {
       onClose();
     } catch {
       toast.error("Failed to save settings. Please try again.");
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -672,15 +695,41 @@ function InspectionConfigModal({ onClose }: { onClose: () => void }) {
                 </div>
               </div>
 
-              {/* Time range */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-[11.5px] font-semibold text-neutral-600 mb-1.5">Available From</label>
-                  <input type="time" className={inputCls} value={timeFrom} onChange={(e) => setTimeFrom(e.target.value)} />
-                </div>
-                <div>
-                  <label className="block text-[11.5px] font-semibold text-neutral-600 mb-1.5">Available To</label>
-                  <input type="time" className={inputCls} value={timeTo} onChange={(e) => setTimeTo(e.target.value)} />
+              {/* Time slots (multiple start times) */}
+              <div>
+                <label className="block text-[11.5px] font-semibold text-neutral-600 mb-2">
+                  Available Time Slots <span className="text-red-500">*</span>
+                </label>
+                <p className="text-[11px] text-neutral-400 mb-2">Add individual start times. Customers will select from these slots.</p>
+
+                {/* Existing slots */}
+                {timeSlots.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 mb-2">
+                    {timeSlots.map((slot) => (
+                      <span key={slot}
+                        className="inline-flex items-center gap-1 px-2.5 py-1 bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-lg text-[12px] font-semibold">
+                        {slot}
+                        <button type="button" onClick={() => removeSlot(slot)}
+                          className="hover:text-red-500 transition-colors ml-0.5">
+                          <X className="size-3" />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+
+                {/* Add slot row */}
+                <div className="flex items-center gap-2">
+                  <input
+                    type="time"
+                    className="flex-1 px-3 py-2 text-[13px] border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400 bg-white"
+                    value={newSlot}
+                    onChange={(e) => setNewSlot(e.target.value)}
+                  />
+                  <button type="button" onClick={addSlot}
+                    className="px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-[12px] font-semibold rounded-lg transition-colors whitespace-nowrap">
+                    + Add Slot
+                  </button>
                 </div>
               </div>
 
@@ -703,7 +752,9 @@ function InspectionConfigModal({ onClose }: { onClose: () => void }) {
 
         <div className="flex gap-3 px-5 pb-5">
           <button onClick={onClose} className="flex-1 py-2.5 rounded-xl border border-neutral-200 text-[13px] font-medium text-neutral-600 hover:bg-neutral-50 transition-colors">Cancel</button>
-          <button onClick={handleSave} className="flex-1 py-2.5 rounded-xl bg-emerald-600 text-white text-[13px] font-semibold hover:bg-emerald-700 transition-colors shadow-sm">Save Settings</button>
+          <button onClick={handleSave} disabled={saving} className="flex-1 py-2.5 rounded-xl bg-emerald-600 text-white text-[13px] font-semibold hover:bg-emerald-700 disabled:opacity-60 transition-colors shadow-sm">
+            {saving ? "Saving…" : "Save Settings"}
+          </button>
         </div>
       </motion.div>
     </div>

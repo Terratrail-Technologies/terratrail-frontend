@@ -464,7 +464,7 @@ export const api = {
       ),
     activity: (page = 1) => request<any>(`/workspaces/activity/${buildParams({ page })}`),
     events: () => request<{ events: any[]; count: number }>("/workspaces/events/"),
-    billingPlans: () => request<any[]>("/workspaces/billing/plans/"),
+    billingPlans: () => request<{ plans: any[]; payment_details: any }>("/workspaces/billing/plans/"),
     billingUsage: () => request<any>("/workspaces/billing/usage/"),
     selectPlan: (data: { plan: string }) =>
       request<any>("/workspaces/billing/select/", { method: "POST", body: JSON.stringify(data) }),
