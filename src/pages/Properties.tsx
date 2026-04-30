@@ -1,10 +1,11 @@
 import { useState, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { usePolling } from "../hooks/usePolling";
 import { usePageTitle } from "../hooks/usePageTitle";
 import { Link, useNavigate } from "react-router";
 import {
   Plus, Search, MapPin, CheckCircle2, Clock,
-  Building as BuildingIcon, Loader2, MoreHorizontal, Pencil, Eye,
+  Building as BuildingIcon, Loader2, MoreHorizontal, Pencil, Eye, EyeOff,
   LayoutGrid, List, Home, TrendingUp, Package, AlertCircle,
 } from "lucide-react";
 import { Skeleton } from "../components/ui/skeleton";
@@ -26,62 +27,122 @@ const item = {
 } as const;
 
 // ── Property card 3-dot dropdown ─────────────────────────────────────────────
-function PropertyMenu({ propertyId }: { propertyId: string; onDelete?: (id: string) => void }) {
+function PropertyMenu({
+  propertyId,
+  status,
+  onRefresh,
+}: {
+  propertyId: string;
+  status?: string;
+  onRefresh?: () => void;
+}) {
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
+  const [menuPos, setMenuPos] = useState({ top: 0, right: 0 });
+  const btnRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    if (!open) return;
     const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+      if (!btnRef.current?.contains(e.target as Node) && !menuRef.current?.contains(e.target as Node))
+        setOpen(false);
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
-  }, []);
+  }, [open]);
+
+  const handleToggle = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!open && btnRef.current) {
+      const rect = btnRef.current.getBoundingClientRect();
+      setMenuPos({ top: rect.bottom + 4, right: window.innerWidth - rect.right });
+    }
+    setOpen((o) => !o);
+  };
+
+  const handlePublishToggle = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setOpen(false);
+    const isPublished = status === "PUBLISHED" || status === "published";
+    try {
+      if (isPublished) {
+        await api.properties.unpublish(propertyId);
+        toast.success("Property unpublished.");
+      } else {
+        await api.properties.publish(propertyId);
+        toast.success("Property published.");
+      }
+      onRefresh?.();
+    } catch (err: any) {
+      toast.error(err.message ?? "Action failed.");
+    }
+  };
+
+  const isPublished = status === "PUBLISHED" || status === "published";
 
   return (
-    <div ref={ref} className="relative" onClick={(e) => e.stopPropagation()}>
+    <div onClick={(e) => e.stopPropagation()}>
       <button
-        onClick={(e) => { e.stopPropagation(); setOpen((o) => !o); }}
+        ref={btnRef}
+        onClick={handleToggle}
         className="h-7 w-7 rounded-md flex items-center justify-center bg-white/80 backdrop-blur-sm text-neutral-500 hover:text-neutral-900 hover:bg-white border border-neutral-200/60 shadow-sm transition-all"
       >
         <MoreHorizontal className="w-3.5 h-3.5" />
       </button>
 
-      <AnimatePresence>
-        {open && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95, y: -4 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: -4 }}
-            transition={{ duration: 0.1 }}
-            className="absolute right-0 top-full mt-1 w-44 rounded-xl border border-neutral-100 bg-white shadow-lg shadow-neutral-900/10 z-50 overflow-hidden"
-          >
-            <div className="py-1">
-              <button
-                onClick={(e) => { e.stopPropagation(); setOpen(false); navigate(`/properties/${propertyId}/edit`); }}
-                className="w-full flex items-center gap-2.5 px-3.5 py-2 text-[12.5px] font-medium text-neutral-700 hover:bg-neutral-50 transition-colors"
-              >
-                <Pencil className="w-3.5 h-3.5 text-neutral-400" />
-                Edit Property
-              </button>
-              <button
-                onClick={(e) => { e.stopPropagation(); setOpen(false); navigate(`/properties/${propertyId}/preview`); }}
-                className="w-full flex items-center gap-2.5 px-3.5 py-2 text-[12.5px] font-medium text-neutral-700 hover:bg-neutral-50 transition-colors"
-              >
-                <Eye className="w-3.5 h-3.5 text-neutral-400" />
-                View Details
-              </button>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {createPortal(
+        <AnimatePresence>
+          {open && (
+            <motion.div
+              ref={menuRef}
+              initial={{ opacity: 0, scale: 0.95, y: -4 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: -4 }}
+              transition={{ duration: 0.1 }}
+              style={{ position: "fixed", top: menuPos.top, right: menuPos.right, zIndex: 9999 }}
+              className="w-44 rounded-xl border border-neutral-100 bg-white shadow-lg shadow-neutral-900/10 overflow-hidden"
+            >
+              <div className="py-1">
+                <button
+                  onClick={(e) => { e.stopPropagation(); setOpen(false); navigate(`/properties/${propertyId}/preview`); }}
+                  className="w-full flex items-center gap-2.5 px-3.5 py-2 text-[12.5px] font-medium text-neutral-700 hover:bg-neutral-50 transition-colors"
+                >
+                  <Eye className="w-3.5 h-3.5 text-neutral-400" />
+                  View Details
+                </button>
+                <button
+                  onClick={(e) => { e.stopPropagation(); setOpen(false); navigate(`/properties/${propertyId}/edit`); }}
+                  className="w-full flex items-center gap-2.5 px-3.5 py-2 text-[12.5px] font-medium text-neutral-700 hover:bg-neutral-50 transition-colors"
+                >
+                  <Pencil className="w-3.5 h-3.5 text-neutral-400" />
+                  Edit Property
+                </button>
+                {status !== undefined && (
+                  <button
+                    onClick={handlePublishToggle}
+                    className={`w-full flex items-center gap-2.5 px-3.5 py-2 text-[12.5px] font-medium transition-colors ${
+                      isPublished ? "text-amber-600 hover:bg-amber-50" : "text-emerald-600 hover:bg-emerald-50"
+                    }`}
+                  >
+                    {isPublished
+                      ? <EyeOff className="w-3.5 h-3.5" />
+                      : <CheckCircle2 className="w-3.5 h-3.5" />}
+                    {isPublished ? "Unpublish" : "Publish"}
+                  </button>
+                )}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>,
+        document.body
+      )}
     </div>
   );
 }
 
 // ── Property card (grid view) ─────────────────────────────────────────────────
-function PropertyCard({ property }: { property: any }) {
+function PropertyCard({ property, onRefresh }: { property: any; onRefresh: () => void }) {
   const navigate = useNavigate();
   const fmt = (n: number | string) => `₦${Number(n).toLocaleString("en-NG")}`;
   const isPublished = property.status === "PUBLISHED" || property.status === "published";
@@ -133,7 +194,7 @@ function PropertyCard({ property }: { property: any }) {
 
         {/* 3-dot menu */}
         <div className="absolute top-3 right-3">
-          <PropertyMenu propertyId={property.id} />
+          <PropertyMenu propertyId={property.id} status={property.status} onRefresh={onRefresh} />
         </div>
 
         {/* Dark overlay on hover */}
@@ -203,50 +264,90 @@ function PropertyCard({ property }: { property: any }) {
 }
 
 // ── Property row (list view) ──────────────────────────────────────────────────
-function PropertyRow({ property }: { property: any }) {
+function PropertyRow({ property, onRefresh }: { property: any; onRefresh: () => void }) {
   const navigate = useNavigate();
-  const fmt = (n: number | string) => `₦${Number(n).toLocaleString("en-NG")}`;
   const isPublished = property.status === "PUBLISHED" || property.status === "published";
   const typeLabel = (property.property_type ?? property.type ?? "")
     .replace(/_/g, " ")
     .replace(/\b\w/g, (c: string) => c.toUpperCase());
 
+  const totalUnits   = property.available_units ?? 0;
+  const unitsSold    = property.subscription_count ?? 0;
+  const unitsAvail   = Math.max(0, totalUnits - unitsSold);
+  const landSizesLabel = property.land_sizes?.length > 0
+    ? property.land_sizes.map((ls: any) => Number(ls.land_size).toLocaleString()).join(", ") + " SQM"
+    : "—";
+  const priceFrom = property.price_from ?? property.min_pricing_plan?.total_price;
+  const priceFmt  = priceFrom ? `₦${Number(priceFrom).toLocaleString("en-NG")}` : "—";
+
   return (
     <motion.tr
       variants={item}
-      onClick={() => navigate(`/properties/${property.id}/preview`)}
-      className="hover:bg-neutral-50/60 transition-colors cursor-pointer group border-b border-neutral-50 last:border-0"
+      className="hover:bg-neutral-50/60 transition-colors group border-b border-neutral-50 last:border-0"
     >
+      {/* Cover Image */}
       <td className="px-4 py-3 whitespace-nowrap">
-        <div className="flex items-center gap-3">
+        <button onClick={() => navigate(`/properties/${property.id}/preview`)} className="block">
           {property.featured_image ? (
             <img src={property.featured_image} alt={property.name}
-              className="h-10 w-14 object-cover rounded-lg border border-neutral-100 shrink-0" />
+              className="h-10 w-16 object-cover rounded-lg border border-neutral-100 shrink-0" />
           ) : (
-            <div className="h-10 w-14 rounded-lg bg-emerald-50 border border-neutral-100 flex items-center justify-center shrink-0">
+            <div className="h-10 w-16 rounded-lg bg-emerald-50 border border-neutral-100 flex items-center justify-center shrink-0">
               <BuildingIcon className="w-4 h-4 text-emerald-400" />
             </div>
           )}
-          <div className="min-w-0">
-            <div className="text-[13px] font-semibold text-neutral-900 group-hover:text-emerald-600 transition-colors truncate">
-              {property.name}
-            </div>
-            {typeLabel && (
-              <div className="text-[11px] text-emerald-700 font-medium">{typeLabel}</div>
-            )}
-          </div>
-        </div>
+        </button>
       </td>
-      <td className="px-4 py-3 whitespace-nowrap hidden sm:table-cell">
+      {/* Property Name */}
+      <td className="px-4 py-3 whitespace-nowrap">
+        <button onClick={() => navigate(`/properties/${property.id}/preview`)} className="text-left">
+          <div className="text-[13px] font-semibold text-neutral-900 group-hover:text-emerald-600 transition-colors max-w-[180px] truncate">
+            {property.name}
+          </div>
+        </button>
+      </td>
+      {/* Property Type */}
+      <td className="px-4 py-3 whitespace-nowrap hidden lg:table-cell">
+        {typeLabel
+          ? <span className="text-[11px] font-medium text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md">{typeLabel}</span>
+          : <span className="text-neutral-400">—</span>}
+      </td>
+      {/* Location */}
+      <td className="px-4 py-3 whitespace-nowrap hidden md:table-cell">
         <div className="flex items-center gap-1.5 text-[12.5px] text-neutral-500">
           <MapPin className="w-3 h-3 text-neutral-400 shrink-0" />
-          <span className="truncate max-w-[160px]">
+          <span className="truncate max-w-[140px]">
             {property.location?.city && property.location?.state
               ? `${property.location.city}, ${property.location.state}`
               : property.location?.city || property.location?.state || "—"}
           </span>
         </div>
       </td>
+      {/* Total SQM */}
+      <td className="px-4 py-3 whitespace-nowrap hidden lg:table-cell text-[12.5px] text-neutral-700">
+        {(property.total_sqms ?? 0).toLocaleString()} sqm
+      </td>
+      {/* Land Sizes */}
+      <td className="px-4 py-3 whitespace-nowrap hidden xl:table-cell text-[12px] text-neutral-600">
+        {landSizesLabel}
+      </td>
+      {/* Total Units */}
+      <td className="px-4 py-3 whitespace-nowrap hidden lg:table-cell text-[12.5px] text-neutral-700 text-center">
+        {totalUnits}
+      </td>
+      {/* Units Available */}
+      <td className="px-4 py-3 whitespace-nowrap hidden lg:table-cell text-[12.5px] font-medium text-emerald-600 text-center">
+        {unitsAvail}
+      </td>
+      {/* Units Sold */}
+      <td className="px-4 py-3 whitespace-nowrap hidden xl:table-cell text-[12.5px] font-medium text-violet-600 text-center">
+        {unitsSold}
+      </td>
+      {/* Price From */}
+      <td className="px-4 py-3 whitespace-nowrap hidden xl:table-cell text-[12.5px] font-semibold text-neutral-800">
+        {priceFmt}
+      </td>
+      {/* Status */}
       <td className="px-4 py-3 whitespace-nowrap">
         <Badge className={isPublished
           ? "bg-emerald-50 text-emerald-700 border border-emerald-100 text-[10.5px] gap-1"
@@ -255,17 +356,9 @@ function PropertyRow({ property }: { property: any }) {
           {isPublished ? "Published" : "Draft"}
         </Badge>
       </td>
-      <td className="px-4 py-3 whitespace-nowrap hidden md:table-cell text-[12.5px] text-neutral-700">
-        {(property.total_sqms ?? property.totalSqm ?? property.total_sqm ?? 0).toLocaleString()} sqm
-      </td>
-      <td className="px-4 py-3 whitespace-nowrap hidden lg:table-cell text-[12.5px] text-neutral-700">
-        {property.subscription_count ?? property.subscriptions ?? 0}
-      </td>
-      <td className="px-4 py-3 whitespace-nowrap hidden lg:table-cell text-[12.5px] font-semibold text-emerald-700">
-        {fmt(property.total_revenue ?? property.revenue ?? 0)}
-      </td>
+      {/* Actions */}
       <td className="px-4 py-3 whitespace-nowrap text-right" onClick={(e) => e.stopPropagation()}>
-        <PropertyMenu propertyId={property.id} />
+        <PropertyMenu propertyId={property.id} status={property.status} onRefresh={onRefresh} />
       </td>
     </motion.tr>
   );
@@ -576,7 +669,7 @@ export function Properties() {
                 className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5"
               >
                 {filtered.map((property) => (
-                  <PropertyCard key={property.id} property={property} />
+                  <PropertyCard key={property.id} property={property} onRefresh={fetchProperties} />
                 ))}
               </motion.div>
             ) : (
@@ -589,18 +682,23 @@ export function Properties() {
                   >
                     <thead>
                       <tr className="border-b border-neutral-100 bg-neutral-50/70">
-                        <th className="px-4 py-3 text-[10.5px] font-semibold tracking-wider text-neutral-400 uppercase whitespace-nowrap">Property</th>
-                        <th className="px-4 py-3 text-[10.5px] font-semibold tracking-wider text-neutral-400 uppercase whitespace-nowrap hidden sm:table-cell">Location</th>
+                        <th className="px-4 py-3 text-[10.5px] font-semibold tracking-wider text-neutral-400 uppercase whitespace-nowrap">Image</th>
+                        <th className="px-4 py-3 text-[10.5px] font-semibold tracking-wider text-neutral-400 uppercase whitespace-nowrap">Property Name</th>
+                        <th className="px-4 py-3 text-[10.5px] font-semibold tracking-wider text-neutral-400 uppercase whitespace-nowrap hidden lg:table-cell">Type</th>
+                        <th className="px-4 py-3 text-[10.5px] font-semibold tracking-wider text-neutral-400 uppercase whitespace-nowrap hidden md:table-cell">Location</th>
+                        <th className="px-4 py-3 text-[10.5px] font-semibold tracking-wider text-neutral-400 uppercase whitespace-nowrap hidden lg:table-cell">Total SQM</th>
+                        <th className="px-4 py-3 text-[10.5px] font-semibold tracking-wider text-neutral-400 uppercase whitespace-nowrap hidden xl:table-cell">Land Sizes</th>
+                        <th className="px-4 py-3 text-[10.5px] font-semibold tracking-wider text-neutral-400 uppercase whitespace-nowrap hidden lg:table-cell text-center">Total Units</th>
+                        <th className="px-4 py-3 text-[10.5px] font-semibold tracking-wider text-neutral-400 uppercase whitespace-nowrap hidden lg:table-cell text-center">Available</th>
+                        <th className="px-4 py-3 text-[10.5px] font-semibold tracking-wider text-neutral-400 uppercase whitespace-nowrap hidden xl:table-cell text-center">Sold</th>
+                        <th className="px-4 py-3 text-[10.5px] font-semibold tracking-wider text-neutral-400 uppercase whitespace-nowrap hidden xl:table-cell">Price From</th>
                         <th className="px-4 py-3 text-[10.5px] font-semibold tracking-wider text-neutral-400 uppercase whitespace-nowrap">Status</th>
-                        <th className="px-4 py-3 text-[10.5px] font-semibold tracking-wider text-neutral-400 uppercase whitespace-nowrap hidden md:table-cell">Total SQM</th>
-                        <th className="px-4 py-3 text-[10.5px] font-semibold tracking-wider text-neutral-400 uppercase whitespace-nowrap hidden lg:table-cell">Subscriptions</th>
-                        <th className="px-4 py-3 text-[10.5px] font-semibold tracking-wider text-neutral-400 uppercase whitespace-nowrap hidden lg:table-cell">Revenue</th>
                         <th className="px-4 py-3 text-[10.5px] font-semibold tracking-wider text-neutral-400 uppercase text-right whitespace-nowrap">Actions</th>
                       </tr>
                     </thead>
                     <tbody>
                       {filtered.map((property) => (
-                        <PropertyRow key={property.id} property={property} />
+                        <PropertyRow key={property.id} property={property} onRefresh={fetchProperties} />
                       ))}
                     </tbody>
                   </motion.table>

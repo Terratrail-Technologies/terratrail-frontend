@@ -132,7 +132,7 @@ function validateStep(step: number, state: Record<string, any>): string | null {
 }
 
 // ─── Helper ──────────────────────────────────────────────────────────────────
-const fmt = (n: number) => `₦${n.toLocaleString("en-NG")}`;
+const fmt = (n: number, sym = "₦") => `${sym}${n.toLocaleString("en-NG")}`;
 const fmtSqm = (n: number) => n.toLocaleString("en-NG");
 
 export function PropertyWizard() {
@@ -1539,7 +1539,7 @@ export function PropertyWizard() {
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-neutral-700 mb-1.5">Total Price (₦) <span className="text-red-500">*</span></label>
+                <label className="block text-sm font-medium text-neutral-700 mb-1.5">Total Price ({pricingForm.currency === "USD" ? "$" : "₦"}) <span className="text-red-500">*</span></label>
                 <input type="number" value={pricingForm.totalPrice}
                   onChange={(e) => setPricingForm((f) => ({ ...f, totalPrice: e.target.value }))}
                   placeholder="e.g. 1500000"
@@ -1564,7 +1564,7 @@ export function PropertyWizard() {
                 <>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-neutral-700 mb-1.5">Initial Payment (₦)</label>
+                      <label className="block text-sm font-medium text-neutral-700 mb-1.5">Initial Payment ({pricingForm.currency === "USD" ? "$" : "₦"})</label>
                       <input type="number" value={pricingForm.initialPayment}
                         onChange={(e) => setPricingForm((f) => ({ ...f, initialPayment: e.target.value }))}
                         placeholder="e.g. 250000"
@@ -1608,18 +1608,25 @@ export function PropertyWizard() {
                   {pricingForm.totalPrice && pricingForm.duration && (
                     <div className="p-4 bg-emerald-50 rounded-lg border border-emerald-200 text-sm space-y-1">
                       <div className="font-medium text-emerald-800 mb-2">Summary</div>
-                      <div className="flex justify-between text-neutral-700">
-                        <span>Total Price</span>
-                        <span className="font-medium">{fmt(Number(pricingForm.totalPrice))}</span>
-                      </div>
-                      <div className="flex justify-between text-neutral-700">
-                        <span>Initial Payment</span>
-                        <span className="font-medium">{fmt(Number(pricingForm.initialPayment) || 0)}</span>
-                      </div>
-                      <div className="flex justify-between text-neutral-700">
-                        <span>Monthly Installment</span>
-                        <span className="font-medium">{fmt(Math.round(monthlyInstallment(pricingForm) ?? 0))}</span>
-                      </div>
+                      {(() => {
+                        const sym = pricingForm.currency === "USD" ? "$" : "₦";
+                        return (
+                          <>
+                            <div className="flex justify-between text-neutral-700">
+                              <span>Total Price</span>
+                              <span className="font-medium">{fmt(Number(pricingForm.totalPrice), sym)}</span>
+                            </div>
+                            <div className="flex justify-between text-neutral-700">
+                              <span>Initial Payment</span>
+                              <span className="font-medium">{fmt(Number(pricingForm.initialPayment) || 0, sym)}</span>
+                            </div>
+                            <div className="flex justify-between text-neutral-700">
+                              <span>Monthly Installment</span>
+                              <span className="font-medium">{fmt(Math.round(monthlyInstallment(pricingForm) ?? 0), sym)}</span>
+                            </div>
+                          </>
+                        );
+                      })()}
                       <div className="flex justify-between text-neutral-700">
                         <span>Duration</span>
                         <span className="font-medium">{pricingForm.duration} months</span>

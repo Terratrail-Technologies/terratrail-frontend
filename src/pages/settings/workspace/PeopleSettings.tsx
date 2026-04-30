@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Search, Mail, UserPlus, Loader2, X, Check, Copy } from "lucide-react";
+import { Search, Mail, UserPlus, Loader2, X, Check, Copy, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { api } from "../../../services/api";
 import { Badge } from "../../../components/ui/badge";
@@ -25,6 +25,11 @@ export function PeopleSettings() {
   const [inviting,    setInviting]    = useState(false);
   const [inviteLink,  setInviteLink]  = useState<string | null>(null);
   const [linkCopied,  setLinkCopied]  = useState(false);
+
+  // Member action state
+  const [updatingMember, setUpdatingMember] = useState<string | null>(null);
+  const [confirmDelete,  setConfirmDelete]  = useState<any | null>(null);
+  const [deleting,       setDeleting]       = useState(false);
 
   const fetchMembers = () => {
     setLoading(true);
@@ -70,6 +75,34 @@ export function PeopleSettings() {
       setLinkCopied(true);
       setTimeout(() => setLinkCopied(false), 1500);
     });
+  };
+
+  const handleRoleUpdate = async (memberId: string, newRole: string) => {
+    setUpdatingMember(memberId);
+    try {
+      await api.workspaces.updateMember(memberId, { role: newRole });
+      toast.success("Role updated.");
+      fetchMembers();
+    } catch (err: any) {
+      toast.error(err.message ?? "Failed to update role.");
+    } finally {
+      setUpdatingMember(null);
+    }
+  };
+
+  const handleRemove = async () => {
+    if (!confirmDelete) return;
+    setDeleting(true);
+    try {
+      await api.workspaces.removeMember(confirmDelete.id);
+      toast.success("Member removed.");
+      setConfirmDelete(null);
+      fetchMembers();
+    } catch (err: any) {
+      toast.error(err.message ?? "Failed to remove member.");
+    } finally {
+      setDeleting(false);
+    }
   };
 
   const closeInviteModal = () => {
@@ -121,7 +154,7 @@ export function PeopleSettings() {
           <table className="w-full">
             <thead className="bg-neutral-50 border-b border-neutral-200">
               <tr>
-                {["Name", "Email", "Role", "Joined"].map((h) => (
+                {["Name", "Email", "Role", "Joined", "Actions"].map((h) => (
                   <th key={h} className="px-6 py-3 text-left text-xs font-semibold text-neutral-500 uppercase tracking-wider">{h}</th>
                 ))}
               </tr>
@@ -129,7 +162,7 @@ export function PeopleSettings() {
             <tbody className="divide-y divide-neutral-100">
               {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="px-6 py-12 text-center text-sm text-neutral-400 italic">
+                  <td colSpan={5} className="px-6 py-12 text-center text-sm text-neutral-400 italic">
                     {search ? "No matching members." : "No members found."}
                   </td>
                 </tr>
@@ -157,6 +190,31 @@ export function PeopleSettings() {
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-neutral-500">
                       {m.created_at ? new Date(m.created_at).toLocaleDateString("en-NG", { dateStyle: "medium" }) : "—"}
                     </td>
+                    <td className="px-6 py-4 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                      {role !== "OWNER" ? (
+                        <div className="flex items-center gap-2">
+                          <select
+                            value={role}
+                            onChange={(e) => handleRoleUpdate(m.id, e.target.value)}
+                            disabled={updatingMember === m.id}
+                            className="px-2 py-1 border border-neutral-200 rounded-md text-xs bg-white focus:outline-none focus:ring-1 focus:ring-emerald-500 disabled:opacity-60"
+                          >
+                            <option value="ADMIN">Admin</option>
+                            <option value="SALES_REP">Sales Rep</option>
+                          </select>
+                          {updatingMember === m.id && <Loader2 className="w-3.5 h-3.5 animate-spin text-emerald-500" />}
+                          <button
+                            onClick={() => setConfirmDelete(m)}
+                            title="Remove member"
+                            className="p-1.5 text-neutral-400 hover:text-red-500 hover:bg-red-50 rounded-md transition-colors"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      ) : (
+                        <span className="text-xs text-neutral-400 italic">Owner</span>
+                      )}
+                    </td>
                   </tr>
                 );
               })}
@@ -164,6 +222,35 @@ export function PeopleSettings() {
           </table>
         )}
       </div>
+
+      {/* Remove Confirmation Modal */}
+      {confirmDelete && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl max-w-sm w-full p-6 shadow-xl">
+            <h3 className="font-semibold text-neutral-900 mb-2">Remove Member</h3>
+            <p className="text-sm text-neutral-600 mb-5">
+              Are you sure you want to remove <strong>{confirmDelete.user_name || confirmDelete.user_email}</strong> from the workspace? This action cannot be undone.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setConfirmDelete(null)}
+                disabled={deleting}
+                className="flex-1 px-4 py-2 bg-white border border-neutral-300 text-neutral-700 rounded-md hover:bg-neutral-50 text-sm transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleRemove}
+                disabled={deleting}
+                className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:opacity-60 text-sm transition-colors"
+              >
+                {deleting && <Loader2 className="w-4 h-4 animate-spin" />}
+                {deleting ? "Removing…" : "Remove"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Invite Modal */}
       {showInvite && (

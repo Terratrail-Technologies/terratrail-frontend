@@ -378,6 +378,10 @@ export const api = {
       fd.append("order", String(order));
       return requestFile<any>("/properties/gallery/", fd, "POST");
     },
+    publish: (id: string) =>
+      request<any>(`/properties/${id}/publish/`, { method: "POST", body: JSON.stringify({}) }),
+    unpublish: (id: string) =>
+      request<any>(`/properties/${id}/unpublish/`, { method: "POST", body: JSON.stringify({}) }),
   },
 
   // ── Customers ─────────────────────────────────────────────────────────────
@@ -473,6 +477,10 @@ export const api = {
       request<{ role: string; is_active: boolean; workspace_id: string; workspace_name: string }>(
         "/workspaces/my-membership/"
       ),
+    updateMember: (pk: string, data: { role?: string; is_active?: boolean }) =>
+      request<any>(`/workspaces/members/${pk}/`, { method: "PATCH", body: JSON.stringify(data) }),
+    removeMember: (pk: string) =>
+      request<void>(`/workspaces/members/${pk}/`, { method: "DELETE" }),
   },
 
   // ── Banking / Account Verification (Paystack) ────────────────────────────

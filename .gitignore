@@ -39,8 +39,8 @@ docs.json
 openapi.json
 TerraTrail.md
 .claude/
-# customer-booking-site.md
-customer-rep-dashboard.md
+customer-booking-site.md
+customer-rep-list.md
 admin-dashboard.md
 data-export-page.md
 properties-listing.md

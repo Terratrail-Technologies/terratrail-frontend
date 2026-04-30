@@ -46,7 +46,7 @@ import { motion, AnimatePresence } from "motion/react";
 // ── Notification Bell dropdown ────────────────────────────────────────────────
 interface NotificationItem {
   id: string;
-  type: "inspection" | "customer";
+  type: "inspection" | "customer" | "payment" | "subscription" | "commission";
   title: string;
   subtitle: string;
   time: string;
@@ -93,7 +93,7 @@ function NotificationBell() {
     }
   }, []);
 
-  useEffect(() => { fetchEvents(); }, [fetchEvents]);
+  usePolling(fetchEvents, 30_000);
 
   const handleOpen = () => {
     setOpen((o) => !o);
@@ -111,8 +111,24 @@ function NotificationBell() {
     return `${Math.floor(h / 24)}d ago`;
   };
 
+  const TYPE_COLOR: Record<string, string> = {
+    inspection:   "bg-amber-100 text-amber-700",
+    customer:     "bg-blue-100 text-blue-700",
+    payment:      "bg-green-100 text-green-700",
+    subscription: "bg-violet-100 text-violet-700",
+    commission:   "bg-orange-100 text-orange-700",
+  };
+  const TYPE_LABEL: Record<string, string> = {
+    inspection:   "Inspection",
+    customer:     "Customer",
+    payment:      "Payment",
+    subscription: "Subscription",
+    commission:   "Commission",
+  };
   const typeColor = (type: NotificationItem["type"]) =>
-    type === "inspection" ? "bg-amber-100 text-amber-700" : "bg-blue-100 text-blue-700";
+    TYPE_COLOR[type] ?? "bg-neutral-100 text-neutral-600";
+  const typeLabel = (type: NotificationItem["type"]) =>
+    TYPE_LABEL[type] ?? type;
 
   return (
     <div ref={ref} style={{ position: "relative" }}>
@@ -162,7 +178,7 @@ function NotificationBell() {
                   >
                     <div className="flex items-start gap-2.5">
                       <span className={cn("text-[9.5px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded mt-0.5 shrink-0", typeColor(n.type))}>
-                        {n.type === "inspection" ? "Inspection" : "Customer"}
+                        {typeLabel(n.type)}
                       </span>
                       <div className="flex-1 min-w-0">
                         <p className="text-[12px] text-neutral-700 font-medium leading-snug truncate">{n.title}</p>
