@@ -6,6 +6,7 @@ import { usePolling } from "../hooks/usePolling";
 import { usePageTitle } from "../hooks/usePageTitle";
 import { useWorkspaceRole } from "../hooks/useWorkspaceRole";
 import { api } from "../services/api";
+import { toast } from "sonner";
 import {
   LayoutDashboard,
   Building2,
@@ -53,6 +54,112 @@ interface NotificationItem {
   href: string;
 }
 
+const SEEN_KEY = "tt_seen_events";
+
+function getSeenIds(): Set<string> {
+  try {
+    const raw = localStorage.getItem(SEEN_KEY);
+    return new Set(raw ? JSON.parse(raw) : []);
+  } catch {
+    return new Set();
+  }
+}
+
+function markSeen(ids: string[]) {
+  try {
+    const seen = getSeenIds();
+    ids.forEach((id) => seen.add(id));
+    // Keep at most 500 IDs to avoid unbounded growth
+    const arr = Array.from(seen).slice(-500);
+    localStorage.setItem(SEEN_KEY, JSON.stringify(arr));
+  } catch {}
+}
+
+const TOAST_CONFIG: Record<string, { icon: string; label: string; toastFn: (title: string, desc: string, action: () => void) => void }> = {
+  inspection: {
+    icon: "🗓️",
+    label: "Inspection",
+    toastFn: (title, desc, action) =>
+      toast(title, {
+        description: desc,
+        icon: "🗓️",
+        duration: 6000,
+        action: { label: "View", onClick: action },
+        style: { borderLeft: "3px solid #f59e0b" },
+      }),
+  },
+  payment: {
+    icon: "💰",
+    label: "Payment",
+    toastFn: (title, desc, action) =>
+      toast.success(title, {
+        description: desc,
+        icon: "💰",
+        duration: 6000,
+        action: { label: "Review", onClick: action },
+      }),
+  },
+  subscription: {
+    icon: "📋",
+    label: "Subscription",
+    toastFn: (title, desc, action) =>
+      toast(title, {
+        description: desc,
+        icon: "📋",
+        duration: 6000,
+        action: { label: "View", onClick: action },
+        style: { borderLeft: "3px solid #8b5cf6" },
+      }),
+  },
+  customer: {
+    icon: "👤",
+    label: "Customer",
+    toastFn: (title, desc, action) =>
+      toast(title, {
+        description: desc,
+        icon: "👤",
+        duration: 5000,
+        action: { label: "Open", onClick: action },
+        style: { borderLeft: "3px solid #3b82f6" },
+      }),
+  },
+  commission: {
+    icon: "🏆",
+    label: "Commission",
+    toastFn: (title, desc, action) =>
+      toast.success(title, {
+        description: desc,
+        icon: "🏆",
+        duration: 7000,
+        action: { label: "View", onClick: action },
+      }),
+  },
+};
+
+function fireToastsForNew(newItems: NotificationItem[], navigate: ReturnType<typeof useNavigate>) {
+  const seen = getSeenIds();
+  const fresh = newItems.filter((n) => !seen.has(n.id));
+  if (fresh.length === 0) return;
+
+  if (fresh.length > 3) {
+    // Batch toast when there are many new items
+    toast(`${fresh.length} new notifications`, {
+      description: "Open the notification bell to review them.",
+      icon: "🔔",
+      duration: 5000,
+    });
+  } else {
+    fresh.forEach((n) => {
+      const cfg = TOAST_CONFIG[n.type];
+      if (cfg) {
+        cfg.toastFn(n.title, n.subtitle, () => navigate(n.href));
+      } else {
+        toast(n.title, { description: n.subtitle, duration: 5000 });
+      }
+    });
+  }
+}
+
 function NotificationBell() {
   const navigate = useNavigate();
   const [open, setOpen]       = useState(false);
@@ -61,6 +168,7 @@ function NotificationBell() {
   const [unread, setUnread]   = useState(0);
   const [fetched, setFetched] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const isFirstPoll = useRef(true);
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -82,22 +190,37 @@ function NotificationBell() {
         time: e.created_at ?? "",
         href: e.href ?? "/",
       }));
+
+      const seen = getSeenIds();
+      const freshCount = events.filter((n) => !seen.has(n.id)).length;
+
       setItems(events);
-      setUnread(events.length);
+      setUnread(freshCount);
       setFetched(true);
+
+      // Fire toasts only on subsequent polls (not the initial load)
+      if (!isFirstPoll.current) {
+        fireToastsForNew(events, navigate);
+      }
+      isFirstPoll.current = false;
     } catch {
       setItems([]);
       setFetched(true);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [navigate]);
 
   usePolling(fetchEvents, 30_000);
 
   const handleOpen = () => {
+    const wasOpen = open;
     setOpen((o) => !o);
-    if (!open) setUnread(0);
+    if (!wasOpen) {
+      // Mark all currently loaded events as seen when the dropdown opens
+      markSeen(items.map((n) => n.id));
+      setUnread(0);
+    }
   };
 
   const relativeTime = (iso: string) => {
@@ -130,6 +253,8 @@ function NotificationBell() {
   const typeLabel = (type: NotificationItem["type"]) =>
     TYPE_LABEL[type] ?? type;
 
+  const seen = getSeenIds();
+
   return (
     <div ref={ref} style={{ position: "relative" }}>
       <Button
@@ -152,7 +277,7 @@ function NotificationBell() {
           <div className="px-4 py-3 border-b border-neutral-50 flex items-center justify-between">
             <span className="text-[12.5px] font-semibold text-neutral-800">Notifications</span>
             <button
-              onClick={() => { setOpen(false); fetchEvents(); }}
+              onClick={() => { fetchEvents(); }}
               className="text-[11px] text-emerald-600 hover:text-emerald-700 font-medium"
             >
               Refresh
@@ -170,26 +295,35 @@ function NotificationBell() {
               </div>
             ) : (
               <div className="py-1.5">
-                {items.map((n) => (
-                  <button
-                    key={n.id}
-                    onClick={() => { setOpen(false); navigate(n.href); }}
-                    className="w-full px-4 py-2.5 hover:bg-neutral-50 transition-colors text-left"
-                  >
-                    <div className="flex items-start gap-2.5">
-                      <span className={cn("text-[9.5px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded mt-0.5 shrink-0", typeColor(n.type))}>
-                        {typeLabel(n.type)}
-                      </span>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-[12px] text-neutral-700 font-medium leading-snug truncate">{n.title}</p>
-                        <p className="text-[11px] text-neutral-400 mt-0.5 truncate">{n.subtitle}</p>
-                      </div>
-                      {n.time && (
-                        <span className="text-[10px] text-neutral-400 shrink-0 mt-0.5">{relativeTime(n.time)}</span>
+                {items.map((n) => {
+                  const isNew = !seen.has(n.id);
+                  return (
+                    <button
+                      key={n.id}
+                      onClick={() => { setOpen(false); navigate(n.href); }}
+                      className={cn(
+                        "w-full px-4 py-2.5 hover:bg-neutral-50 transition-colors text-left",
+                        isNew && "bg-emerald-50/40"
                       )}
-                    </div>
-                  </button>
-                ))}
+                    >
+                      <div className="flex items-start gap-2.5">
+                        {isNew && (
+                          <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+                        )}
+                        <span className={cn("text-[9.5px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded mt-0.5 shrink-0", typeColor(n.type))}>
+                          {typeLabel(n.type)}
+                        </span>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[12px] text-neutral-700 font-medium leading-snug truncate">{n.title}</p>
+                          <p className="text-[11px] text-neutral-400 mt-0.5 truncate">{n.subtitle}</p>
+                        </div>
+                        {n.time && (
+                          <span className="text-[10px] text-neutral-400 shrink-0 mt-0.5">{relativeTime(n.time)}</span>
+                        )}
+                      </div>
+                    </button>
+                  );
+                })}
               </div>
             )}
           </div>

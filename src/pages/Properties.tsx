@@ -105,7 +105,7 @@ function PropertyMenu({
             >
               <div className="py-1">
                 <button
-                  onClick={(e) => { e.stopPropagation(); setOpen(false); navigate(`/properties/${propertyId}/preview`); }}
+                  onClick={(e) => { e.stopPropagation(); setOpen(false); navigate(`/properties/${propertyId}`); }}
                   className="w-full flex items-center gap-2.5 px-3.5 py-2 text-[12.5px] font-medium text-neutral-700 hover:bg-neutral-50 transition-colors"
                 >
                   <Eye className="w-3.5 h-3.5 text-neutral-400" />
@@ -154,7 +154,7 @@ function PropertyCard({ property, onRefresh }: { property: any; onRefresh: () =>
   return (
     <motion.div
       variants={item}
-      onClick={() => navigate(`/properties/${property.id}/preview`)}
+      onClick={() => navigate(`/properties/${property.id}`)}
       className="bg-white rounded-xl border border-neutral-100 overflow-hidden cursor-pointer
                  shadow-[0_1px_3px_rgba(0,0,0,0.06)]
                  hover:shadow-[0_6px_20px_rgba(0,0,0,0.09)]
@@ -287,7 +287,7 @@ function PropertyRow({ property, onRefresh }: { property: any; onRefresh: () => 
     >
       {/* Cover Image */}
       <td className="px-4 py-3 whitespace-nowrap">
-        <button onClick={() => navigate(`/properties/${property.id}/preview`)} className="block">
+        <button onClick={() => navigate(`/properties/${property.id}`)} className="block">
           {property.featured_image ? (
             <img src={property.featured_image} alt={property.name}
               className="h-10 w-16 object-cover rounded-lg border border-neutral-100 shrink-0" />
@@ -300,7 +300,7 @@ function PropertyRow({ property, onRefresh }: { property: any; onRefresh: () => 
       </td>
       {/* Property Name */}
       <td className="px-4 py-3 whitespace-nowrap">
-        <button onClick={() => navigate(`/properties/${property.id}/preview`)} className="text-left">
+        <button onClick={() => navigate(`/properties/${property.id}`)} className="text-left">
           <div className="text-[13px] font-semibold text-neutral-900 group-hover:text-emerald-600 transition-colors max-w-[180px] truncate">
             {property.name}
           </div>

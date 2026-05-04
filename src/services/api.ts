@@ -312,6 +312,10 @@ export const api = {
       publicRequest<any>(`/public/${workspaceSlug}/properties/${propertyId}/inspection-config/`),
     appreciations: (workspaceSlug: string, propertyId: string) =>
       publicRequest<any[]>(`/public/${workspaceSlug}/properties/${propertyId}/appreciations/`),
+    validateReferral: (workspaceSlug: string, code: string) =>
+      publicRequest<{ valid: boolean; rep_name: string | null }>(
+        `/public/${workspaceSlug}/validate-referral/?code=${encodeURIComponent(code)}`
+      ),
   },
 
   // ── Health ────────────────────────────────────────────────────────────────
@@ -382,6 +386,27 @@ export const api = {
       request<any>(`/properties/${id}/publish/`, { method: "POST", body: JSON.stringify({}) }),
     unpublish: (id: string) =>
       request<any>(`/properties/${id}/unpublish/`, { method: "POST", body: JSON.stringify({}) }),
+  },
+
+  // ── Subscriptions ─────────────────────────────────────────────────────────
+  subscriptions: {
+    list: (params?: { property?: string; customer?: string; status?: string }) =>
+      request<any>(`/customers/subscriptions/${buildParams(params ?? {})}`).then(unwrapList),
+    get: (id: string) => request<any>(`/customers/subscriptions/${id}/`),
+    create: (data: any) =>
+      request<any>("/customers/subscriptions/create/", { method: "POST", body: JSON.stringify(data) }),
+  },
+
+  // ── Payments ─────────────────────────────────────────────────────────────
+  payments: {
+    list: (params?: { property?: string; status?: string }) =>
+      request<any>(`/payments/${buildParams(params ?? {})}`).then(unwrapList),
+    record: (formData: FormData) =>
+      requestFile<any>("/payments/record/", formData, "POST"),
+    approve: (id: string) =>
+      request<any>(`/payments/${id}/approve/`, { method: "POST", body: JSON.stringify({}) }),
+    reject: (id: string, reason = "") =>
+      request<any>(`/payments/${id}/reject/`, { method: "POST", body: JSON.stringify({ reason }) }),
   },
 
   // ── Customers ─────────────────────────────────────────────────────────────
