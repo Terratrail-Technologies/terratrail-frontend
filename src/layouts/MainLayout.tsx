@@ -23,6 +23,8 @@ import {
   UsersRound,
   ClipboardList,
   Globe,
+  CreditCard,
+  MapPin,
 } from "lucide-react";
 import { cn } from "../components/ui/utils";
 import {
@@ -330,10 +332,10 @@ function NotificationBell() {
 
           <div className="border-t border-neutral-50 px-4 py-2.5">
             <button
-              onClick={() => { setOpen(false); navigate("/settings/activity"); }}
+              onClick={() => { setOpen(false); navigate("/notifications"); }}
               className="text-[11.5px] text-emerald-600 hover:text-emerald-700 font-medium w-full text-center"
             >
-              View activity log →
+              View all notifications →
             </button>
           </div>
         </div>
@@ -426,6 +428,8 @@ const ALL_NAV_ITEMS = [
   { icon: UsersRound,      label: "Customer Reps",   href: "/customer-reps",  roles: ["OWNER","ADMIN"] },
   { icon: UserCheck,       label: "Sales Reps",      href: "/sales-reps",     roles: ["OWNER","ADMIN"] },
   { icon: ClipboardList,   label: "Site Inspection", href: "/site-inspection",roles: ["OWNER","ADMIN","SALES_REP"] },
+  { icon: CreditCard,      label: "Payments",        href: "/payments",       roles: ["OWNER","ADMIN"] },
+  { icon: MapPin,          label: "Allocation",      href: "/allocation",     roles: ["OWNER","ADMIN"] },
   { icon: Download,        label: "Data Export",     href: "/data-export",    roles: ["OWNER","ADMIN"] },
 ];
 
@@ -436,7 +440,7 @@ const ALL_BOTTOM_ITEMS = [
 ];
 
 // Priority items shown in the mobile bottom nav (max 5 slots)
-const MOBILE_NAV_PRIORITY = ["/", "/properties", "/customers", "/site-inspection"];
+const MOBILE_NAV_PRIORITY = ["/", "/properties", "/payments", "/allocation"];
 
 // ── Mobile Bottom Navigation ──────────────────────────────────────────────────
 function MobileBottomNav() {

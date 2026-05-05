@@ -386,6 +386,8 @@ export const api = {
       request<any>(`/properties/${id}/publish/`, { method: "POST", body: JSON.stringify({}) }),
     unpublish: (id: string) =>
       request<any>(`/properties/${id}/unpublish/`, { method: "POST", body: JSON.stringify({}) }),
+    planHistory: (planId: string) =>
+      request<any>(`/properties/plans/${planId}/history/`).then(unwrapList),
   },
 
   // ── Subscriptions ─────────────────────────────────────────────────────────
@@ -395,6 +397,19 @@ export const api = {
     get: (id: string) => request<any>(`/customers/subscriptions/${id}/`),
     create: (data: any) =>
       request<any>("/customers/subscriptions/create/", { method: "POST", body: JSON.stringify(data) }),
+    update: (id: string, data: any) =>
+      request<any>(`/customers/subscriptions/${id}/`, { method: "PATCH", body: JSON.stringify(data) }),
+    delete: (id: string) =>
+      request<void>(`/customers/subscriptions/${id}/`, { method: "DELETE" }),
+    allocate: (id: string, formData: FormData) =>
+      requestFile<any>(`/customers/subscriptions/${id}/allocate/`, formData, "POST"),
+    cancel: (id: string, reason = "") =>
+      request<any>(`/customers/subscriptions/${id}/cancel/`, { method: "POST", body: JSON.stringify({ reason }) }),
+  },
+
+  installments: {
+    list: (params?: { subscription?: string; status?: string }) =>
+      request<any>(`/customers/installments/${buildParams(params ?? {})}`).then(unwrapList),
   },
 
   // ── Payments ─────────────────────────────────────────────────────────────
@@ -453,7 +468,7 @@ export const api = {
 
   // ── Commissions ────────────────────────────────────────────────────────────
   commissions: {
-    list: (params?: { status?: string; sales_rep?: string }) =>
+    list: (params?: { status?: string; sales_rep?: string; property?: string }) =>
       request<any>(`/commissions/${buildParams(params ?? {})}`).then(unwrapList),
     markPaid: (id: string, notes = "") =>
       request<any>(`/commissions/${id}/mark-paid/`, { method: "POST", body: JSON.stringify({ notes }) }),

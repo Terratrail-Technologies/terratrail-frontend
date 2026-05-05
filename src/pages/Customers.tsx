@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, Fragment } from "react";
 import { useNavigate } from "react-router";
 import { usePolling } from "../hooks/usePolling";
 import { usePageTitle } from "../hooks/usePageTitle";
@@ -16,6 +16,8 @@ import {
   CheckCircle2,
   XCircle,
   AlertTriangle,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 import { Skeleton } from "../components/ui/skeleton";
 import { api } from "../services/api";
@@ -81,6 +83,10 @@ const fmt = (n: number | string | null | undefined) =>
 const dash = (v: string | number | null | undefined) =>
   v == null || v === "" ? "—" : String(v);
 
+// ─── Date formatter ───────────────────────────────────────────────────────────
+const fmtDate = (d: string | null | undefined) =>
+  d ? new Date(d).toLocaleDateString("en-NG", { day: "numeric", month: "short", year: "numeric" }) : "—";
+
 // ─── Add Customer Modal ───────────────────────────────────────────────────────
 interface AddCustomerModalProps {
   onClose: () => void;
@@ -89,17 +95,27 @@ interface AddCustomerModalProps {
 
 interface PropertyOption { id: string; name: string; pricing_plans: { id: string; plan_name: string; land_size: string; total_price: string; payment_type: string; is_active: boolean }[] }
 
+const REFERRAL_SOURCES = [
+  { value: "WALK_IN",      label: "Walk-in" },
+  { value: "REFERRAL",     label: "Referral" },
+  { value: "SOCIAL_MEDIA", label: "Social Media" },
+  { value: "WEBSITE",      label: "Website" },
+  { value: "AGENT",        label: "Agent" },
+  { value: "OTHER",        label: "Other" },
+];
+
+const NOK_RELATIONSHIPS = ["Spouse", "Parent", "Child", "Sibling", "Friend", "Colleague", "Other"];
+
 function AddCustomerModal({ onClose, onCreated }: AddCustomerModalProps) {
   const [form, setForm] = useState({
     full_name: "", email: "", phone: "", address: "",
     next_of_kin_name: "", next_of_kin_phone: "", next_of_kin_relationship: "",
-    referral_source: "", referral_code: "",
+    referral_source: "WALK_IN", referral_code: "",
     property_id: "", pricing_plan_id: "",
   });
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [properties, setProperties] = useState<PropertyOption[]>([]);
-  const [showAdvanced, setShowAdvanced] = useState(false);
 
   useEffect(() => {
     api.properties.list().then((list: any[]) => {
@@ -165,146 +181,172 @@ function AddCustomerModal({ onClose, onCreated }: AddCustomerModalProps) {
       hasError ? "border-red-400 bg-red-50" : "border-neutral-300 bg-white"
     }`;
 
+  const lbl = "block text-[12px] font-medium text-neutral-700 mb-1.5";
+
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
-      <div className="bg-white rounded-xl max-w-lg w-full shadow-xl my-auto">
+      <div className="bg-white rounded-xl max-w-2xl w-full shadow-xl my-auto">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-100">
           <div>
             <h3 className="text-[15px] font-semibold text-neutral-900">Add Customer</h3>
-            <p className="text-[12px] text-neutral-400 mt-0.5">Fill in the customer's details below.</p>
+            <p className="text-[12px] text-neutral-400 mt-0.5">Fill in the customer's details across all three sections.</p>
           </div>
           <button onClick={onClose} className="p-1.5 hover:bg-neutral-100 rounded-lg transition-colors">
             <X className="w-4 h-4 text-neutral-500" />
           </button>
         </div>
 
-        <div className="p-6 space-y-5 max-h-[70vh] overflow-y-auto">
-          {/* ── Basic Info ── */}
-          <div className="space-y-4">
-            <p className="text-[11px] font-bold text-neutral-400 uppercase tracking-wider">Customer Information</p>
+        <div className="p-6 space-y-6 max-h-[75vh] overflow-y-auto">
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {/* ── Section 1: Personal Information ── */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <div className="w-5 h-5 rounded-full bg-emerald-600 text-white text-[10px] font-bold flex items-center justify-center shrink-0">1</div>
+              <p className="text-[12px] font-bold text-neutral-700 uppercase tracking-wider">Personal Information</p>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pl-7">
               <div className="sm:col-span-2">
-                <label className="block text-[12px] font-medium text-neutral-700 mb-1.5">Full Name <span className="text-red-500">*</span></label>
+                <label className={lbl}>Full Name <span className="text-red-500">*</span></label>
                 <input type="text" value={form.full_name} onChange={(e) => set("full_name", e.target.value)}
                   placeholder="e.g. John Adebayo" className={inputCls(!!errors.full_name)} />
                 {errors.full_name && <p className="text-[11px] text-red-600 mt-1 flex items-center gap-1"><AlertCircle className="w-3 h-3" /> {errors.full_name}</p>}
               </div>
               <div>
-                <label className="block text-[12px] font-medium text-neutral-700 mb-1.5">Email <span className="text-red-500">*</span></label>
+                <label className={lbl}>Email <span className="text-red-500">*</span></label>
                 <input type="email" value={form.email} onChange={(e) => set("email", e.target.value)}
                   placeholder="john@example.com" className={inputCls(!!errors.email)} />
                 {errors.email && <p className="text-[11px] text-red-600 mt-1 flex items-center gap-1"><AlertCircle className="w-3 h-3" /> {errors.email}</p>}
               </div>
               <div>
-                <label className="block text-[12px] font-medium text-neutral-700 mb-1.5">Phone <span className="text-red-500">*</span></label>
+                <label className={lbl}>Phone <span className="text-red-500">*</span></label>
                 <input type="tel" value={form.phone} onChange={(e) => set("phone", e.target.value)}
                   placeholder="08012345678" className={inputCls(!!errors.phone)} />
                 {errors.phone && <p className="text-[11px] text-red-500 mt-1 flex items-center gap-1"><AlertCircle className="w-3 h-3" /> {errors.phone}</p>}
               </div>
               <div className="sm:col-span-2">
-                <label className="block text-[12px] font-medium text-neutral-700 mb-1.5">Address <span className="text-neutral-400 text-[11px]">(optional)</span></label>
+                <label className={lbl}>Address <span className="text-neutral-400 text-[11px] font-normal">(optional)</span></label>
                 <input type="text" value={form.address} onChange={(e) => set("address", e.target.value)}
                   placeholder="e.g. 12 Allen Ave, Ikeja" className={inputCls()} />
               </div>
             </div>
           </div>
 
-          {/* ── Property Subscription ── */}
-          {properties.length > 0 && (
-            <div className="space-y-3">
-              <p className="text-[11px] font-bold text-neutral-400 uppercase tracking-wider">Property Subscription <span className="normal-case font-normal">(optional)</span></p>
+          <div className="border-t border-neutral-100" />
+
+          {/* ── Section 2: Next of Kin ── */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <div className="w-5 h-5 rounded-full bg-emerald-600 text-white text-[10px] font-bold flex items-center justify-center shrink-0">2</div>
+              <p className="text-[12px] font-bold text-neutral-700 uppercase tracking-wider">Next of Kin <span className="normal-case text-neutral-400 font-normal text-[11px]">(optional)</span></p>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pl-7">
               <div>
-                <label className="block text-[12px] font-medium text-neutral-700 mb-1.5">Select Property</label>
-                <select value={form.property_id}
-                  onChange={(e) => { set("property_id", e.target.value); set("pricing_plan_id", ""); }}
+                <label className={lbl}>Full Name</label>
+                <input type="text" value={form.next_of_kin_name} onChange={(e) => set("next_of_kin_name", e.target.value)}
+                  placeholder="e.g. Jane Adebayo" className={inputCls()} />
+              </div>
+              <div>
+                <label className={lbl}>Phone Number</label>
+                <input type="tel" value={form.next_of_kin_phone} onChange={(e) => set("next_of_kin_phone", e.target.value)}
+                  placeholder="08011112222" className={inputCls()} />
+              </div>
+              <div>
+                <label className={lbl}>Relationship</label>
+                <select value={form.next_of_kin_relationship} onChange={(e) => set("next_of_kin_relationship", e.target.value)}
                   className={inputCls()}>
-                  <option value="">— None —</option>
-                  {properties.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                  <option value="">Select…</option>
+                  {NOK_RELATIONSHIPS.map((r) => <option key={r} value={r}>{r}</option>)}
                 </select>
               </div>
-              {form.property_id && activePlans.length > 0 && (
-                <div>
-                  <label className="block text-[12px] font-medium text-neutral-700 mb-1.5">Select Plan / Land Size</label>
-                  <div className="space-y-1.5">
-                    {activePlans.map((plan) => (
-                      <label key={plan.id}
-                        className={`flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg border cursor-pointer transition-colors ${
-                          form.pricing_plan_id === plan.id
-                            ? "border-emerald-400 bg-emerald-50/50"
-                            : "border-neutral-200 hover:border-emerald-200"
-                        }`}>
-                        <div className="flex items-center gap-2.5">
-                          <input type="radio" name="pricing_plan" value={plan.id}
-                            checked={form.pricing_plan_id === plan.id}
-                            onChange={(e) => set("pricing_plan_id", e.target.value)}
-                            className="accent-emerald-600" />
-                          <div>
-                            <p className="text-[13px] font-semibold text-neutral-900">{plan.plan_name}</p>
-                            <p className="text-[11px] text-neutral-400">{plan.land_size} sqm · {plan.payment_type === "INSTALLMENT" ? "Installment" : "Outright"}</p>
-                          </div>
-                        </div>
-                        <span className="text-[13px] font-bold text-emerald-700 shrink-0">{fmt(plan.total_price)}</span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-              )}
             </div>
-          )}
+          </div>
 
-          {/* ── Advanced (collapsible) ── */}
-          <div>
-            <button type="button" onClick={() => setShowAdvanced((v) => !v)}
-              className="flex items-center gap-1.5 text-[12px] font-semibold text-neutral-500 hover:text-neutral-700 transition-colors">
-              <span className={`transition-transform ${showAdvanced ? "rotate-90" : ""}`}>▶</span>
-              Additional Details (Next of Kin, Referral)
-            </button>
+          <div className="border-t border-neutral-100" />
 
-            {showAdvanced && (
-              <div className="mt-3 space-y-3 pl-4 border-l-2 border-neutral-100">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {/* ── Section 3: Referral Information ── */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <div className="w-5 h-5 rounded-full bg-emerald-600 text-white text-[10px] font-bold flex items-center justify-center shrink-0">3</div>
+              <p className="text-[12px] font-bold text-neutral-700 uppercase tracking-wider">Referral Information</p>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pl-7">
+              <div>
+                <label className={lbl}>How did they hear about us?</label>
+                <select value={form.referral_source} onChange={(e) => set("referral_source", e.target.value)}
+                  className={inputCls()}>
+                  {REFERRAL_SOURCES.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className={lbl}>Referral Code <span className="text-neutral-400 text-[11px] font-normal">(if any)</span></label>
+                <input type="text" value={form.referral_code} onChange={(e) => set("referral_code", e.target.value)}
+                  placeholder="e.g. REF-AGENT-001" className={inputCls()} />
+              </div>
+            </div>
+          </div>
+
+          {/* ── Property Subscription (optional) ── */}
+          {properties.length > 0 && (
+            <>
+              <div className="border-t border-neutral-100" />
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <div className="w-5 h-5 rounded-full bg-neutral-300 text-white text-[10px] font-bold flex items-center justify-center shrink-0">4</div>
+                  <p className="text-[12px] font-bold text-neutral-700 uppercase tracking-wider">Property Subscription <span className="normal-case text-neutral-400 font-normal text-[11px]">(optional)</span></p>
+                </div>
+                <div className="pl-7 space-y-3">
                   <div>
-                    <label className="block text-[12px] font-medium text-neutral-700 mb-1.5">Next of Kin Name</label>
-                    <input type="text" value={form.next_of_kin_name} onChange={(e) => set("next_of_kin_name", e.target.value)}
-                      placeholder="e.g. Jane Adebayo" className={inputCls()} />
+                    <label className={lbl}>Select Property</label>
+                    <select value={form.property_id}
+                      onChange={(e) => { set("property_id", e.target.value); set("pricing_plan_id", ""); }}
+                      className={inputCls()}>
+                      <option value="">— None —</option>
+                      {properties.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                    </select>
                   </div>
-                  <div>
-                    <label className="block text-[12px] font-medium text-neutral-700 mb-1.5">Next of Kin Phone</label>
-                    <input type="tel" value={form.next_of_kin_phone} onChange={(e) => set("next_of_kin_phone", e.target.value)}
-                      placeholder="08011112222" className={inputCls()} />
-                  </div>
-                  <div>
-                    <label className="block text-[12px] font-medium text-neutral-700 mb-1.5">Relationship</label>
-                    <input type="text" value={form.next_of_kin_relationship} onChange={(e) => set("next_of_kin_relationship", e.target.value)}
-                      placeholder="e.g. Spouse" className={inputCls()} />
-                  </div>
-                  <div>
-                    <label className="block text-[12px] font-medium text-neutral-700 mb-1.5">Referral Source</label>
-                    <input type="text" value={form.referral_source} onChange={(e) => set("referral_source", e.target.value)}
-                      placeholder="e.g. Facebook, Friend" className={inputCls()} />
-                  </div>
-                  <div>
-                    <label className="block text-[12px] font-medium text-neutral-700 mb-1.5">Referral Code</label>
-                    <input type="text" value={form.referral_code} onChange={(e) => set("referral_code", e.target.value)}
-                      placeholder="e.g. REF1234" className={inputCls()} />
-                  </div>
+                  {form.property_id && activePlans.length > 0 && (
+                    <div>
+                      <label className={lbl}>Select Plan / Land Size</label>
+                      <div className="space-y-1.5">
+                        {activePlans.map((plan) => (
+                          <label key={plan.id}
+                            className={`flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg border cursor-pointer transition-colors ${
+                              form.pricing_plan_id === plan.id
+                                ? "border-emerald-400 bg-emerald-50/50"
+                                : "border-neutral-200 hover:border-emerald-200"
+                            }`}>
+                            <div className="flex items-center gap-2.5">
+                              <input type="radio" name="pricing_plan" value={plan.id}
+                                checked={form.pricing_plan_id === plan.id}
+                                onChange={(e) => set("pricing_plan_id", e.target.value)}
+                                className="accent-emerald-600" />
+                              <div>
+                                <p className="text-[13px] font-semibold text-neutral-900">{plan.plan_name}</p>
+                                <p className="text-[11px] text-neutral-400">{plan.land_size} sqm · {plan.payment_type === "INSTALLMENT" ? "Installment" : "Outright"}</p>
+                              </div>
+                            </div>
+                            <span className="text-[13px] font-bold text-emerald-700 shrink-0">{fmt(plan.total_price)}</span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
-            )}
-          </div>
+            </>
+          )}
         </div>
 
         {/* Actions */}
-        <div className="flex gap-2.5 px-6 pb-6">
+        <div className="flex gap-2.5 px-6 pb-6 pt-4 border-t border-neutral-100">
           <button onClick={onClose}
             className="flex-1 px-4 py-2.5 border border-neutral-200 text-neutral-700 rounded-lg text-[13px] font-medium hover:bg-neutral-50 transition-colors">
             Cancel
           </button>
           <button onClick={handleSubmit} disabled={saving}
             className="flex-1 px-4 py-2.5 bg-emerald-600 text-white rounded-lg text-[13px] font-medium hover:bg-emerald-700 disabled:opacity-60 transition-colors flex items-center justify-center gap-2">
-            {saving ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Saving…</> : <>Add Customer</>}
+            {saving ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Saving…</> : "Add Customer"}
           </button>
         </div>
       </div>
@@ -369,6 +411,9 @@ export function Customers() {
   const [salesRepFilter, setSalesRepFilter]   = useState("ALL");
   const [custRepFilter, setCustRepFilter]     = useState("ALL");
   const [showAdd, setShowAdd]     = useState(false);
+  const [expandedIds, setExpandedIds]     = useState<Set<string>>(new Set());
+  const [subCache, setSubCache]           = useState<Record<string, any[]>>({});
+  const [loadingExpand, setLoadingExpand] = useState<Set<string>>(new Set());
 
   // ── Role guard ────────────────────────────────────────────────────────────
   if (role === "SALES_REP" || role === "CUSTOMER") {
@@ -448,6 +493,26 @@ export function Customers() {
     setSalesRepFilter("ALL");
     setCustRepFilter("ALL");
   };
+
+  const toggleExpand = useCallback(async (customerId: string) => {
+    const isOpen = expandedIds.has(customerId);
+    setExpandedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(customerId)) next.delete(customerId);
+      else next.add(customerId);
+      return next;
+    });
+    if (!isOpen && !subCache[customerId]) {
+      setLoadingExpand((prev) => new Set([...prev, customerId]));
+      try {
+        const detail = await api.customers.get(customerId);
+        setSubCache((prev) => ({ ...prev, [customerId]: detail.subscriptions ?? [] }));
+      } catch { /* silent */ }
+      finally {
+        setLoadingExpand((prev) => { const n = new Set(prev); n.delete(customerId); return n; });
+      }
+    }
+  }, [expandedIds, subCache]);
 
   const isInitialLoad = loading && customers.length === 0;
 
@@ -757,7 +822,7 @@ export function Customers() {
                         <Eye className="w-3.5 h-3.5" /> View
                       </button>
                       <button
-                        onClick={() => navigate(`/customers/${customer.id}/edit`)}
+                        onClick={() => navigate(`/customers/${customer.id}`)}
                         className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg border border-blue-100 bg-blue-50/50 text-[12px] font-medium text-blue-700 hover:bg-blue-100 transition-colors"
                       >
                         <Pencil className="w-3.5 h-3.5" /> Edit
@@ -780,94 +845,186 @@ export function Customers() {
                 <table className="w-full text-sm text-left">
                   <thead>
                     <tr className="border-b border-neutral-100 bg-neutral-50/70">
-                      <th className="px-5 py-3 text-[10.5px] font-semibold tracking-wider text-neutral-400 uppercase whitespace-nowrap">Customer Name</th>
-                      <th className="px-5 py-3 text-[10.5px] font-semibold tracking-wider text-neutral-400 uppercase whitespace-nowrap">Phone</th>
-                      <th className="px-5 py-3 text-[10.5px] font-semibold tracking-wider text-neutral-400 uppercase whitespace-nowrap">Email</th>
-                      <th className="px-5 py-3 text-[10.5px] font-semibold tracking-wider text-neutral-400 uppercase whitespace-nowrap hidden lg:table-cell">Property</th>
-                      <th className="px-5 py-3 text-[10.5px] font-semibold tracking-wider text-neutral-400 uppercase whitespace-nowrap hidden lg:table-cell">Land Size</th>
-                      <th className="px-5 py-3 text-[10.5px] font-semibold tracking-wider text-neutral-400 uppercase whitespace-nowrap hidden xl:table-cell">Plan</th>
-                      <th className="px-5 py-3 text-[10.5px] font-semibold tracking-wider text-neutral-400 uppercase whitespace-nowrap hidden xl:table-cell">Locked Price</th>
-                      <th className="px-5 py-3 text-[10.5px] font-semibold tracking-wider text-neutral-400 uppercase whitespace-nowrap hidden xl:table-cell">Amount Paid</th>
-                      <th className="px-5 py-3 text-[10.5px] font-semibold tracking-wider text-neutral-400 uppercase whitespace-nowrap hidden xl:table-cell">Balance</th>
-                      <th className="px-5 py-3 text-[10.5px] font-semibold tracking-wider text-neutral-400 uppercase whitespace-nowrap hidden xl:table-cell">Next Due Date</th>
+                      <th className="px-5 py-3 text-[10.5px] font-semibold tracking-wider text-neutral-400 uppercase whitespace-nowrap">Customer</th>
+                      <th className="px-5 py-3 text-[10.5px] font-semibold tracking-wider text-neutral-400 uppercase whitespace-nowrap">Contact</th>
+                      <th className="px-5 py-3 text-[10.5px] font-semibold tracking-wider text-neutral-400 uppercase whitespace-nowrap">Subscriptions</th>
+                      <th className="px-5 py-3 text-[10.5px] font-semibold tracking-wider text-neutral-400 uppercase whitespace-nowrap hidden lg:table-cell">Total Paid</th>
+                      <th className="px-5 py-3 text-[10.5px] font-semibold tracking-wider text-neutral-400 uppercase whitespace-nowrap hidden lg:table-cell">Balance</th>
                       <th className="px-5 py-3 text-[10.5px] font-semibold tracking-wider text-neutral-400 uppercase whitespace-nowrap">Status</th>
                       <th className="px-5 py-3 text-[10.5px] font-semibold tracking-wider text-neutral-400 uppercase text-right whitespace-nowrap">Actions</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-neutral-50">
+                  <tbody>
                     {filtered.map((customer) => {
                       const name = customer.full_name ?? customer.name ?? "Unknown";
                       const [bgCls, txtCls] = avatarColor(name);
-                      const ps = customer.primary_subscription;
-                      const statusCfg = subStatusConfig(ps?.status);
+                      const totalSubs = (customer.total_subscriptions ?? 0) ||
+                        ((customer.active_subscriptions ?? 0) + (customer.completed_subscriptions ?? 0) + (customer.defaulting_subscriptions ?? 0));
+                      const isExpanded = expandedIds.has(customer.id);
+                      const isLoadingThisExpand = loadingExpand.has(customer.id);
+                      const subs = subCache[customer.id] ?? [];
+
+                      const summaryStatusCfg =
+                        (customer.defaulting_subscriptions ?? 0) > 0 ? STATUS_CONFIG.DEFAULTING :
+                        (customer.active_subscriptions ?? 0) > 0 ? STATUS_CONFIG.ACTIVE :
+                        (customer.completed_subscriptions ?? 0) > 0 ? STATUS_CONFIG.COMPLETED :
+                        subStatusConfig(customer.primary_subscription?.status);
 
                       return (
-                        <tr key={customer.id} className="hover:bg-neutral-50/60 transition-colors group">
-                          <td className="px-5 py-3.5 whitespace-nowrap">
-                            <div className="flex items-center gap-3">
-                              <div className={`h-8 w-8 rounded-full ${bgCls} ${txtCls} flex items-center justify-center text-[11px] font-bold uppercase shrink-0`}>
-                                {name.substring(0, 2)}
+                        <Fragment key={customer.id}>
+                          {/* Level 1 — customer row */}
+                          <tr className={`hover:bg-neutral-50/60 transition-colors ${isExpanded ? "" : "border-b border-neutral-50"}`}>
+                            <td className="px-5 py-3.5 whitespace-nowrap">
+                              <div className="flex items-center gap-3">
+                                <div className={`h-8 w-8 rounded-full ${bgCls} ${txtCls} flex items-center justify-center text-[11px] font-bold uppercase shrink-0`}>
+                                  {name.substring(0, 2)}
+                                </div>
+                                <div>
+                                  <p className="text-[13px] font-semibold text-neutral-900">{name}</p>
+                                  <p className="text-[11px] text-neutral-400">{customer.email || "—"}</p>
+                                </div>
                               </div>
-                              <div className="text-[13px] font-semibold text-neutral-900">{name}</div>
-                            </div>
-                          </td>
-                          <td className="px-5 py-3.5 whitespace-nowrap">
-                            <span className="text-[12.5px] text-neutral-700">{dash(customer.phone)}</span>
-                          </td>
-                          <td className="px-5 py-3.5 whitespace-nowrap">
-                            <span className="text-[12.5px] text-neutral-700">{dash(customer.email)}</span>
-                          </td>
-                          <td className="px-5 py-3.5 whitespace-nowrap hidden lg:table-cell">
-                            <span className="text-[12.5px] text-neutral-700">{dash(ps?.property_name)}</span>
-                          </td>
-                          <td className="px-5 py-3.5 whitespace-nowrap hidden lg:table-cell">
-                            <span className="text-[12.5px] text-neutral-700">{dash(ps?.land_size)}</span>
-                          </td>
-                          <td className="px-5 py-3.5 whitespace-nowrap hidden xl:table-cell">
-                            <span className="text-[12.5px] text-neutral-700">{dash(ps?.plan_name)}</span>
-                          </td>
-                          <td className="px-5 py-3.5 whitespace-nowrap hidden xl:table-cell">
-                            <span className="text-[12.5px] font-medium text-neutral-800">{fmt(ps?.locked_price)}</span>
-                          </td>
-                          <td className="px-5 py-3.5 whitespace-nowrap hidden xl:table-cell">
-                            <span className="text-[12.5px] font-medium text-emerald-700">{fmt(ps?.amount_paid)}</span>
-                          </td>
-                          <td className="px-5 py-3.5 whitespace-nowrap hidden xl:table-cell">
-                            <span className={`text-[12.5px] font-medium ${ps?.balance > 0 ? "text-red-600" : "text-neutral-700"}`}>{fmt(ps?.balance)}</span>
-                          </td>
-                          <td className="px-5 py-3.5 whitespace-nowrap hidden xl:table-cell">
-                            <span className="text-[12.5px] text-neutral-700">
-                              {ps?.next_due_date
-                                ? new Date(ps.next_due_date).toLocaleDateString("en-NG", { day: "numeric", month: "short", year: "numeric" })
-                                : "—"}
-                            </span>
-                          </td>
-                          <td className="px-5 py-3.5 whitespace-nowrap">
-                            {statusCfg ? (
-                              <Badge className={`text-[11px] border gap-1.5 ${statusCfg.cls}`}>
-                                {statusCfg.dot && <span className={`w-1.5 h-1.5 rounded-full ${statusCfg.dot} inline-block`} />}
-                                {ps?.status === "COMPLETED" && <CheckCircle2 className="w-3 h-3" />}
-                                {ps?.status === "DEFAULTING" && <AlertTriangle className="w-3 h-3" />}
-                                {ps?.status === "CANCELLED" && <XCircle className="w-3 h-3" />}
-                                {statusCfg.label}
-                              </Badge>
+                            </td>
+                            <td className="px-5 py-3.5 whitespace-nowrap">
+                              <span className="text-[12.5px] text-neutral-700">{dash(customer.phone)}</span>
+                            </td>
+                            <td className="px-5 py-3.5 whitespace-nowrap">
+                              <div className="flex items-center gap-1.5">
+                                <span className="inline-flex items-center justify-center min-w-[1.375rem] h-5 px-1.5 rounded-full bg-neutral-100 text-[11px] font-bold text-neutral-700">
+                                  {totalSubs}
+                                </span>
+                                {(customer.active_subscriptions ?? 0) > 0 && (
+                                  <span className="w-2 h-2 rounded-full bg-emerald-400 shrink-0" title={`${customer.active_subscriptions} Active`} />
+                                )}
+                                {(customer.defaulting_subscriptions ?? 0) > 0 && (
+                                  <span className="w-2 h-2 rounded-full bg-red-400 shrink-0" title={`${customer.defaulting_subscriptions} Defaulting`} />
+                                )}
+                                {(customer.completed_subscriptions ?? 0) > 0 && (
+                                  <span className="w-2 h-2 rounded-full bg-blue-400 shrink-0" title={`${customer.completed_subscriptions} Completed`} />
+                                )}
+                              </div>
+                            </td>
+                            <td className="px-5 py-3.5 whitespace-nowrap hidden lg:table-cell">
+                              <span className="text-[12.5px] font-medium text-emerald-700">
+                                {fmt(customer.total_paid ?? customer.primary_subscription?.amount_paid)}
+                              </span>
+                            </td>
+                            <td className="px-5 py-3.5 whitespace-nowrap hidden lg:table-cell">
+                              <span className="text-[12.5px] font-medium text-neutral-800">
+                                {fmt(customer.total_balance ?? customer.primary_subscription?.balance)}
+                              </span>
+                            </td>
+                            <td className="px-5 py-3.5 whitespace-nowrap">
+                              {summaryStatusCfg ? (
+                                <Badge className={`text-[11px] border gap-1 ${summaryStatusCfg.cls}`}>
+                                  {summaryStatusCfg.dot && <span className={`w-1.5 h-1.5 rounded-full ${summaryStatusCfg.dot} inline-block`} />}
+                                  {summaryStatusCfg.label}
+                                </Badge>
+                              ) : (
+                                <span className="text-[11px] text-neutral-300">—</span>
+                              )}
+                            </td>
+                            <td className="px-5 py-3.5 whitespace-nowrap text-right">
+                              <div className="flex items-center justify-end gap-1">
+                                <button
+                                  onClick={() => navigate(`/customers/${customer.id}`)}
+                                  title="View profile"
+                                  className="h-7 w-7 flex items-center justify-center rounded-lg text-neutral-400 hover:text-emerald-700 hover:bg-emerald-50 transition-colors"
+                                >
+                                  <Eye className="w-3.5 h-3.5" />
+                                </button>
+                                {totalSubs > 0 && (
+                                  <button
+                                    onClick={() => toggleExpand(customer.id)}
+                                    title={isExpanded ? "Collapse subscriptions" : "Expand subscriptions"}
+                                    className="h-7 w-7 flex items-center justify-center rounded-lg text-neutral-400 hover:text-emerald-700 hover:bg-emerald-50 transition-colors"
+                                  >
+                                    {isLoadingThisExpand
+                                      ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                      : isExpanded
+                                      ? <ChevronUp className="w-3.5 h-3.5" />
+                                      : <ChevronDown className="w-3.5 h-3.5" />}
+                                  </button>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+
+                          {/* Level 2 — subscription sub-rows */}
+                          {isExpanded && (
+                            isLoadingThisExpand ? (
+                              <tr className="border-b border-neutral-50">
+                                <td colSpan={7} className="px-5 py-2 bg-neutral-50/60">
+                                  <div className="flex items-center gap-2 pl-11 text-[12px] text-neutral-400">
+                                    <Loader2 className="w-3 h-3 animate-spin" /> Loading subscriptions…
+                                  </div>
+                                </td>
+                              </tr>
+                            ) : subs.length === 0 ? (
+                              <tr className="border-b border-neutral-100">
+                                <td colSpan={7} className="px-5 py-2.5 bg-neutral-50/40">
+                                  <p className="pl-11 text-[12px] text-neutral-400 italic">No subscriptions found.</p>
+                                </td>
+                              </tr>
                             ) : (
-                              <span className="text-[11px] text-neutral-300">—</span>
-                            )}
-                          </td>
-                          <td className="px-5 py-3.5 whitespace-nowrap text-right">
-                            <div className="flex items-center justify-end gap-1">
-                              <button onClick={() => navigate(`/customers/${customer.id}`)} title="View customer"
-                                className="h-7 w-7 flex items-center justify-center rounded-lg text-neutral-400 hover:text-emerald-700 hover:bg-emerald-50 transition-colors">
-                                <Eye className="w-3.5 h-3.5" />
-                              </button>
-                              <button onClick={() => navigate(`/customers/${customer.id}/edit`)} title="Edit customer"
-                                className="h-7 w-7 flex items-center justify-center rounded-lg text-neutral-400 hover:text-blue-700 hover:bg-blue-50 transition-colors">
-                                <Pencil className="w-3.5 h-3.5" />
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
+                              <>
+                                {subs.map((sub: any, idx: number) => {
+                                  const subCfg = subStatusConfig(sub.status);
+                                  return (
+                                    <tr
+                                      key={sub.id}
+                                      className={`bg-neutral-50/40 hover:bg-neutral-50/80 transition-colors ${idx === subs.length - 1 ? "border-b border-neutral-100" : "border-b border-neutral-50/70"}`}
+                                    >
+                                      <td colSpan={7} className="py-0">
+                                        <div className="flex items-center gap-5 pl-16 pr-5 py-2.5 border-l-2 border-emerald-200/60">
+                                          <div className="flex-1 min-w-0">
+                                            <p className="text-[12.5px] font-semibold text-neutral-800 truncate">{sub.property_name || "—"}</p>
+                                            <p className="text-[11px] text-neutral-400">
+                                              {sub.land_size ? `${sub.land_size} SQM` : ""}
+                                              {sub.plan_name ? `${sub.land_size ? " · " : ""}${sub.plan_name}` : ""}
+                                            </p>
+                                          </div>
+                                          <div className="hidden lg:flex items-center gap-6 shrink-0">
+                                            <div className="text-right">
+                                              <p className="text-[10px] text-neutral-400 uppercase tracking-wide font-semibold">Price</p>
+                                              <p className="text-[12px] font-medium text-neutral-800">{fmt(sub.total_price)}</p>
+                                            </div>
+                                            <div className="text-right">
+                                              <p className="text-[10px] text-neutral-400 uppercase tracking-wide font-semibold">Paid</p>
+                                              <p className="text-[12px] font-medium text-emerald-700">{fmt(sub.amount_paid)}</p>
+                                            </div>
+                                            <div className="text-right">
+                                              <p className="text-[10px] text-neutral-400 uppercase tracking-wide font-semibold">Balance</p>
+                                              <p className={`text-[12px] font-medium ${Number(sub.balance) > 0 ? "text-red-600" : "text-neutral-700"}`}>{fmt(sub.balance)}</p>
+                                            </div>
+                                            <div className="text-right">
+                                              <p className="text-[10px] text-neutral-400 uppercase tracking-wide font-semibold">Next Due</p>
+                                              <p className="text-[12px] text-neutral-600">{fmtDate(sub.next_due_date)}</p>
+                                            </div>
+                                          </div>
+                                          <div className="flex items-center gap-2.5 shrink-0">
+                                            {subCfg && (
+                                              <Badge className={`text-[10.5px] border gap-1 ${subCfg.cls}`}>
+                                                {subCfg.dot && <span className={`w-1.5 h-1.5 rounded-full ${subCfg.dot} inline-block`} />}
+                                                {subCfg.label}
+                                              </Badge>
+                                            )}
+                                            <button
+                                              onClick={() => navigate(`/customers/${customer.id}`)}
+                                              className="text-[12px] text-emerald-600 hover:text-emerald-800 font-medium transition-colors whitespace-nowrap"
+                                            >
+                                              View →
+                                            </button>
+                                          </div>
+                                        </div>
+                                      </td>
+                                    </tr>
+                                  );
+                                })}
+                              </>
+                            )
+                          )}
+                        </Fragment>
                       );
                     })}
                   </tbody>

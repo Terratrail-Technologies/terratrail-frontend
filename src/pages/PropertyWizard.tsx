@@ -1256,13 +1256,101 @@ export function PropertyWizard() {
                           </div>
                         </>
                       )}
-                      {/* Cover image preview */}
-                      {coverPreview && (
+                      {/* Amenities */}
+                      {amenities.length > 0 && (
                         <>
                           <div className="border-t border-neutral-100" />
                           <div>
-                            <div className="text-[11px] font-semibold text-neutral-400 uppercase tracking-wide mb-2">Cover Image</div>
-                            <img src={coverPreview} alt="Cover" className="h-32 w-full object-cover rounded-lg" />
+                            <div className="text-[11px] font-semibold text-neutral-400 uppercase tracking-wide mb-2">Amenities</div>
+                            <div className="flex flex-wrap gap-2">
+                              {amenities.map((a) => (
+                                <span key={a.id} className={`px-2.5 py-1 rounded-lg text-[12px] font-medium border ${a.status === "AVAILABLE" ? "bg-emerald-50 text-emerald-700 border-emerald-100" : a.status === "COMING_SOON" ? "bg-amber-50 text-amber-700 border-amber-100" : "bg-neutral-50 text-neutral-500 border-neutral-200"}`}>
+                                  {a.name}
+                                  <span className="ml-1 text-[10px] opacity-70">· {a.status.replace(/_/g, " ").toLowerCase()}</span>
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        </>
+                      )}
+                      {/* Land Documents */}
+                      {documents.length > 0 && (
+                        <>
+                          <div className="border-t border-neutral-100" />
+                          <div>
+                            <div className="text-[11px] font-semibold text-neutral-400 uppercase tracking-wide mb-2">Land Documents</div>
+                            <div className="space-y-1.5">
+                              {documents.map((d) => (
+                                <div key={d.id} className="flex items-center justify-between px-3 py-2 bg-neutral-50 rounded-lg">
+                                  <span className="text-[13px] font-medium text-neutral-800">
+                                    {d.documentType === "CUSTOM" ? d.customDocName || "Custom Document" : d.documentType.replace(/_/g, " ")}
+                                  </span>
+                                  <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ${d.status === "AVAILABLE" ? "bg-emerald-100 text-emerald-700" : d.status === "PENDING" ? "bg-amber-100 text-amber-700" : "bg-neutral-200 text-neutral-500"}`}>
+                                    {d.status}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </>
+                      )}
+                      {/* Payment Methods */}
+                      {paymentMethods.length > 0 && (
+                        <>
+                          <div className="border-t border-neutral-100" />
+                          <div>
+                            <div className="text-[11px] font-semibold text-neutral-400 uppercase tracking-wide mb-2">Payment Methods</div>
+                            <div className="space-y-1.5">
+                              {paymentMethods.map((m) => (
+                                <div key={m.id} className="flex items-center justify-between px-3 py-2 bg-neutral-50 rounded-lg">
+                                  <div>
+                                    <p className="text-[13px] font-semibold text-neutral-800">{m.bankName}</p>
+                                    <p className="text-[11px] text-neutral-500">{m.accountNumber} · {m.accountName}</p>
+                                  </div>
+                                  {!m.active && <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-neutral-200 text-neutral-500">Inactive</span>}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </>
+                      )}
+                      {/* Cover image + gallery */}
+                      {(coverPreview || galleryImages.length > 0) && (
+                        <>
+                          <div className="border-t border-neutral-100" />
+                          <div>
+                            <div className="text-[11px] font-semibold text-neutral-400 uppercase tracking-wide mb-2">Images</div>
+                            <div className="grid grid-cols-4 gap-2">
+                              {coverPreview && (
+                                <div className="relative col-span-2 row-span-1 aspect-video rounded-lg overflow-hidden bg-neutral-100">
+                                  <img src={coverPreview} alt="Cover" className="w-full h-full object-cover" />
+                                  <span className="absolute bottom-1 left-1 text-[9px] font-bold bg-black/60 text-white px-1.5 py-0.5 rounded">COVER</span>
+                                </div>
+                              )}
+                              {galleryImages.map((img, i) => (
+                                <div key={i} className="aspect-square rounded-lg overflow-hidden bg-neutral-100">
+                                  <img src={img.preview} alt="" className="w-full h-full object-cover" />
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </>
+                      )}
+                      {/* Map preview */}
+                      {latitude && longitude && (
+                        <>
+                          <div className="border-t border-neutral-100" />
+                          <div>
+                            <div className="text-[11px] font-semibold text-neutral-400 uppercase tracking-wide mb-2">Location Map</div>
+                            <div className="h-40 rounded-lg border border-neutral-200 overflow-hidden">
+                              <iframe
+                                title="Map preview"
+                                width="100%" height="100%"
+                                style={{ border: 0 }}
+                                loading="lazy"
+                                src={`https://maps.google.com/maps?q=${latitude},${longitude}&z=15&output=embed`}
+                              />
+                            </div>
                           </div>
                         </>
                       )}

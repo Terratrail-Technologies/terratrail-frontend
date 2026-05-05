@@ -21,6 +21,9 @@ import EstatesPage from "./pages/public/EstatesPage";
 import EstateDetailPage from "./pages/public/EstateDetailPage";
 import LandingPage from "./pages/public/LandingPage";
 import { PropertyDetail } from "./pages/PropertyDetail";
+import { PaymentsPage } from "./pages/PaymentsPage";
+import { AllocationPage } from "./pages/AllocationPage";
+import { NotificationsPage } from "./pages/NotificationsPage";
 // Onboarding – isolated module, no MainLayout dependency
 import { OnboardingLayout } from "./onboarding/components/OnboardingLayout";
 import { SignIn } from "./onboarding/pages/SignIn";
@@ -74,6 +77,9 @@ export const router = createBrowserRouter([
           { path: "sales-reps", Component: SalesReps },
           { path: "sales-reps/:id", Component: SalesRepDetail },
           { path: "site-inspection", Component: SiteInspection },
+          { path: "payments", Component: PaymentsPage },
+          { path: "allocation", Component: AllocationPage },
+          { path: "notifications", Component: NotificationsPage },
           { path: "data-export", Component: DataExport },
           { path: "settings/*", Component: WorkspaceSettings },
           { path: "account", Component: AccountSettings },

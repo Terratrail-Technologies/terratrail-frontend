@@ -3,8 +3,8 @@ import { useParams, useNavigate, Link } from "react-router";
 import {
   ArrowLeft, ExternalLink, Pencil, LayoutGrid, Users, CreditCard,
   ClipboardList, TrendingUp, DollarSign, Wallet, CheckCircle2,
-  XCircle, Clock, Plus, Search, ChevronLeft, ChevronRight, X, Loader2,
-  Upload, Eye, Building2, MapPin, BarChart3, Receipt,
+  XCircle, Clock, Plus, Search, ChevronLeft, ChevronRight, ChevronDown, ChevronUp,
+  X, Loader2, Upload, Eye, Building2, MapPin, BarChart3, Receipt,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { api, BASE_URL } from "../services/api";
@@ -47,7 +47,15 @@ interface Subscription {
   status: string; start_date: string | null; estimated_end_date: string | null;
   next_due_date: string | null; next_due_amount: string | null; next_due_installment_id: string | null;
   assigned_rep: string | null; assigned_rep_name: string | null;
+  plot_number: string | null; allocation_date: string | null;
+  allocation_letter: string | null; allocation_notes: string;
+  notes: string;
   created_at: string;
+}
+
+interface FullInstallment {
+  id: string; installment_number: number; due_date: string;
+  amount: string; status: string; paid_date: string | null;
 }
 
 interface Payment {
@@ -162,7 +170,7 @@ function MiniProgress({ pct }: { pct: number }) {
 
 // ── Slide-over Wrapper ────────────────────────────────────────────────────────
 
-function SlideOver({ open, onClose, title, children, width = "max-w-md" }: {
+function SlideOver({ open, onClose, title, children, width = "max-w-lg" }: {
   open: boolean; onClose: () => void; title: string; children: React.ReactNode; width?: string;
 }) {
   return (
@@ -171,9 +179,10 @@ function SlideOver({ open, onClose, title, children, width = "max-w-md" }: {
         <>
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm" onClick={onClose} />
-          <motion.div initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }}
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <motion.div initial={{ opacity: 0, scale: 0.96, y: 8 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.96, y: 8 }}
             transition={{ type: "spring", stiffness: 340, damping: 34 }}
-            className={`fixed right-0 top-0 bottom-0 z-50 bg-white shadow-2xl flex flex-col w-full ${width}`}>
+            className={`relative bg-white rounded-2xl shadow-2xl flex flex-col w-full ${width} max-h-[90vh]`}>
             <div className="flex items-center justify-between p-5 border-b border-neutral-100 shrink-0">
               <h2 className="font-semibold text-neutral-900">{title}</h2>
               <button onClick={onClose} className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-neutral-100">
@@ -182,6 +191,7 @@ function SlideOver({ open, onClose, title, children, width = "max-w-md" }: {
             </div>
             <div className="flex-1 overflow-y-auto p-5">{children}</div>
           </motion.div>
+          </div>
         </>
       )}
     </AnimatePresence>
@@ -197,7 +207,7 @@ function CustomerSearch({ onSelect, label = "Search Customer" }: {
   const [results, setResults] = useState<Customer[]>([]);
   const [selected, setSelected] = useState<Customer | null>(null);
   const [loading, setLoading] = useState(false);
-  const debounceRef = useRef<ReturnType<typeof setTimeout>>();
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   useEffect(() => {
     if (!query.trim() || selected) { setResults([]); return; }
@@ -252,12 +262,75 @@ function CustomerSearch({ onSelect, label = "Search Customer" }: {
 const PaymentTabCtx = createContext<{ property: Property | null }>({ property: null });
 const usePaymentTabCtx = () => useContext(PaymentTabCtx);
 
+// ── Pricing Plan Price History Row ───────────────────────────────────────────
+
+function PlanHistoryRow({ plan }: { plan: PricingPlan }) {
+  const [expanded, setExpanded] = useState(false);
+  const [history, setHistory]   = useState<any[]>([]);
+  const [loading, setLoading]   = useState(false);
+  const [fetched, setFetched]   = useState(false);
+
+  const toggle = async () => {
+    if (fetched) { setExpanded((v) => !v); return; }
+    setExpanded(true);
+    setLoading(true);
+    try {
+      const data = await api.properties.planHistory(plan.id);
+      setHistory(data);
+      setFetched(true);
+    } catch { setHistory([]); setFetched(true); }
+    finally { setLoading(false); }
+  };
+
+  return (
+    <div className="bg-white rounded-xl border border-neutral-100 overflow-hidden shadow-sm">
+      <div className="px-4 py-3 flex items-center justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-[13px] font-semibold text-neutral-800 truncate">{plan.plan_name}</p>
+          <p className="text-[11px] text-neutral-400">{plan.land_size} SQM · {plan.payment_type === "OUTRIGHT" ? "Outright" : "Installment"}</p>
+        </div>
+        <div className="flex items-center gap-3 shrink-0">
+          <p className="text-[14px] font-bold text-emerald-700">{fmt(plan.total_price)}</p>
+          <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${plan.is_active ? "bg-emerald-100 text-emerald-700" : "bg-neutral-100 text-neutral-500"}`}>
+            {plan.is_active ? "Active" : "Inactive"}
+          </span>
+          <button onClick={toggle} className="flex items-center gap-1 text-[11.5px] text-neutral-400 hover:text-emerald-600 transition-colors">
+            {expanded ? <ChevronUp className="size-3.5" /> : <ChevronDown className="size-3.5" />}
+            History
+          </button>
+        </div>
+      </div>
+      {expanded && (
+        <div className="border-t border-neutral-50 px-4 py-3 bg-neutral-50/40">
+          {loading ? (
+            <p className="text-[12px] text-neutral-400 flex items-center gap-1.5"><Loader2 className="size-3 animate-spin" /> Loading…</p>
+          ) : history.length === 0 ? (
+            <p className="text-[12px] text-neutral-400 italic">No price changes recorded yet.</p>
+          ) : (
+            <div className="space-y-1.5">
+              {history.map((h: any) => (
+                <div key={h.id} className="flex items-center gap-3 text-[12px]">
+                  <span className="text-neutral-400 shrink-0">{fmtDate(h.created_at)}</span>
+                  <span className="text-red-500 line-through">{fmt(h.old_price)}</span>
+                  <span className="text-neutral-400">→</span>
+                  <span className="text-emerald-700 font-semibold">{fmt(h.new_price)}</span>
+                  {h.changed_by_name && <span className="text-neutral-400">by {h.changed_by_name}</span>}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // Tab 1 — Overview
 // ═══════════════════════════════════════════════════════════════════════════════
 
-function OverviewTab({ property, subscriptions, payments }: {
-  property: Property; subscriptions: Subscription[]; payments: Payment[];
+function OverviewTab({ property, subscriptions, payments, commissions }: {
+  property: Property; subscriptions: Subscription[]; payments: Payment[]; commissions: any[];
 }) {
   const activeSubs    = subscriptions.filter((s) => s.status === "ACTIVE").length;
   const completedSubs = subscriptions.filter((s) => s.status === "COMPLETED").length;
@@ -400,6 +473,37 @@ function OverviewTab({ property, subscriptions, payments }: {
           })()}
         </div>
       </div>
+
+      {/* Commissions */}
+      <div>
+        <h3 className="text-[12px] font-semibold text-neutral-400 uppercase tracking-wider mb-3">Commissions</h3>
+        <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
+          {(() => {
+            const earned   = commissions.filter((c) => c.status === "PAID").reduce((a, c) => a + parseFloat(c.amount || "0"), 0);
+            const pending  = commissions.filter((c) => c.status === "PENDING").reduce((a, c) => a + parseFloat(c.amount || "0"), 0);
+            const total    = earned + pending;
+            return (
+              <>
+                <MetricCard label="Commission Earned"  value={fmt(earned)}  icon={CheckCircle2} color="emerald" sub="Paid out to reps" />
+                <MetricCard label="Commission Pending" value={fmt(pending)} icon={Clock}        color="amber"   sub="Awaiting payout" />
+                <MetricCard label="Total Commission"   value={fmt(total)}   icon={TrendingUp}   color="violet"  sub="Earned + pending" />
+              </>
+            );
+          })()}
+        </div>
+      </div>
+
+      {/* Pricing Plans */}
+      {property.pricing_plans.length > 0 && (
+        <div>
+          <h3 className="text-[12px] font-semibold text-neutral-400 uppercase tracking-wider mb-3">Pricing Plans</h3>
+          <div className="space-y-2">
+            {property.pricing_plans.map((plan) => (
+              <PlanHistoryRow key={plan.id} plan={plan} />
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -555,6 +659,252 @@ function AddSubscriptionSlideOver({ open, onClose, property, onCreated }: {
   );
 }
 
+// ── Subscription Detail Modal ───────────────────────────────────────────────
+
+const instStatusCls: Record<string, string> = {
+  PAID:     "bg-emerald-100 text-emerald-700",
+  OVERDUE:  "bg-red-100 text-red-700",
+  DUE:      "bg-amber-100 text-amber-700",
+  UPCOMING: "bg-neutral-100 text-neutral-500",
+};
+
+function SubscriptionDetailModal({ sub, onClose, onRefresh }: {
+  sub: Subscription; onClose: () => void; onRefresh: () => void;
+}) {
+  const [installments, setInstallments] = useState<FullInstallment[]>([]);
+  const [loading, setLoading]           = useState(true);
+  const [view, setView]                 = useState<"detail" | "cancel">("detail");
+  const [cancelReason, setCancelReason] = useState("");
+  const [cancelling, setCancelling]     = useState(false);
+  const [deleting, setDeleting]         = useState(false);
+
+  useEffect(() => {
+    setLoading(true);
+    api.installments.list({ subscription: sub.id })
+      .then((rows: any[]) => setInstallments(rows))
+      .catch(() => setInstallments([]))
+      .finally(() => setLoading(false));
+  }, [sub.id]);
+
+  const handleCancel = async () => {
+    setCancelling(true);
+    try {
+      await api.subscriptions.cancel(sub.id, cancelReason);
+      toast.success("Subscription cancelled.");
+      onRefresh(); onClose();
+    } catch (err: any) { toast.error(err.message ?? "Failed to cancel."); }
+    finally { setCancelling(false); }
+  };
+
+  const handleDelete = async () => {
+    if (!window.confirm(`Delete this subscription for ${sub.customer_name}? This cannot be undone.`)) return;
+    setDeleting(true);
+    try {
+      await api.subscriptions.delete(sub.id);
+      toast.success("Subscription deleted.");
+      onRefresh(); onClose();
+    } catch (err: any) { toast.error(err.message ?? "Failed to delete."); }
+    finally { setDeleting(false); }
+  };
+
+  const isCancellable = ["PENDING", "ACTIVE", "DEFAULTING", "DEFAULTED"].includes(sub.status);
+  const isDeletable   = ["PENDING", "ACTIVE", "DEFAULTING"].includes(sub.status);
+
+  return (
+    <SlideOver open onClose={onClose} title="Subscription Detail" width="max-w-2xl">
+      {view === "cancel" ? (
+        <div className="space-y-4">
+          <p className="text-[13px] text-neutral-600">
+            Cancelling subscription for <strong>{sub.customer_name}</strong> — {sub.land_size} SQM · {sub.plan_name}
+          </p>
+          <div>
+            <label className={labelCls}>Reason (optional)</label>
+            <textarea value={cancelReason} onChange={(e) => setCancelReason(e.target.value)} rows={3}
+              placeholder="Add a reason for cancellation…"
+              className="w-full px-3 py-2 rounded-lg border border-neutral-200 text-[13px] focus:outline-none focus:ring-1 focus:ring-emerald-500/40 resize-none" />
+          </div>
+          <div className="flex gap-2">
+            <Button variant="outline" className="flex-1" onClick={() => setView("detail")}>Back</Button>
+            <Button className="flex-1 bg-red-600 hover:bg-red-700 text-white gap-1.5" onClick={handleCancel} disabled={cancelling}>
+              {cancelling ? <><Loader2 className="size-3.5 animate-spin" />Cancelling…</> : "Confirm Cancel"}
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <div className="space-y-5">
+          {/* Summary */}
+          <div className="grid grid-cols-2 gap-2.5">
+            {([
+              ["Customer",   sub.customer_name],
+              ["Status",     <SubStatusBadge status={sub.status} />],
+              ["Land Size",  sub.land_size ? `${sub.land_size} SQM` : "—"],
+              ["Plan",       sub.plan_name || "—"],
+              ["Total Price", fmt(sub.total_price)],
+              ["Amount Paid", fmt(sub.amount_paid)],
+              ["Balance",    fmt(sub.balance)],
+              ["Start Date", fmtDate(sub.start_date)],
+            ] as [string, React.ReactNode][]).map(([k, v]) => (
+              <div key={k} className="bg-neutral-50 rounded-lg px-3 py-2.5">
+                <p className="text-[10.5px] font-semibold text-neutral-400 uppercase tracking-wide">{k}</p>
+                <div className="text-[13px] font-semibold text-neutral-800 mt-0.5">{v}</div>
+              </div>
+            ))}
+          </div>
+
+          {sub.plot_number && (
+            <div className="bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2.5">
+              <p className="text-[10.5px] font-semibold text-emerald-600 uppercase tracking-wide">Plot Allocation</p>
+              <p className="text-[13px] font-semibold text-emerald-800 mt-0.5">Plot #{sub.plot_number}</p>
+              {sub.allocation_date && (
+                <p className="text-[11px] text-emerald-600 mt-0.5">Allocated on {fmtDate(sub.allocation_date)}</p>
+              )}
+              {sub.allocation_notes && (
+                <p className="text-[11px] text-emerald-600 mt-0.5">{sub.allocation_notes}</p>
+              )}
+            </div>
+          )}
+
+          {/* Installment Schedule */}
+          <div>
+            <h3 className="text-[11px] font-semibold text-neutral-400 uppercase tracking-wider mb-2">
+              Installment Schedule
+            </h3>
+            {loading ? (
+              <div className="space-y-1.5">
+                {[1,2,3].map((i) => <Skeleton key={i} className="h-9 rounded-lg" />)}
+              </div>
+            ) : installments.length === 0 ? (
+              <p className="text-[12px] text-neutral-400 italic py-4 text-center">No installments generated yet.</p>
+            ) : (
+              <div className="bg-white rounded-xl border border-neutral-100 overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-[12px]">
+                    <thead>
+                      <tr className="border-b border-neutral-100 bg-neutral-50">
+                        {["#", "Due Date", "Amount", "Status", "Paid Date"].map((h) => (
+                          <th key={h} className="px-3 py-2 text-left text-[10.5px] font-semibold text-neutral-400 uppercase tracking-wide">{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {installments.map((inst) => (
+                        <tr key={inst.id} className="border-b border-neutral-50 last:border-0">
+                          <td className="px-3 py-2 text-neutral-500">#{inst.installment_number}</td>
+                          <td className="px-3 py-2 text-neutral-600 whitespace-nowrap">{fmtDate(inst.due_date)}</td>
+                          <td className="px-3 py-2 font-semibold text-neutral-800">{fmt(inst.amount)}</td>
+                          <td className="px-3 py-2">
+                            <span className={`text-[10.5px] font-bold px-1.5 py-0.5 rounded-full ${instStatusCls[inst.status] ?? "bg-neutral-100 text-neutral-500"}`}>
+                              {inst.status}
+                            </span>
+                          </td>
+                          <td className="px-3 py-2 text-neutral-400 whitespace-nowrap">
+                            {inst.paid_date ? fmtDate(inst.paid_date) : "—"}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Actions */}
+          {(isCancellable || isDeletable) && (
+            <div className="flex gap-2 pt-1 border-t border-neutral-100">
+              {isCancellable && (
+                <Button variant="outline"
+                  className="text-amber-600 border-amber-200 hover:bg-amber-50 text-[12px] h-8 gap-1.5"
+                  onClick={() => setView("cancel")}>
+                  <XCircle className="size-3.5" /> Cancel Subscription
+                </Button>
+              )}
+              {isDeletable && (
+                <Button variant="outline"
+                  className="text-red-600 border-red-200 hover:bg-red-50 text-[12px] h-8 gap-1.5"
+                  onClick={handleDelete} disabled={deleting}>
+                  {deleting ? <Loader2 className="size-3.5 animate-spin" /> : <X className="size-3.5" />}
+                  Delete
+                </Button>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+    </SlideOver>
+  );
+}
+
+// ── Allocate Plot Slide-over ────────────────────────────────────────────────
+
+function AllocateSlideOver({ sub, onClose, onRefresh }: {
+  sub: Subscription; onClose: () => void; onRefresh: () => void;
+}) {
+  const [plotNum, setPlotNum]       = useState("");
+  const [allocDate, setAllocDate]   = useState("");
+  const [allocNotes, setAllocNotes] = useState("");
+  const [allocLetter, setAllocLetter] = useState<File | null>(null);
+  const [saving, setSaving]         = useState(false);
+
+  const handleSubmit = async () => {
+    if (!plotNum.trim()) { toast.error("Plot number is required."); return; }
+    setSaving(true);
+    try {
+      const fd = new FormData();
+      fd.append("plot_number", plotNum.trim());
+      if (allocDate)   fd.append("allocation_date", allocDate);
+      if (allocNotes)  fd.append("allocation_notes", allocNotes);
+      if (allocLetter) fd.append("allocation_letter", allocLetter);
+      await api.subscriptions.allocate(sub.id, fd);
+      toast.success("Plot allocated successfully.");
+      onRefresh(); onClose();
+    } catch (err: any) { toast.error(err.message ?? "Failed to allocate plot."); }
+    finally { setSaving(false); }
+  };
+
+  return (
+    <SlideOver open onClose={onClose} title="Allocate Plot">
+      <div className="space-y-4">
+        <div className="bg-neutral-50 rounded-lg px-3 py-2.5 text-[12px]">
+          <p className="font-semibold text-neutral-700">{sub.customer_name}</p>
+          <p className="text-neutral-500 mt-0.5">{sub.land_size} SQM · {sub.plan_name}</p>
+        </div>
+        <div>
+          <label className={labelCls}>Plot Number <span className="text-red-500">*</span></label>
+          <input value={plotNum} onChange={(e) => setPlotNum(e.target.value)} className={inputCls} placeholder="e.g. A-24" />
+        </div>
+        <div>
+          <label className={labelCls}>Allocation Date</label>
+          <input type="date" value={allocDate} onChange={(e) => setAllocDate(e.target.value)} className={inputCls} />
+        </div>
+        <div>
+          <label className={labelCls}>Notes</label>
+          <textarea value={allocNotes} onChange={(e) => setAllocNotes(e.target.value)} rows={2}
+            className="w-full px-3 py-2 rounded-lg border border-neutral-200 text-[13px] focus:outline-none focus:ring-1 focus:ring-emerald-500/40 resize-none" />
+        </div>
+        <div>
+          <label className={labelCls}>Allocation Letter (optional)</label>
+          <label className="block w-full border-2 border-dashed border-neutral-200 rounded-lg p-4 text-center cursor-pointer hover:border-emerald-400 transition-colors">
+            <Upload className="size-5 mx-auto mb-1 text-neutral-400" />
+            <span className="text-[12px] text-neutral-500">
+              {allocLetter ? allocLetter.name : "Click to upload image or PDF"}
+            </span>
+            <input type="file" className="hidden" accept="image/*,.pdf"
+              onChange={(e) => setAllocLetter(e.target.files?.[0] ?? null)} />
+          </label>
+        </div>
+        <div className="flex gap-2">
+          <Button variant="outline" className="flex-1" onClick={onClose}>Cancel</Button>
+          <Button className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white gap-1.5"
+            onClick={handleSubmit} disabled={!plotNum.trim() || saving}>
+            {saving ? <><Loader2 className="size-3.5 animate-spin" />Allocating…</> : "Confirm Allocation"}
+          </Button>
+        </div>
+      </div>
+    </SlideOver>
+  );
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // Tab 2 — Subscriptions
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -564,6 +914,8 @@ function SubscriptionsTab({ property, subscriptions, loading, onRefresh, onViewC
   onRefresh: () => void; onViewCustomer: (id: string) => void;
 }) {
   const [showAdd, setShowAdd]           = useState(false);
+  const [viewSub, setViewSub]           = useState<Subscription | null>(null);
+  const [allocateSub, setAllocateSub]   = useState<Subscription | null>(null);
   const [search, setSearch]             = useState("");
   const [filterStatus, setFilterStatus] = useState("");
   const [filterLS, setFilterLS]         = useState("");
@@ -584,6 +936,12 @@ function SubscriptionsTab({ property, subscriptions, loading, onRefresh, onViewC
 
   if (loading) return <div className="space-y-2">{[1, 2, 3].map((i) => <Skeleton key={i} className="h-14 rounded-xl" />)}</div>;
 
+  const totalPaid        = subscriptions.reduce((a, s) => a + parseFloat(s.amount_paid || "0"), 0);
+  const totalOutstanding = subscriptions.filter((s) => !["CANCELLED","COMPLETED"].includes(s.status))
+    .reduce((a, s) => a + parseFloat(s.balance || "0"), 0);
+  const totalLocked      = subscriptions.filter((s) => ["ACTIVE","PENDING","COMPLETED"].includes(s.status))
+    .reduce((a, s) => a + parseFloat(s.total_price || "0"), 0);
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-3 flex-wrap">
@@ -591,6 +949,24 @@ function SubscriptionsTab({ property, subscriptions, loading, onRefresh, onViewC
         <Button onClick={() => setShowAdd(true)} className="bg-emerald-600 hover:bg-emerald-700 text-white h-8 text-[12px] gap-1.5">
           <Plus className="size-3.5" /> Add New Subscription
         </Button>
+      </div>
+
+      <div className="grid grid-cols-3 gap-3">
+        <div className="bg-white rounded-xl border border-neutral-100 px-4 py-3 shadow-sm">
+          <p className="text-[10.5px] font-semibold text-neutral-400 uppercase tracking-wide">Amount Paid</p>
+          <p className="text-[18px] font-bold text-emerald-700 mt-0.5">{fmt(totalPaid)}</p>
+          <p className="text-[10.5px] text-neutral-400 mt-0.5">Across all subscriptions</p>
+        </div>
+        <div className="bg-white rounded-xl border border-neutral-100 px-4 py-3 shadow-sm">
+          <p className="text-[10.5px] font-semibold text-neutral-400 uppercase tracking-wide">Outstanding</p>
+          <p className="text-[18px] font-bold text-amber-600 mt-0.5">{fmt(totalOutstanding)}</p>
+          <p className="text-[10.5px] text-neutral-400 mt-0.5">Active + defaulting subs</p>
+        </div>
+        <div className="bg-white rounded-xl border border-neutral-100 px-4 py-3 shadow-sm">
+          <p className="text-[10.5px] font-semibold text-neutral-400 uppercase tracking-wide">Locked Price</p>
+          <p className="text-[18px] font-bold text-violet-700 mt-0.5">{fmt(totalLocked)}</p>
+          <p className="text-[10.5px] text-neutral-400 mt-0.5">Contract value at purchase</p>
+        </div>
       </div>
 
       <div className="flex gap-2 flex-wrap">
@@ -651,10 +1027,18 @@ function SubscriptionsTab({ property, subscriptions, loading, onRefresh, onViewC
                     <td className="px-4 py-3"><SubStatusBadge status={s.status} /></td>
                     <td className="px-4 py-3 whitespace-nowrap text-neutral-500 text-[12px]">{fmtDate(s.next_due_date)}</td>
                     <td className="px-4 py-3">
-                      <button onClick={() => onViewCustomer(s.customer)}
-                        className="text-emerald-600 hover:text-emerald-700 font-medium text-[12px] flex items-center gap-1">
-                        <Eye className="size-3.5" /> View
-                      </button>
+                      <div className="flex items-center gap-2">
+                        <button onClick={() => setViewSub(s)}
+                          className="text-emerald-600 hover:text-emerald-700 font-medium text-[12px] flex items-center gap-1">
+                          <Eye className="size-3.5" /> View
+                        </button>
+                        {s.status === "COMPLETED" && !s.plot_number && (
+                          <button onClick={() => setAllocateSub(s)}
+                            className="text-blue-600 hover:text-blue-700 font-medium text-[12px] flex items-center gap-1 ml-1">
+                            <MapPin className="size-3.5" /> Allocate
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -667,6 +1051,22 @@ function SubscriptionsTab({ property, subscriptions, loading, onRefresh, onViewC
 
       <AddSubscriptionSlideOver open={showAdd} onClose={() => setShowAdd(false)} property={property}
         onCreated={() => { onRefresh(); setShowAdd(false); }} />
+
+      {viewSub && (
+        <SubscriptionDetailModal
+          sub={viewSub}
+          onClose={() => setViewSub(null)}
+          onRefresh={() => { setViewSub(null); onRefresh(); }}
+        />
+      )}
+
+      {allocateSub && (
+        <AllocateSlideOver
+          sub={allocateSub}
+          onClose={() => setAllocateSub(null)}
+          onRefresh={() => { setAllocateSub(null); onRefresh(); }}
+        />
+      )}
     </div>
   );
 }
@@ -694,109 +1094,152 @@ function Pagination({ page, pageCount, total, onPage }: { page: number; pageCoun
 // Record Payment Slide-over
 // ═══════════════════════════════════════════════════════════════════════════════
 
+interface InstallmentRow { id: string; installment_number: number; due_date: string; amount: string; status: string; }
+
 function RecordPaymentSlideOver({ open, onClose, property, onRecorded }: {
   open: boolean; onClose: () => void; property: Property; onRecorded: () => void;
 }) {
-  const [customer, setCustomer]       = useState<Customer | null>(null);
-  const [custSubs, setCustSubs]       = useState<Subscription[]>([]);
-  const [selectedSub, setSelectedSub] = useState<Subscription | null>(null);
-  const [amount, setAmount]           = useState("");
-  const [payDate, setPayDate]         = useState(new Date().toISOString().slice(0, 10));
-  const [bankId, setBankId]           = useState("");
-  const [reference, setReference]     = useState("");
-  const [receipt, setReceipt]         = useState<File | null>(null);
-  const [loadingSubs, setLoadingSubs] = useState(false);
-  const [saving, setSaving]           = useState(false);
+  const [customer, setCustomer]               = useState<Customer | null>(null);
+  const [custSubs, setCustSubs]               = useState<Subscription[]>([]);
+  const [selectedSub, setSelectedSub]         = useState<Subscription | null>(null);
+  const [installments, setInstallments]       = useState<InstallmentRow[]>([]);
+  const [selectedInst, setSelectedInst]       = useState<InstallmentRow | null>(null);
+  const [amount, setAmount]                   = useState("");
+  const [reference, setReference]             = useState("");
+  const [receipt, setReceipt]                 = useState<File | null>(null);
+  const [loadingSubs, setLoadingSubs]         = useState(false);
+  const [loadingInst, setLoadingInst]         = useState(false);
+  const [saving, setSaving]                   = useState(false);
 
   const activeBanks = property.bank_accounts.filter((b) => b.is_active);
 
+  // Load subscriptions when customer changes
   useEffect(() => {
-    if (!customer) { setCustSubs([]); setSelectedSub(null); return; }
+    if (!customer) { setCustSubs([]); setSelectedSub(null); setInstallments([]); setSelectedInst(null); return; }
     setLoadingSubs(true);
     api.subscriptions.list({ customer: customer.id, property: property.id })
       .then((subs: any[]) => {
         const forProp = subs.filter((s) => s.property === property.id && ["ACTIVE", "PENDING"].includes(s.status));
         setCustSubs(forProp);
-        if (forProp.length === 1) { setSelectedSub(forProp[0]); setAmount(forProp[0].next_due_amount ?? ""); }
+        if (forProp.length === 1) setSelectedSub(forProp[0]);
       })
       .catch(() => setCustSubs([]))
       .finally(() => setLoadingSubs(false));
   }, [customer, property.id]);
 
+  // Load installments when subscription changes
+  useEffect(() => {
+    if (!selectedSub) { setInstallments([]); setSelectedInst(null); return; }
+    setLoadingInst(true);
+    api.installments.list({ subscription: selectedSub.id })
+      .then((rows: any[]) => {
+        const payable = rows.filter((r) => ["UPCOMING", "DUE", "OVERDUE"].includes(r.status));
+        setInstallments(payable);
+        if (payable.length > 0) {
+          // Auto-select the first overdue/due, else first upcoming
+          const first = payable.find((r) => r.status === "OVERDUE") ?? payable.find((r) => r.status === "DUE") ?? payable[0];
+          setSelectedInst(first);
+          setAmount(first.amount);
+        }
+      })
+      .catch(() => setInstallments([]))
+      .finally(() => setLoadingInst(false));
+  }, [selectedSub]);
+
   const reset = () => {
     setCustomer(null); setCustSubs([]); setSelectedSub(null);
-    setAmount(""); setPayDate(new Date().toISOString().slice(0, 10));
-    setBankId(""); setReference(""); setReceipt(null); onClose();
+    setInstallments([]); setSelectedInst(null);
+    setAmount(""); setReference(""); setReceipt(null); onClose();
   };
 
   const handleSubmit = async () => {
-    if (!selectedSub?.next_due_installment_id) { toast.error("No due installment found."); return; }
-    if (!receipt) { toast.error("Receipt is required."); return; }
-    if (!amount) { toast.error("Amount is required."); return; }
+    if (!selectedInst) { toast.error("Select an installment to record payment against."); return; }
+    if (!amount || Number(amount) <= 0) { toast.error("Enter a valid amount."); return; }
+    if (!receipt) { toast.error("Receipt upload is required."); return; }
     setSaving(true);
     try {
       const fd = new FormData();
-      fd.append("installment_id", selectedSub.next_due_installment_id);
+      fd.append("installment_id", selectedInst.id);
       fd.append("amount", amount);
       fd.append("receipt_file", receipt);
       if (reference) fd.append("notes", reference);
       await api.payments.record(fd);
-      toast.success("Payment recorded. Pending approval.");
+      toast.success("Payment recorded — pending approval.");
       onRecorded(); reset();
     } catch (err: any) { toast.error(err.message ?? "Failed to record payment."); }
     finally { setSaving(false); }
   };
 
+  const instStatusCls: Record<string, string> = {
+    OVERDUE: "text-red-600 font-semibold", DUE: "text-amber-600 font-semibold", UPCOMING: "text-neutral-500",
+  };
+
   return (
     <SlideOver open={open} onClose={reset} title="Record Payment">
       <div className="space-y-5">
-        <CustomerSearch onSelect={(c) => { setCustomer(c); setSelectedSub(null); setCustSubs([]); }} />
+        <CustomerSearch onSelect={(c) => { setCustomer(c); setSelectedSub(null); setCustSubs([]); setInstallments([]); setSelectedInst(null); }} />
 
         {customer && loadingSubs && (
           <div className="flex items-center gap-2 text-[13px] text-neutral-500">
             <Loader2 className="size-3.5 animate-spin" /> Loading subscriptions…
           </div>
         )}
-
         {customer && !loadingSubs && custSubs.length === 0 && (
-          <p className="text-[13px] text-neutral-400 bg-neutral-50 rounded-lg p-3">
-            No active subscription found for this property.
-          </p>
+          <p className="text-[13px] text-neutral-400 bg-neutral-50 rounded-lg p-3">No active subscription for this property.</p>
         )}
-
         {customer && !loadingSubs && custSubs.length > 0 && (
           <div>
             <label className={labelCls}>Subscription</label>
             {custSubs.map((s) => (
-              <button key={s.id} onClick={() => { setSelectedSub(s); setAmount(s.next_due_amount ?? ""); }}
+              <button key={s.id} onClick={() => { setSelectedSub(s); setInstallments([]); setSelectedInst(null); }}
                 className={`w-full text-left p-3 rounded-lg border mb-2 transition-all ${selectedSub?.id === s.id ? "border-emerald-500 bg-emerald-50" : "border-neutral-200 hover:border-emerald-300"}`}>
                 <div className="flex items-center justify-between">
                   <span className="text-[13px] font-semibold">{s.land_size} SQM · {s.plan_name}</span>
                   <SubStatusBadge status={s.status} />
                 </div>
-                <div className="text-[11px] text-neutral-500 mt-1">
-                  Balance: {fmt(s.balance)} · Next due: {fmtDate(s.next_due_date)} ({fmt(s.next_due_amount)})
-                </div>
+                <p className="text-[11px] text-neutral-500 mt-1">Balance: {fmt(s.balance)} · {Number(s.payment_completion_pct ?? 0).toFixed(0)}% paid</p>
               </button>
             ))}
           </div>
         )}
 
-        {selectedSub && (
+        {selectedSub && loadingInst && (
+          <div className="flex items-center gap-2 text-[13px] text-neutral-500">
+            <Loader2 className="size-3.5 animate-spin" /> Loading installments…
+          </div>
+        )}
+        {selectedSub && !loadingInst && installments.length === 0 && (
+          <p className="text-[13px] text-amber-600 bg-amber-50 rounded-lg p-3">No payable installments found. All may already be paid or pending approval.</p>
+        )}
+        {selectedSub && !loadingInst && installments.length > 0 && (
+          <div>
+            <label className={labelCls}>Installment <span className="text-red-500">*</span></label>
+            <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
+              {installments.map((inst) => (
+                <button key={inst.id} onClick={() => { setSelectedInst(inst); setAmount(inst.amount); }}
+                  className={`w-full text-left px-3 py-2 rounded-lg border transition-all ${selectedInst?.id === inst.id ? "border-emerald-500 bg-emerald-50" : "border-neutral-200 hover:border-emerald-300"}`}>
+                  <div className="flex justify-between items-center">
+                    <span className="text-[12.5px] font-semibold text-neutral-800">#{inst.installment_number} · {fmt(inst.amount)}</span>
+                    <span className={`text-[11px] ${instStatusCls[inst.status] ?? ""}`}>{inst.status}</span>
+                  </div>
+                  <p className="text-[11px] text-neutral-400 mt-0.5">Due: {fmtDate(inst.due_date)}</p>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {selectedInst && (
           <>
             <div>
               <label className={labelCls}>Amount Paid</label>
               <input type="number" value={amount} onChange={(e) => setAmount(e.target.value)}
-                className={inputCls} placeholder={`Expected: ${fmt(selectedSub.next_due_amount)}`} />
-            </div>
-            <div>
-              <label className={labelCls}>Payment Date</label>
-              <input type="date" value={payDate} onChange={(e) => setPayDate(e.target.value)} className={inputCls} />
+                className={inputCls} placeholder={`Expected: ${fmt(selectedInst.amount)}`} />
             </div>
             {activeBanks.length > 0 && (
               <div>
-                <label className={labelCls}>Bank Account</label>
-                <select value={bankId} onChange={(e) => setBankId(e.target.value)} className={inputCls}>
+                <label className={labelCls}>Bank Account (optional)</label>
+                <select onChange={() => {}} className={inputCls}>
                   <option value="">Select bank account…</option>
                   {activeBanks.map((b) => (
                     <option key={b.id} value={b.id}>{b.bank_name} · {b.account_number} ({b.account_name})</option>
@@ -1141,11 +1584,187 @@ function SiteInspectionsTab({ property, inspections, loading, onRefresh }: {
 // Main Component
 // ═══════════════════════════════════════════════════════════════════════════════
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// Tab 5 — Allocation
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function AllocationPropertyTab({ subscriptions, loading, onRefresh }: {
+  subscriptions: Subscription[]; loading: boolean; onRefresh: () => void;
+}) {
+  const [allocating, setAllocating] = useState<Subscription | null>(null);
+  const [plotNumber, setPlotNumber] = useState("");
+  const [allocDate, setAllocDate]   = useState(new Date().toISOString().slice(0, 10));
+  const [letter, setLetter]         = useState<File | null>(null);
+  const [notes, setNotes]           = useState("");
+  const [saving, setSaving]         = useState(false);
+  const [deleting, setDeleting]     = useState<string | null>(null);
+
+  const completed = subscriptions.filter((s) => s.status === "COMPLETED");
+
+  const handleAllocate = async () => {
+    if (!allocating) return;
+    if (!plotNumber.trim()) { toast.error("Plot number is required."); return; }
+    if (!allocDate) { toast.error("Allocation date is required."); return; }
+    setSaving(true);
+    try {
+      const fd = new FormData();
+      fd.append("plot_number", plotNumber);
+      fd.append("allocation_date", allocDate);
+      fd.append("allocation_notes", notes);
+      if (letter) fd.append("allocation_letter", letter);
+      await api.subscriptions.allocate(allocating.id, fd);
+      toast.success(`Plot ${plotNumber} allocated to ${allocating.customer_name}.`);
+      setAllocating(null); setPlotNumber(""); setAllocDate(new Date().toISOString().slice(0, 10));
+      setLetter(null); setNotes(""); onRefresh();
+    } catch (err: any) { toast.error(err.message ?? "Allocation failed."); }
+    finally { setSaving(false); }
+  };
+
+  const handleDelete = async (sub: Subscription) => {
+    if (!["PENDING", "ACTIVE", "DEFAULTING", "DEFAULTED"].includes(sub.status)) {
+      toast.error("Only pending, active, or defaulting subscriptions can be deleted.");
+      return;
+    }
+    setDeleting(sub.id);
+    try {
+      await api.subscriptions.delete(sub.id);
+      toast.success("Subscription deleted.");
+      onRefresh();
+    } catch (err: any) { toast.error(err.message ?? "Failed to delete."); }
+    finally { setDeleting(null); }
+  };
+
+  if (loading) return <div className="flex items-center justify-center py-12"><Loader2 className="size-5 animate-spin text-neutral-300" /></div>;
+
+  const awaiting  = completed.filter((s) => !s.plot_number);
+  const allocated = completed.filter((s) => !!s.plot_number);
+
+  return (
+    <div className="space-y-6">
+      <div className="grid grid-cols-3 gap-4">
+        <MetricCard label="Awaiting Allocation" value={awaiting.length}  icon={Clock}        color="amber"   sub="Completed, no plot" />
+        <MetricCard label="Allocated"            value={allocated.length} icon={CheckCircle2} color="emerald" sub="Plot numbers assigned" />
+        <MetricCard label="Total Completed"      value={completed.length} icon={MapPin}       color="blue"    sub="Fully paid subscriptions" />
+      </div>
+
+      <div className="bg-white rounded-xl border border-neutral-100 overflow-hidden shadow-sm">
+        <div className="px-5 py-3.5 border-b border-neutral-50">
+          <p className="text-[12.5px] font-semibold text-neutral-700">Completed Subscriptions</p>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-neutral-50 bg-neutral-50/60">
+                {["Customer","Land Size","Allocation Status","Plot Name","Letter","Action"].map((h) => (
+                  <th key={h} className="px-4 py-3 text-[10.5px] font-semibold text-neutral-400 uppercase tracking-wide whitespace-nowrap text-left">{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {completed.map((s) => (
+                <tr key={s.id} className="border-b border-neutral-50 hover:bg-neutral-50/40 transition-colors">
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    <p className="text-[12.5px] font-semibold text-neutral-800">{s.customer_name}</p>
+                    <p className="text-[11px] text-neutral-400">{s.customer_email}</p>
+                  </td>
+                  <td className="px-4 py-3 text-[12.5px] text-neutral-700 whitespace-nowrap">{s.land_size} SQM</td>
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    {s.plot_number ? (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10.5px] font-bold bg-emerald-100 text-emerald-700">
+                        <CheckCircle2 className="size-3" /> Allocated
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10.5px] font-bold bg-amber-100 text-amber-700">
+                        <Clock className="size-3" /> Awaiting
+                      </span>
+                    )}
+                  </td>
+                  <td className="px-4 py-3 text-[12.5px] text-neutral-700 whitespace-nowrap">{s.plot_number || <span className="text-neutral-300">—</span>}</td>
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    {(s as any).allocation_letter ? (
+                      <a href={(s as any).allocation_letter} target="_blank" rel="noopener noreferrer"
+                        className="text-[12px] text-emerald-600 hover:text-emerald-700 font-medium flex items-center gap-1">
+                        <Eye className="size-3" /> Download
+                      </a>
+                    ) : <span className="text-neutral-300 text-[12px]">—</span>}
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    <button disabled={!!s.plot_number} onClick={() => { setAllocating(s); setPlotNumber(""); }}
+                      className="px-3 py-1.5 rounded-lg bg-emerald-600 text-white text-[11.5px] font-semibold hover:bg-emerald-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
+                      Allocate
+                    </button>
+                  </td>
+                </tr>
+              ))}
+              {completed.length === 0 && (
+                <tr><td colSpan={6} className="px-4 py-10 text-center text-[13px] text-neutral-400">No completed subscriptions yet.</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <AnimatePresence>
+        {allocating && (
+          <>
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm" onClick={() => setAllocating(null)} />
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+              <motion.div initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.96 }}
+                className="bg-white rounded-2xl shadow-2xl w-full max-w-md border border-neutral-100">
+                <div className="flex items-center justify-between px-5 py-4 border-b border-neutral-100">
+                  <h2 className="text-[14px] font-semibold text-neutral-900">Allocate Plot</h2>
+                  <button onClick={() => setAllocating(null)} className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-neutral-100">
+                    <X className="w-4 h-4 text-neutral-500" /></button>
+                </div>
+                <div className="px-5 py-3 bg-emerald-50/50 border-b border-emerald-100">
+                  <p className="text-[12.5px] font-semibold text-neutral-800">{allocating.customer_name}</p>
+                  <p className="text-[11.5px] text-neutral-500">{allocating.land_size} SQM · {allocating.plan_name}</p>
+                </div>
+                <div className="p-5 space-y-4">
+                  <div>
+                    <label className={labelCls}>Plot Number <span className="text-red-500">*</span></label>
+                    <input value={plotNumber} onChange={(e) => setPlotNumber(e.target.value)} className={inputCls} placeholder="e.g. A-12, Block C Lot 4" />
+                  </div>
+                  <div>
+                    <label className={labelCls}>Allocation Date <span className="text-red-500">*</span></label>
+                    <input type="date" value={allocDate} onChange={(e) => setAllocDate(e.target.value)} className={inputCls} />
+                  </div>
+                  <div>
+                    <label className={labelCls}>Allocation Letter <span className="text-[11px] text-neutral-400">(PDF — recommended)</span></label>
+                    <label className="block w-full border-2 border-dashed border-neutral-200 rounded-lg p-3 text-center cursor-pointer hover:border-emerald-400 transition-colors">
+                      <Upload className="size-4 mx-auto mb-1 text-neutral-400" />
+                      <span className="text-[11.5px] text-neutral-500">{letter ? letter.name : "Click to upload PDF"}</span>
+                      <input type="file" accept=".pdf" className="hidden" onChange={(e) => setLetter(e.target.files?.[0] ?? null)} />
+                    </label>
+                  </div>
+                  <div>
+                    <label className={labelCls}>Notes <span className="text-[11px] text-neutral-400">(optional)</span></label>
+                    <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2}
+                      className="w-full px-3 py-2 rounded-lg border border-neutral-200 text-[13px] focus:outline-none focus:ring-1 focus:ring-emerald-500/40 resize-none bg-white" />
+                  </div>
+                </div>
+                <div className="px-5 py-4 border-t border-neutral-100 flex gap-2.5">
+                  <Button onClick={handleAllocate} disabled={saving} className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white gap-1.5">
+                    {saving ? <><Loader2 className="size-3.5 animate-spin" />Allocating…</> : "Confirm Allocation"}
+                  </Button>
+                  <Button variant="outline" onClick={() => setAllocating(null)}>Cancel</Button>
+                </div>
+              </motion.div>
+            </div>
+          </>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
 const TABS = [
   { key: "overview",      label: "Overview",         icon: LayoutGrid },
   { key: "subscriptions", label: "Subscriptions",    icon: Users },
   { key: "payments",      label: "Payment History",  icon: CreditCard },
   { key: "inspections",   label: "Site Inspections", icon: ClipboardList },
+  { key: "allocation",    label: "Allocation",       icon: MapPin },
 ] as const;
 
 type TabKey = (typeof TABS)[number]["key"];
@@ -1159,6 +1778,7 @@ export function PropertyDetail() {
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
   const [payments, setPayments]           = useState<Payment[]>([]);
   const [inspections, setInspections]     = useState<Inspection[]>([]);
+  const [commissions, setCommissions]     = useState<any[]>([]);
   const [loadingProp, setLoadingProp]     = useState(true);
   const [loadingSubs, setLoadingSubs]     = useState(false);
   const [loadingPay, setLoadingPay]       = useState(false);
@@ -1205,10 +1825,18 @@ export function PropertyDetail() {
     finally { setLoadingIns(false); }
   }, [id]);
 
+  const loadComm = useCallback(async () => {
+    if (!id) return;
+    try {
+      const all: any[] = await api.commissions.list({ property: id });
+      setCommissions(all);
+    } catch { setCommissions([]); }
+  }, [id]);
+
   useEffect(() => { loadProperty(); }, [loadProperty]);
   useEffect(() => {
-    if (!loadingProp && id) { loadSubs(); loadPay(); loadIns(); }
-  }, [loadingProp, id, loadSubs, loadPay, loadIns]);
+    if (!loadingProp && id) { loadSubs(); loadPay(); loadIns(); loadComm(); }
+  }, [loadingProp, id, loadSubs, loadPay, loadIns, loadComm]);
 
   const workspaceSlug = workspace?.slug ?? localStorage.getItem("tt_workspace_slug") ?? "";
 
@@ -1277,10 +1905,11 @@ export function PropertyDetail() {
         {/* Tab content */}
         <AnimatePresence mode="wait">
           <motion.div key={tab} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.18 }}>
-            {tab === "overview"      && <OverviewTab property={property} subscriptions={subscriptions} payments={payments} />}
+            {tab === "overview"      && <OverviewTab property={property} subscriptions={subscriptions} payments={payments} commissions={commissions} />}
             {tab === "subscriptions" && <SubscriptionsTab property={property} subscriptions={subscriptions} loading={loadingSubs} onRefresh={loadSubs} onViewCustomer={(cid) => navigate(`/customers/${cid}`)} />}
             {tab === "payments"      && <PaymentHistoryTab payments={payments} loading={loadingPay} onRefresh={loadPay} />}
             {tab === "inspections"   && <SiteInspectionsTab property={property} inspections={inspections} loading={loadingIns} onRefresh={loadIns} />}
+            {tab === "allocation"    && <AllocationPropertyTab subscriptions={subscriptions} loading={loadingSubs} onRefresh={loadSubs} />}
           </motion.div>
         </AnimatePresence>
 
