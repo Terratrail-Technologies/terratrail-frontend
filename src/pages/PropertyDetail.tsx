@@ -4,12 +4,13 @@ import {
   ArrowLeft, ExternalLink, Pencil, LayoutGrid, Users, CreditCard,
   ClipboardList, TrendingUp, DollarSign, Wallet, CheckCircle2,
   XCircle, Clock, Plus, Search, ChevronLeft, ChevronRight, ChevronDown, ChevronUp,
-  X, Loader2, Upload, Eye, Building2, MapPin, BarChart3, Receipt,
+  X, Loader2, Upload, Eye, Building2, MapPin, BarChart3, Receipt, History, UserCheck,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { api, BASE_URL } from "../services/api";
 import { usePageTitle } from "../hooks/usePageTitle";
 import { useWorkspace } from "../hooks/useWorkspace";
+import { useWorkspaceRole } from "../hooks/useWorkspaceRole";
 import { Button } from "../components/ui/button";
 import { Skeleton } from "../components/ui/skeleton";
 import { toast } from "sonner";
@@ -31,7 +32,8 @@ interface Property {
 interface PricingPlan {
   id: string; plan_name: string; land_size: string; total_price: string;
   payment_type: "OUTRIGHT" | "INSTALLMENT"; initial_payment: string;
-  duration_months: number; monthly_installment: string; is_active: boolean;
+  duration_months: number; monthly_installment: string;
+  is_active: boolean; is_locked: boolean;
 }
 
 interface BankAccount {
@@ -101,16 +103,20 @@ const labelCls = "text-[12px] font-medium text-neutral-600 block mb-1.5";
 
 // ── Status Badges ─────────────────────────────────────────────────────────────
 
-function SubStatusBadge({ status }: { status?: string }) {
+function SubStatusBadge({ status, allocated }: { status?: string; allocated?: boolean }) {
+  const upper = (status ?? "").toUpperCase();
+  const isUnallocated = upper === "COMPLETED" && allocated === false;
   const map: Record<string, { cls: string; label: string }> = {
     ACTIVE:     { cls: "bg-emerald-100 text-emerald-700", label: "Active" },
-    COMPLETED:  { cls: "bg-blue-100 text-blue-700",       label: "Completed" },
+    COMPLETED:  isUnallocated
+      ? { cls: "bg-violet-100 text-violet-700", label: "Pending Allocation" }
+      : { cls: "bg-blue-100 text-blue-700",     label: "Completed" },
     DEFAULTING: { cls: "bg-red-100 text-red-700",         label: "Defaulting" },
     DEFAULTED:  { cls: "bg-red-100 text-red-700",         label: "Defaulting" },
     CANCELLED:  { cls: "bg-neutral-100 text-neutral-500", label: "Cancelled" },
     PENDING:    { cls: "bg-amber-100 text-amber-700",     label: "Pending" },
   };
-  const cfg = map[(status ?? "").toUpperCase()] ?? map["PENDING"];
+  const cfg = map[upper] ?? map["PENDING"];
   return <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold ${cfg.cls}`}>{cfg.label}</span>;
 }
 
@@ -291,6 +297,11 @@ function PlanHistoryRow({ plan }: { plan: PricingPlan }) {
         </div>
         <div className="flex items-center gap-3 shrink-0">
           <p className="text-[14px] font-bold text-emerald-700">{fmt(plan.total_price)}</p>
+          {plan.is_locked && (
+            <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold bg-amber-100 text-amber-700">
+              Locked
+            </span>
+          )}
           <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${plan.is_active ? "bg-emerald-100 text-emerald-700" : "bg-neutral-100 text-neutral-500"}`}>
             {plan.is_active ? "Active" : "Inactive"}
           </span>
@@ -668,8 +679,8 @@ const instStatusCls: Record<string, string> = {
   UPCOMING: "bg-neutral-100 text-neutral-500",
 };
 
-function SubscriptionDetailModal({ sub, onClose, onRefresh }: {
-  sub: Subscription; onClose: () => void; onRefresh: () => void;
+function SubscriptionDetailModal({ sub, onClose, onRefresh, isAdmin = false }: {
+  sub: Subscription; onClose: () => void; onRefresh: () => void; isAdmin?: boolean;
 }) {
   const [installments, setInstallments] = useState<FullInstallment[]>([]);
   const [loading, setLoading]           = useState(true);
@@ -809,8 +820,8 @@ function SubscriptionDetailModal({ sub, onClose, onRefresh }: {
             )}
           </div>
 
-          {/* Actions */}
-          {(isCancellable || isDeletable) && (
+          {/* Actions — admin only */}
+          {isAdmin && (isCancellable || isDeletable) && (
             <div className="flex gap-2 pt-1 border-t border-neutral-100">
               {isCancellable && (
                 <Button variant="outline"
@@ -913,6 +924,7 @@ function SubscriptionsTab({ property, subscriptions, loading, onRefresh, onViewC
   property: Property; subscriptions: Subscription[]; loading: boolean;
   onRefresh: () => void; onViewCustomer: (id: string) => void;
 }) {
+  const { isAdmin } = useWorkspaceRole();
   const [showAdd, setShowAdd]           = useState(false);
   const [viewSub, setViewSub]           = useState<Subscription | null>(null);
   const [allocateSub, setAllocateSub]   = useState<Subscription | null>(null);
@@ -946,9 +958,11 @@ function SubscriptionsTab({ property, subscriptions, loading, onRefresh, onViewC
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <h2 className="text-[16px] font-semibold text-neutral-800">Subscriptions</h2>
-        <Button onClick={() => setShowAdd(true)} className="bg-emerald-600 hover:bg-emerald-700 text-white h-8 text-[12px] gap-1.5">
-          <Plus className="size-3.5" /> Add New Subscription
-        </Button>
+        {isAdmin && (
+          <Button onClick={() => setShowAdd(true)} className="bg-emerald-600 hover:bg-emerald-700 text-white h-8 text-[12px] gap-1.5">
+            <Plus className="size-3.5" /> Add New Subscription
+          </Button>
+        )}
       </div>
 
       <div className="grid grid-cols-3 gap-3">
@@ -1008,7 +1022,7 @@ function SubscriptionsTab({ property, subscriptions, loading, onRefresh, onViewC
             <table className="w-full text-[13px]">
               <thead>
                 <tr className="border-b border-neutral-100 bg-neutral-50">
-                  {["Customer", "Phone / Email", "Sales Rep", "Land Size", "Payment %", "Status", "Next Due", "Action"].map((h) => (
+                  {["Customer", "Phone / Email", "Sales Rep", "Land Size", "Locked Price", "Paid", "Balance", "Progress", "Status", "Next Due", "Action"].map((h) => (
                     <th key={h} className="px-4 py-3 text-left text-[11px] font-semibold text-neutral-400 uppercase tracking-wide whitespace-nowrap">{h}</th>
                   ))}
                 </tr>
@@ -1023,8 +1037,11 @@ function SubscriptionsTab({ property, subscriptions, loading, onRefresh, onViewC
                     </td>
                     <td className="px-4 py-3 text-[12px] text-neutral-500 whitespace-nowrap">{s.assigned_rep_name ?? "—"}</td>
                     <td className="px-4 py-3 whitespace-nowrap">{s.land_size ? `${s.land_size} SQM` : "—"}</td>
-                    <td className="px-4 py-3 min-w-[130px]"><MiniProgress pct={s.payment_completion_pct ?? 0} /></td>
-                    <td className="px-4 py-3"><SubStatusBadge status={s.status} /></td>
+                    <td className="px-4 py-3 whitespace-nowrap text-[12px] font-semibold text-neutral-700">{fmt(s.total_price)}</td>
+                    <td className="px-4 py-3 whitespace-nowrap text-[12px] text-emerald-700 font-semibold">{fmt(s.amount_paid)}</td>
+                    <td className="px-4 py-3 whitespace-nowrap text-[12px] text-amber-700 font-semibold">{fmt(s.balance)}</td>
+                    <td className="px-4 py-3 min-w-[120px]"><MiniProgress pct={s.payment_completion_pct ?? 0} /></td>
+                    <td className="px-4 py-3"><SubStatusBadge status={s.status} allocated={!!s.plot_number} /></td>
                     <td className="px-4 py-3 whitespace-nowrap text-neutral-500 text-[12px]">{fmtDate(s.next_due_date)}</td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
@@ -1032,7 +1049,7 @@ function SubscriptionsTab({ property, subscriptions, loading, onRefresh, onViewC
                           className="text-emerald-600 hover:text-emerald-700 font-medium text-[12px] flex items-center gap-1">
                           <Eye className="size-3.5" /> View
                         </button>
-                        {s.status === "COMPLETED" && !s.plot_number && (
+                        {isAdmin && s.status === "COMPLETED" && !s.plot_number && (
                           <button onClick={() => setAllocateSub(s)}
                             className="text-blue-600 hover:text-blue-700 font-medium text-[12px] flex items-center gap-1 ml-1">
                             <MapPin className="size-3.5" /> Allocate
@@ -1055,6 +1072,7 @@ function SubscriptionsTab({ property, subscriptions, loading, onRefresh, onViewC
       {viewSub && (
         <SubscriptionDetailModal
           sub={viewSub}
+          isAdmin={isAdmin}
           onClose={() => setViewSub(null)}
           onRefresh={() => { setViewSub(null); onRefresh(); }}
         />
@@ -1119,7 +1137,7 @@ function RecordPaymentSlideOver({ open, onClose, property, onRecorded }: {
     setLoadingSubs(true);
     api.subscriptions.list({ customer: customer.id, property: property.id })
       .then((subs: any[]) => {
-        const forProp = subs.filter((s) => s.property === property.id && ["ACTIVE", "PENDING"].includes(s.status));
+        const forProp = subs.filter((s) => s.property === property.id && ["ACTIVE", "PENDING", "DEFAULTING", "DEFAULTED"].includes(s.status));
         setCustSubs(forProp);
         if (forProp.length === 1) setSelectedSub(forProp[0]);
       })
@@ -1281,6 +1299,7 @@ function PaymentHistoryTab({ payments, loading, onRefresh }: {
   payments: Payment[]; loading: boolean; onRefresh: () => void;
 }) {
   const { property } = usePaymentTabCtx();
+  const { isAdmin } = useWorkspaceRole();
   const [showRecord, setShowRecord]   = useState(false);
   const [search, setSearch]           = useState("");
   const [filterStatus, setFilterStatus] = useState("");
@@ -1311,9 +1330,11 @@ function PaymentHistoryTab({ payments, loading, onRefresh }: {
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <h2 className="text-[16px] font-semibold text-neutral-800">Payment History</h2>
-        <Button onClick={() => setShowRecord(true)} className="bg-emerald-600 hover:bg-emerald-700 text-white h-8 text-[12px] gap-1.5">
-          <Receipt className="size-3.5" /> Record Payment
-        </Button>
+        {isAdmin && (
+          <Button onClick={() => setShowRecord(true)} className="bg-emerald-600 hover:bg-emerald-700 text-white h-8 text-[12px] gap-1.5">
+            <Receipt className="size-3.5" /> Record Payment
+          </Button>
+        )}
       </div>
 
       <div className="flex gap-2 flex-wrap">
@@ -1359,7 +1380,7 @@ function PaymentHistoryTab({ payments, loading, onRefresh }: {
                       <td className="px-4 py-3"><PayStatusBadge status={p.status} /></td>
                       <td className="px-4 py-3 text-neutral-500 whitespace-nowrap text-[12px]">{p.recorded_by_name ?? p.recorded_by_email ?? "—"}</td>
                       <td className="px-4 py-3">
-                        {p.status === "PENDING" && (
+                        {isAdmin && p.status === "PENDING" && (
                           <div className="flex gap-1">
                             <button onClick={(e) => { e.stopPropagation(); handleApprove(p.id); }}
                               className="text-[11px] px-2 py-1 rounded bg-emerald-100 text-emerald-700 hover:bg-emerald-200 font-medium">
@@ -1413,9 +1434,34 @@ function PaymentHistoryTab({ payments, loading, onRefresh }: {
 function LogInspectionSlideOver({ open, onClose, property, onLogged }: {
   open: boolean; onClose: () => void; property: Property; onLogged: () => void;
 }) {
-  const [form, setForm] = useState({ name: "", phone: "", email: "", inspection_date: "", notes: "" });
+  const [form, setForm] = useState({
+    name: "", phone: "", email: "", inspection_date: "",
+    inspection_time: "", inspection_type: "PHYSICAL" as "PHYSICAL" | "VIRTUAL",
+    category: "RESIDENTIAL" as "RESIDENTIAL" | "COMMERCIAL" | "FARM_LAND",
+    persons: "1", notes: "",
+  });
+  const [availableSlots, setAvailableSlots] = useState<{ label: string; start_time: string }[]>([]);
   const [saving, setSaving] = useState(false);
   const set = (k: string, v: string) => setForm((f) => ({ ...f, [k]: v }));
+
+  useEffect(() => {
+    if (!open) return;
+    api.properties.inspectionConfig.get(property.id)
+      .then((cfg: any) => {
+        if (cfg && Array.isArray(cfg.time_slots) && cfg.time_slots.length > 0) {
+          const slots = cfg.time_slots
+            .filter((s: any) => s.is_active !== false)
+            .map((s: any) => typeof s === "string"
+              ? { label: s, start_time: s }
+              : { label: s.label || s.start_time, start_time: s.start_time }
+            );
+          setAvailableSlots(slots);
+        } else {
+          setAvailableSlots([]);
+        }
+      })
+      .catch(() => setAvailableSlots([]));
+  }, [open, property.id]);
 
   const handleSubmit = async () => {
     if (!form.name || !form.phone || !form.inspection_date) { toast.error("Name, phone, and date are required."); return; }
@@ -1423,12 +1469,17 @@ function LogInspectionSlideOver({ open, onClose, property, onLogged }: {
     try {
       await api.siteInspections.create({
         name: form.name, phone: form.phone, email: form.email,
-        inspection_date: form.inspection_date, notes: form.notes,
+        inspection_date: form.inspection_date,
+        inspection_time: form.inspection_time || undefined,
+        inspection_type: form.inspection_type,
+        category: form.category,
+        persons: Math.max(1, Number(form.persons) || 1),
+        notes: form.notes,
         linked_property: property.id, property_name: property.name,
       });
       toast.success("Inspection logged.");
       onLogged();
-      setForm({ name: "", phone: "", email: "", inspection_date: "", notes: "" });
+      setForm({ name: "", phone: "", email: "", inspection_date: "", inspection_time: "", inspection_type: "PHYSICAL", category: "RESIDENTIAL", persons: "1", notes: "" });
       onClose();
     } catch (err: any) { toast.error(err.message ?? "Failed to log inspection."); }
     finally { setSaving(false); }
@@ -1437,14 +1488,54 @@ function LogInspectionSlideOver({ open, onClose, property, onLogged }: {
   return (
     <SlideOver open={open} onClose={onClose} title="Log Site Inspection">
       <div className="space-y-4">
+        <div className="bg-emerald-50 border border-emerald-100 rounded-lg px-3 py-2 text-[12px]">
+          <p className="text-[10.5px] font-semibold text-emerald-600 uppercase tracking-wide">Property</p>
+          <p className="font-semibold text-neutral-800">{property.name}</p>
+        </div>
         <div><label className={labelCls}>Prospect Name <span className="text-red-500">*</span></label>
           <input value={form.name} onChange={(e) => set("name", e.target.value)} className={inputCls} placeholder="Full name" /></div>
-        <div><label className={labelCls}>Phone <span className="text-red-500">*</span></label>
-          <input value={form.phone} onChange={(e) => set("phone", e.target.value)} className={inputCls} placeholder="08012345678" /></div>
+        <div className="grid grid-cols-2 gap-3">
+          <div><label className={labelCls}>Phone <span className="text-red-500">*</span></label>
+            <input value={form.phone} onChange={(e) => set("phone", e.target.value)} className={inputCls} placeholder="08012345678" /></div>
+          <div><label className={labelCls}>No. of Persons</label>
+            <input type="number" min="1" value={form.persons} onChange={(e) => set("persons", e.target.value)} className={inputCls} /></div>
+        </div>
         <div><label className={labelCls}>Email</label>
           <input type="email" value={form.email} onChange={(e) => set("email", e.target.value)} className={inputCls} placeholder="email@example.com" /></div>
-        <div><label className={labelCls}>Inspection Date <span className="text-red-500">*</span></label>
-          <input type="date" value={form.inspection_date} onChange={(e) => set("inspection_date", e.target.value)} className={inputCls} /></div>
+        <div className="grid grid-cols-2 gap-3">
+          <div><label className={labelCls}>Inspection Date <span className="text-red-500">*</span></label>
+            <input type="date" value={form.inspection_date} onChange={(e) => set("inspection_date", e.target.value)} className={inputCls} /></div>
+          <div>
+            <label className={labelCls}>
+              Time {availableSlots.length > 0 && <span className="text-neutral-400 font-normal">(schedule)</span>}
+            </label>
+            {availableSlots.length > 0 ? (
+              <select value={form.inspection_time} onChange={(e) => set("inspection_time", e.target.value)} className={inputCls}>
+                <option value="">— Select slot —</option>
+                {availableSlots.map((s) => (
+                  <option key={s.start_time} value={s.start_time}>{s.label} ({s.start_time})</option>
+                ))}
+              </select>
+            ) : (
+              <input type="time" value={form.inspection_time} onChange={(e) => set("inspection_time", e.target.value)} className={inputCls} />
+            )}
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div><label className={labelCls}>Type</label>
+            <select value={form.inspection_type} onChange={(e) => set("inspection_type", e.target.value)} className={inputCls}>
+              <option value="PHYSICAL">Physical</option>
+              <option value="VIRTUAL">Virtual</option>
+            </select>
+          </div>
+          <div><label className={labelCls}>Category</label>
+            <select value={form.category} onChange={(e) => set("category", e.target.value)} className={inputCls}>
+              <option value="RESIDENTIAL">Residential</option>
+              <option value="COMMERCIAL">Commercial</option>
+              <option value="FARM_LAND">Farm Land</option>
+            </select>
+          </div>
+        </div>
         <div><label className={labelCls}>Notes</label>
           <textarea value={form.notes} onChange={(e) => set("notes", e.target.value)} rows={3}
             className={`${inputCls} h-auto py-2`} placeholder="Additional notes…" /></div>
@@ -1464,11 +1555,21 @@ function SiteInspectionsTab({ property, inspections, loading, onRefresh }: {
   property: Property; inspections: Inspection[]; loading: boolean; onRefresh: () => void;
 }) {
   const navigate = useNavigate();
-  const [showLog, setShowLog]         = useState(false);
-  const [search, setSearch]           = useState("");
-  const [filterStatus, setFilterStatus] = useState("");
-  const [page, setPage]               = useState(1);
+  const { isAdmin } = useWorkspaceRole();
+  const [showLog, setShowLog]             = useState(false);
+  const [convertTarget, setConvertTarget] = useState<Inspection | null>(null);
+  const [customers, setCustomers]         = useState<{ id: string; full_name: string; email: string }[]>([]);
+  const [search, setSearch]               = useState("");
+  const [filterStatus, setFilterStatus]   = useState("");
+  const [page, setPage]                   = useState(1);
+  const [inspConfig, setInspConfig]       = useState<{ is_active?: boolean; available_days?: string[]; time_slots?: any[] } | null>(null);
   const PER_PAGE = 20;
+
+  useEffect(() => {
+    api.properties.inspectionConfig.get(property.id)
+      .then((cfg: any) => setInspConfig(cfg && Object.keys(cfg).length > 0 ? cfg : null))
+      .catch(() => setInspConfig(null));
+  }, [property.id]);
 
   const filtered = inspections.filter((i) => {
     const q = search.toLowerCase();
@@ -1483,6 +1584,15 @@ function SiteInspectionsTab({ property, inspections, loading, onRefresh }: {
     catch (err: any) { toast.error(err.message ?? "Failed to update."); }
   };
 
+  const handleConvert = async (inspId: string, customerId: string) => {
+    try {
+      await api.siteInspections.convert(inspId, customerId);
+      toast.success("Marked as converted.");
+      onRefresh();
+      setConvertTarget(null);
+    } catch (err: any) { toast.error(err.message ?? "Failed to mark converted."); }
+  };
+
   if (loading) return <div className="space-y-2">{[1, 2, 3].map((i) => <Skeleton key={i} className="h-14 rounded-xl" />)}</div>;
 
   return (
@@ -1493,6 +1603,25 @@ function SiteInspectionsTab({ property, inspections, loading, onRefresh }: {
           <Plus className="size-3.5" /> Log Inspection
         </Button>
       </div>
+
+      {/* Inspection schedule status banner */}
+      {inspConfig ? (
+        <div className={`flex items-center gap-3 px-4 py-3 rounded-xl border text-[12.5px] ${inspConfig.is_active !== false ? "bg-emerald-50 border-emerald-100 text-emerald-700" : "bg-neutral-50 border-neutral-200 text-neutral-500"}`}>
+          <div className={`w-2 h-2 rounded-full shrink-0 ${inspConfig.is_active !== false ? "bg-emerald-500" : "bg-neutral-400"}`} />
+          <span className="font-semibold">{inspConfig.is_active !== false ? "Inspections open" : "Inspections closed"}</span>
+          {inspConfig.available_days && inspConfig.available_days.length > 0 && (
+            <span className="text-[11.5px] opacity-80">· {inspConfig.available_days.join(", ")}</span>
+          )}
+          {inspConfig.time_slots && inspConfig.time_slots.length > 0 && (
+            <span className="text-[11.5px] opacity-80">· {inspConfig.time_slots.filter((s: any) => s.is_active !== false).length} active slot{inspConfig.time_slots.filter((s: any) => s.is_active !== false).length !== 1 ? "s" : ""}</span>
+          )}
+        </div>
+      ) : (
+        <div className="flex items-center gap-2 px-4 py-3 rounded-xl border border-dashed border-neutral-200 text-[12px] text-neutral-400">
+          <ClipboardList className="size-3.5 shrink-0" />
+          No inspection schedule configured. <button onClick={() => {}} className="underline hover:text-neutral-600 ml-0.5">Set one up</button> in Site Inspection settings.
+        </div>
+      )}
 
       <div className="flex gap-2 flex-wrap">
         <div className="relative flex-1 min-w-48">
@@ -1536,7 +1665,7 @@ function SiteInspectionsTab({ property, inspections, loading, onRefresh }: {
                     <td className="px-4 py-3 text-[12px] text-neutral-500 whitespace-nowrap">{ins.assigned_rep_name ?? "—"}</td>
                     <td className="px-4 py-3">
                       <InspectionStatusBadge status={ins.status} />
-                      {ins.status === "PENDING" && (
+                      {isAdmin && ins.status === "PENDING" && (
                         <div className="flex gap-1 mt-1">
                           <button onClick={() => updateStatus(ins.id, "ATTENDED")}
                             className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 hover:bg-emerald-200 font-medium">
@@ -1551,12 +1680,17 @@ function SiteInspectionsTab({ property, inspections, loading, onRefresh }: {
                     </td>
                     <td className="px-4 py-3">
                       {ins.is_converted ? (
-                        <button onClick={() => navigate(`/customers/${ins.converted_customer}`)}
-                          className="flex items-center gap-1 text-[11px] font-semibold text-emerald-600 hover:text-emerald-700">
-                          <CheckCircle2 className="size-3" /> Yes
+                        <button onClick={() => ins.converted_customer && navigate(`/customers/${ins.converted_customer}`)}
+                          className="flex items-center gap-1 text-[11px] font-semibold text-violet-600 hover:text-violet-700">
+                          <UserCheck className="size-3" /> {ins.converted_customer_name ?? "Yes"}
+                        </button>
+                      ) : isAdmin && ins.status === "ATTENDED" ? (
+                        <button onClick={() => { api.customers.list().then((l: any[]) => setCustomers(l)).catch(() => {}); setConvertTarget(ins); }}
+                          className="text-[10px] px-1.5 py-0.5 rounded bg-violet-100 text-violet-700 hover:bg-violet-200 font-medium whitespace-nowrap">
+                          Mark Converted
                         </button>
                       ) : (
-                        <span className="text-[11px] text-neutral-400">No</span>
+                        <span className="text-[11px] text-neutral-400">—</span>
                       )}
                     </td>
                     <td className="px-4 py-3">
@@ -1576,6 +1710,55 @@ function SiteInspectionsTab({ property, inspections, loading, onRefresh }: {
 
       <LogInspectionSlideOver open={showLog} onClose={() => setShowLog(false)}
         property={property} onLogged={() => { onRefresh(); setShowLog(false); }} />
+
+      {/* Convert to customer modal */}
+      <AnimatePresence>
+        {convertTarget && (
+          <>
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm" onClick={() => setConvertTarget(null)} />
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+              <motion.div initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.96 }}
+                className="bg-white rounded-2xl shadow-2xl w-full max-w-md border border-neutral-100">
+                <div className="flex items-center justify-between px-5 py-4 border-b border-neutral-100">
+                  <div>
+                    <h3 className="text-[14px] font-semibold text-neutral-900">Mark as Converted</h3>
+                    <p className="text-[11.5px] text-neutral-400">{convertTarget.name}</p>
+                  </div>
+                  <button onClick={() => setConvertTarget(null)} className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-neutral-100">
+                    <X className="w-4 h-4 text-neutral-500" />
+                  </button>
+                </div>
+                <div className="p-5 space-y-3">
+                  <p className="text-[12.5px] text-neutral-600">Link this inspection to an existing customer record.</p>
+                  <div className="max-h-52 overflow-y-auto border border-neutral-100 rounded-lg divide-y divide-neutral-50">
+                    {customers.length === 0 ? (
+                      <p className="px-3 py-4 text-[12px] text-neutral-400 text-center">No customers found.</p>
+                    ) : customers.slice(0, 30).map((c) => (
+                      <button key={c.id} type="button" onClick={() => handleConvert(convertTarget.id, c.id)}
+                        className="w-full flex items-center gap-3 px-3 py-2.5 text-left hover:bg-emerald-50 transition-colors">
+                        <div className="w-7 h-7 rounded-full bg-neutral-100 flex items-center justify-center text-[11px] font-bold text-neutral-500 shrink-0">
+                          {c.full_name.charAt(0).toUpperCase()}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-[13px] font-semibold text-neutral-800 truncate">{c.full_name}</p>
+                          <p className="text-[11px] text-neutral-400 truncate">{c.email}</p>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div className="px-5 py-3 border-t border-neutral-100">
+                  <button onClick={() => setConvertTarget(null)}
+                    className="w-full py-2 rounded-lg border border-neutral-200 text-[13px] text-neutral-600 hover:bg-neutral-50 font-medium">
+                    Cancel
+                  </button>
+                </div>
+              </motion.div>
+            </div>
+          </>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
@@ -1597,7 +1780,6 @@ function AllocationPropertyTab({ subscriptions, loading, onRefresh }: {
   const [letter, setLetter]         = useState<File | null>(null);
   const [notes, setNotes]           = useState("");
   const [saving, setSaving]         = useState(false);
-  const [deleting, setDeleting]     = useState<string | null>(null);
 
   const completed = subscriptions.filter((s) => s.status === "COMPLETED");
 
@@ -1618,20 +1800,6 @@ function AllocationPropertyTab({ subscriptions, loading, onRefresh }: {
       setLetter(null); setNotes(""); onRefresh();
     } catch (err: any) { toast.error(err.message ?? "Allocation failed."); }
     finally { setSaving(false); }
-  };
-
-  const handleDelete = async (sub: Subscription) => {
-    if (!["PENDING", "ACTIVE", "DEFAULTING", "DEFAULTED"].includes(sub.status)) {
-      toast.error("Only pending, active, or defaulting subscriptions can be deleted.");
-      return;
-    }
-    setDeleting(sub.id);
-    try {
-      await api.subscriptions.delete(sub.id);
-      toast.success("Subscription deleted.");
-      onRefresh();
-    } catch (err: any) { toast.error(err.message ?? "Failed to delete."); }
-    finally { setDeleting(null); }
   };
 
   if (loading) return <div className="flex items-center justify-center py-12"><Loader2 className="size-5 animate-spin text-neutral-300" /></div>;
@@ -1759,12 +1927,47 @@ function AllocationPropertyTab({ subscriptions, loading, onRefresh }: {
   );
 }
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// Tab 6 — Price History
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function PriceHistoryTab({ property }: { property: Property }) {
+  const plans = property.pricing_plans ?? [];
+
+  if (plans.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 gap-3">
+        <History className="size-8 text-neutral-200" />
+        <p className="text-[13px] text-neutral-400">No pricing plans on this property yet.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="text-[14px] font-semibold text-neutral-900">Pricing Plan History</h3>
+          <p className="text-[12px] text-neutral-400 mt-0.5">Expand any plan to see past price changes</p>
+        </div>
+        <span className="text-[11px] bg-neutral-100 text-neutral-500 px-2.5 py-1 rounded-full font-semibold">
+          {plans.length} plan{plans.length !== 1 ? "s" : ""}
+        </span>
+      </div>
+      <div className="space-y-3">
+        {plans.map((plan) => <PlanHistoryRow key={plan.id} plan={plan} />)}
+      </div>
+    </div>
+  );
+}
+
 const TABS = [
   { key: "overview",      label: "Overview",         icon: LayoutGrid },
   { key: "subscriptions", label: "Subscriptions",    icon: Users },
   { key: "payments",      label: "Payment History",  icon: CreditCard },
   { key: "inspections",   label: "Site Inspections", icon: ClipboardList },
   { key: "allocation",    label: "Allocation",       icon: MapPin },
+  { key: "pricehistory",  label: "Price History",    icon: History },
 ] as const;
 
 type TabKey = (typeof TABS)[number]["key"];
@@ -1773,6 +1976,7 @@ export function PropertyDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const workspace = useWorkspace();
+  const { isAdmin } = useWorkspaceRole();
 
   const [property, setProperty]           = useState<Property | null>(null);
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
@@ -1885,10 +2089,12 @@ export function PropertyDetail() {
                 <ExternalLink className="w-3.5 h-3.5" /> View Estate Page
               </Button>
             )}
-            <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white text-[12px] h-8 gap-1.5"
-              onClick={() => navigate(`/properties/${id}/edit`)}>
-              <Pencil className="w-3.5 h-3.5" /> Edit Property
-            </Button>
+            {isAdmin && (
+              <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white text-[12px] h-8 gap-1.5"
+                onClick={() => navigate(`/properties/${id}/edit`)}>
+                <Pencil className="w-3.5 h-3.5" /> Edit Property
+              </Button>
+            )}
           </div>
         </div>
 
@@ -1910,6 +2116,7 @@ export function PropertyDetail() {
             {tab === "payments"      && <PaymentHistoryTab payments={payments} loading={loadingPay} onRefresh={loadPay} />}
             {tab === "inspections"   && <SiteInspectionsTab property={property} inspections={inspections} loading={loadingIns} onRefresh={loadIns} />}
             {tab === "allocation"    && <AllocationPropertyTab subscriptions={subscriptions} loading={loadingSubs} onRefresh={loadSubs} />}
+            {tab === "pricehistory"  && <PriceHistoryTab property={property} />}
           </motion.div>
         </AnimatePresence>
 

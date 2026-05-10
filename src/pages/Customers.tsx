@@ -116,16 +116,28 @@ function AddCustomerModal({ onClose, onCreated }: AddCustomerModalProps) {
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [properties, setProperties] = useState<PropertyOption[]>([]);
+  const [loadingPlans, setLoadingPlans] = useState(false);
 
   useEffect(() => {
     api.properties.list().then((list: any[]) => {
       setProperties(
         list
           .filter((p) => p.status === "PUBLISHED" || p.status === "published")
-          .map((p) => ({ id: p.id, name: p.name, pricing_plans: p.pricing_plans ?? [] }))
+          .map((p) => ({ id: p.id, name: p.name, pricing_plans: [] }))
       );
     }).catch(() => {});
   }, []);
+
+  // Fetch full property details (with pricing_plans) when property is selected
+  useEffect(() => {
+    if (!form.property_id) return;
+    setLoadingPlans(true);
+    api.properties.get(form.property_id).then((detail: any) => {
+      setProperties((prev) =>
+        prev.map((p) => p.id === form.property_id ? { ...p, pricing_plans: detail.pricing_plans ?? [] } : p)
+      );
+    }).catch(() => {}).finally(() => setLoadingPlans(false));
+  }, [form.property_id]);
 
   const selectedProperty = properties.find((p) => p.id === form.property_id);
   const activePlans = selectedProperty?.pricing_plans.filter((pl) => pl.is_active) ?? [];
@@ -305,7 +317,10 @@ function AddCustomerModal({ onClose, onCreated }: AddCustomerModalProps) {
                       {properties.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
                     </select>
                   </div>
-                  {form.property_id && activePlans.length > 0 && (
+                  {form.property_id && loadingPlans && (
+                    <p className="text-[12px] text-neutral-400 flex items-center gap-1.5"><Loader2 className="w-3.5 h-3.5 animate-spin" /> Loading plans…</p>
+                  )}
+                  {form.property_id && !loadingPlans && activePlans.length > 0 && (
                     <div>
                       <label className={lbl}>Select Plan / Land Size</label>
                       <div className="space-y-1.5">

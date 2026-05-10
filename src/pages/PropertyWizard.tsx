@@ -79,11 +79,13 @@ const docDisplayLabel = (doc: Doc) =>
     ? doc.customDocName
     : DOCUMENT_TYPES.find((d) => d.value === doc.documentType)?.label ?? doc.documentType;
 
+interface StatutoryFee { id: string; name: string; amount: string; note: string; }
 interface PricingPlan {
   id: string; name: string; landSize: string; currency: string;
-  totalPrice: string; paymentType: "outright" | "installment";
+  basePrice: string; totalPrice: string;
+  paymentType: "outright" | "installment";
   initialPayment: string; duration: string; spreadMethod: "separate" | "first_month";
-  active: boolean;
+  active: boolean; statutoryFees: StatutoryFee[];
 }
 interface PaymentMethod { id: string; bankName: string; bankCode: string; accountName: string; accountNumber: string; active: boolean; }
 
@@ -200,10 +202,11 @@ export function PropertyWizard() {
   const [pricingPlans, setPricingPlans]         = useState<PricingPlan[]>([]);
   const [showPricingModal, setShowPricingModal] = useState(false);
   const [editingPlanId, setEditingPlanId]       = useState<string | null>(null);
-  const [pricingForm, setPricingForm]           = useState<Omit<PricingPlan, "id" | "active">>({
-    name: "", landSize: "", currency: "NGN", totalPrice: "",
+  const [pricingForm, setPricingForm]           = useState<Omit<PricingPlan, "id" | "active" | "statutoryFees" | "totalPrice">>({
+    name: "", landSize: "", currency: "NGN", basePrice: "",
     paymentType: "outright", initialPayment: "", duration: "", spreadMethod: "separate",
   });
+  const [pricingFees, setPricingFees]           = useState<StatutoryFee[]>([]);
 
   // ── Step 8 state — Payment Methods ───────────────────────────────────────
   const [paymentMethods, setPaymentMethods]     = useState<PaymentMethod[]>([]);
@@ -277,12 +280,18 @@ export function PropertyWizard() {
       if (prop.pricing_plans?.length) {
         setPricingPlans(prop.pricing_plans.filter((p: any) => !p.is_locked).map((p: any) => ({
           id: p.id, name: p.plan_name, landSize: p.land_size?.toString() ?? "",
-          currency: "NGN", totalPrice: p.total_price?.toString() ?? "",
+          currency: "NGN",
+          basePrice: (p.base_price ?? p.total_price)?.toString() ?? "",
+          totalPrice: p.total_price?.toString() ?? "",
           paymentType: p.payment_type === "OUTRIGHT" ? "outright" : "installment",
           initialPayment: p.initial_payment?.toString() ?? "",
           duration: p.duration_months?.toString() ?? "12",
           spreadMethod: p.payment_spread_method === "INITIAL_SEPARATE" ? "separate" : "first_month",
           active: true,
+          statutoryFees: (p.statutory_fees ?? []).map((f: any) => ({
+            id: f.id ?? String(Date.now() + Math.random()),
+            name: f.name ?? "", amount: f.amount?.toString() ?? "", note: f.note ?? "",
+          })),
         })));
       }
       if (prop.bank_accounts?.length) {
@@ -405,26 +414,29 @@ export function PropertyWizard() {
   const openAddPricing = () => {
     setEditingPlanId(null);
     setPricingForm({
-      name: "", landSize: landSizes[0]?.landSize ?? "", currency: "NGN", totalPrice: "",
+      name: "", landSize: landSizes[0]?.landSize ?? "", currency: "NGN", basePrice: "",
       paymentType: "outright", initialPayment: "", duration: "", spreadMethod: "separate",
     });
+    setPricingFees([]);
     setShowPricingModal(true);
   };
   const openEditPricing = (p: PricingPlan) => {
     setEditingPlanId(p.id);
-    setPricingForm({ name: p.name, landSize: p.landSize, currency: p.currency, totalPrice: p.totalPrice, paymentType: p.paymentType, initialPayment: p.initialPayment, duration: p.duration, spreadMethod: p.spreadMethod });
+    setPricingForm({ name: p.name, landSize: p.landSize, currency: p.currency, basePrice: p.basePrice || p.totalPrice, paymentType: p.paymentType, initialPayment: p.initialPayment, duration: p.duration, spreadMethod: p.spreadMethod });
+    setPricingFees(p.statutoryFees ?? []);
     setShowPricingModal(true);
   };
   const savePricing = () => {
-    if (!pricingForm.name.trim() || !pricingForm.totalPrice) {
-      toast.error("Plan name and total price are required.");
+    if (!pricingForm.name.trim() || !pricingForm.basePrice) {
+      toast.error("Plan name and base price are required.");
       return;
     }
+    const totalPrice = (Number(pricingForm.basePrice) + pricingFees.reduce((sum, f) => sum + (Number(f.amount) || 0), 0)).toString();
     if (editingPlanId) {
-      setPricingPlans((prev) => prev.map((p) => p.id === editingPlanId ? { ...p, ...pricingForm } : p));
+      setPricingPlans((prev) => prev.map((p) => p.id === editingPlanId ? { ...p, ...pricingForm, totalPrice, statutoryFees: pricingFees } : p));
       toast.success("Pricing plan updated.");
     } else {
-      setPricingPlans((prev) => [...prev, { id: Date.now().toString(), active: true, ...pricingForm }]);
+      setPricingPlans((prev) => [...prev, { id: Date.now().toString(), active: true, ...pricingForm, totalPrice, statutoryFees: pricingFees }]);
       toast.success("Pricing plan created.");
     }
     setShowPricingModal(false);
@@ -527,6 +539,8 @@ export function PropertyWizard() {
           description: ls.description,
         })),
         pricing_plans: pricingPlans.map((p) => ({
+          // Include id only for real UUIDs (not Date.now() fake IDs)
+          ...(p.id && p.id.includes("-") ? { id: p.id } : {}),
           plan_name: p.name,
           land_size: p.landSize,
           total_price: p.totalPrice,
@@ -1627,13 +1641,81 @@ export function PropertyWizard() {
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-neutral-700 mb-1.5">Total Price ({pricingForm.currency === "USD" ? "$" : "₦"}) <span className="text-red-500">*</span></label>
-                <input type="number" value={pricingForm.totalPrice}
-                  onChange={(e) => setPricingForm((f) => ({ ...f, totalPrice: e.target.value }))}
+                <label className="block text-sm font-medium text-neutral-700 mb-1.5">Base Price ({pricingForm.currency === "USD" ? "$" : "₦"}) <span className="text-red-500">*</span></label>
+                <input type="number" value={pricingForm.basePrice}
+                  onChange={(e) => setPricingForm((f) => ({ ...f, basePrice: e.target.value }))}
                   placeholder="e.g. 1500000"
                   className="w-full px-3 py-2 border border-neutral-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
                 />
               </div>
+
+              {/* Statutory Fees */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-sm font-medium text-neutral-700">Statutory Fees</label>
+                  <button type="button"
+                    onClick={() => setPricingFees((f) => [...f, { id: Date.now().toString(), name: "", amount: "", note: "" }])}
+                    className="flex items-center gap-1.5 text-xs text-emerald-600 hover:text-emerald-700 font-medium px-2.5 py-1.5 border border-emerald-200 rounded-md hover:bg-emerald-50 transition-colors">
+                    <Plus className="w-3.5 h-3.5" /> Add Statutory Fee
+                  </button>
+                </div>
+                {pricingFees.length === 0 && (
+                  <p className="text-xs text-neutral-400 italic">No statutory fees added.</p>
+                )}
+                <div className="space-y-3">
+                  {pricingFees.map((fee, idx) => (
+                    <div key={fee.id} className="p-3 border border-neutral-200 rounded-lg bg-neutral-50 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-medium text-neutral-500">Fee {idx + 1}</span>
+                        <button type="button" onClick={() => setPricingFees((f) => f.filter((_, i) => i !== idx))}
+                          className="text-red-400 hover:text-red-600 p-0.5 rounded transition-colors">
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <input type="text" placeholder="Fee name (e.g. Survey Fee)"
+                          value={fee.name}
+                          onChange={(e) => setPricingFees((f) => f.map((item, i) => i === idx ? { ...item, name: e.target.value } : item))}
+                          className="px-2.5 py-1.5 border border-neutral-300 rounded-md text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                        />
+                        <input type="number" placeholder="Amount"
+                          value={fee.amount}
+                          onChange={(e) => setPricingFees((f) => f.map((item, i) => i === idx ? { ...item, amount: e.target.value } : item))}
+                          className="px-2.5 py-1.5 border border-neutral-300 rounded-md text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                        />
+                      </div>
+                      <input type="text" placeholder="Note (optional)"
+                        value={fee.note}
+                        onChange={(e) => setPricingFees((f) => f.map((item, i) => i === idx ? { ...item, note: e.target.value } : item))}
+                        className="w-full px-2.5 py-1.5 border border-neutral-300 rounded-md text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Total Package Price (auto-computed) */}
+              {pricingForm.basePrice && (
+                <div className="p-3 bg-emerald-50 rounded-lg border border-emerald-200 flex items-center justify-between">
+                  <div>
+                    <span className="text-sm font-semibold text-emerald-900">Total Package Price</span>
+                    {pricingFees.length > 0 && (
+                      <p className="text-xs text-emerald-700 mt-0.5">
+                        Base {pricingForm.currency === "USD" ? "$" : "₦"}{Number(pricingForm.basePrice).toLocaleString("en-NG")}
+                        {" + "}
+                        {pricingFees.map((f) => f.name || "Fee").join(", ")}
+                      </p>
+                    )}
+                  </div>
+                  <span className="text-base font-bold text-emerald-900">
+                    {(() => {
+                      const sym = pricingForm.currency === "USD" ? "$" : "₦";
+                      const total = Number(pricingForm.basePrice) + pricingFees.reduce((s, f) => s + (Number(f.amount) || 0), 0);
+                      return fmt(total, sym);
+                    })()}
+                  </span>
+                </div>
+              )}
               <div>
                 <label className="block text-sm font-medium text-neutral-700 mb-1.5">Payment Type</label>
                 <div className="flex gap-4">
@@ -1693,16 +1775,18 @@ export function PropertyWizard() {
                       </label>
                     </div>
                   </div>
-                  {pricingForm.totalPrice && pricingForm.duration && (
+                  {pricingForm.basePrice && pricingForm.duration && (
                     <div className="p-4 bg-emerald-50 rounded-lg border border-emerald-200 text-sm space-y-1">
                       <div className="font-medium text-emerald-800 mb-2">Summary</div>
                       {(() => {
                         const sym = pricingForm.currency === "USD" ? "$" : "₦";
+                        const computedTotal = Number(pricingForm.basePrice) + pricingFees.reduce((s, f) => s + (Number(f.amount) || 0), 0);
+                        const planForCalc = { ...pricingForm, totalPrice: String(computedTotal), statutoryFees: pricingFees };
                         return (
                           <>
                             <div className="flex justify-between text-neutral-700">
-                              <span>Total Price</span>
-                              <span className="font-medium">{fmt(Number(pricingForm.totalPrice), sym)}</span>
+                              <span>Total Package Price</span>
+                              <span className="font-medium">{fmt(computedTotal, sym)}</span>
                             </div>
                             <div className="flex justify-between text-neutral-700">
                               <span>Initial Payment</span>
@@ -1710,7 +1794,7 @@ export function PropertyWizard() {
                             </div>
                             <div className="flex justify-between text-neutral-700">
                               <span>Monthly Installment</span>
-                              <span className="font-medium">{fmt(Math.round(monthlyInstallment(pricingForm) ?? 0), sym)}</span>
+                              <span className="font-medium">{fmt(Math.round(monthlyInstallment(planForCalc) ?? 0), sym)}</span>
                             </div>
                           </>
                         );

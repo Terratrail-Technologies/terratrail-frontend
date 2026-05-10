@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { useParams } from "react-router";
+import { useParams, useNavigate } from "react-router";
 import {
   Building2, MapPin, Search, ChevronLeft, ChevronRight, X,
   Phone, Mail, CheckCircle2, ArrowRight, TrendingUp,
@@ -63,11 +63,23 @@ function FadeIn({ children, delay = 0, className = "" }: { children: React.React
 }
 
 // ── Inspection modal ──────────────────────────────────────────────────────────
+const DAY_NAMES = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+
+interface InspectionSlot {
+  id: string; label: string; start_time: string;
+  mode: "RECURRING" | "ONE_TIME"; date: string; is_active: boolean;
+}
+
 function InspectionModal({ property, workspaceSlug, onClose }: { property: Property; workspaceSlug: string; onClose: () => void }) {
   const [form, setForm] = useState({ name: "", email: "", phone: "", date: "", timeSlot: "", persons: "1", message: "" });
   const [sent, setSent] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [config, setConfig] = useState<{ time_slots?: string[]; available_days?: string[]; max_persons?: number; meeting_point?: string } | null>(null);
+  const [config, setConfig] = useState<{
+    time_slots?: (string | InspectionSlot)[];
+    available_days?: string[];
+    max_persons?: number;
+    meeting_point?: string;
+  } | null>(null);
   const set = (k: string, v: string) => setForm((f) => ({ ...f, [k]: v }));
 
   useEffect(() => {
@@ -76,19 +88,27 @@ function InspectionModal({ property, workspaceSlug, onClose }: { property: Prope
       .catch(() => setConfig(null));
   }, [workspaceSlug, property.id]);
 
-  const timeSlots: string[] = config?.time_slots?.length ? config.time_slots : [];
+  // Extract string labels from slot objects (API returns InspectionSlot objects)
+  const timeSlots: string[] = (config?.time_slots ?? [])
+    .filter((s: any) => typeof s === "string" || s?.is_active !== false)
+    .map((s: any) => typeof s === "string" ? s : String(s.label || s.start_time || ""));
+
+  const availableDays = config?.available_days ?? [];
+  const dateAllowed = form.date
+    ? (availableDays.length === 0 || availableDays.includes(DAY_NAMES[new Date(form.date + "T12:00:00").getDay()]))
+    : true;
   const maxPersons = config?.max_persons ?? 10;
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (!dateAllowed) return;
     if (timeSlots.length > 0 && !form.timeSlot) {
       alert("Please select a time slot.");
       return;
     }
     setLoading(true);
     try {
-      await api.siteInspections.create({
-        workspace_slug: workspaceSlug,
+      await api.public.bookInspection(workspaceSlug, property.id, {
         name: form.name,
         email: form.email,
         phone: form.phone,
@@ -96,11 +116,8 @@ function InspectionModal({ property, workspaceSlug, onClose }: { property: Prope
         inspection_time: form.timeSlot || undefined,
         persons: Number(form.persons),
         notes: form.message,
-        linked_property: property.id,
-        property_name: property.name,
         inspection_type: "PHYSICAL",
         category: "RESIDENTIAL",
-        status: "PENDING",
       });
       setSent(true);
     } catch {
@@ -173,14 +190,29 @@ function InspectionModal({ property, workspaceSlug, onClose }: { property: Prope
                 className={inputCls} placeholder="you@example.com" />
             </div>
 
+            {/* Available days banner */}
+            {availableDays.length > 0 && (
+              <div className="flex items-center gap-2 px-3 py-2 bg-emerald-50 rounded-xl border border-emerald-100 text-[12px] text-emerald-800">
+                <span className="font-semibold">Available:</span>
+                {availableDays.map(d => d.slice(0,3)).join(", ")}
+              </div>
+            )}
+
             {/* Date */}
             <div>
               <label className="block text-[11px] font-semibold text-neutral-600 mb-1.5 uppercase tracking-wide">
-                Preferred Date {config?.available_days?.length ? `(${config.available_days.map(d => d.slice(0,3)).join(", ")})` : ""}
+                Preferred Date *
               </label>
-              <input type="date" required value={form.date} onChange={(e) => set("date", e.target.value)}
+              <input type="date" required value={form.date}
+                onChange={(e) => { set("date", e.target.value); set("timeSlot", ""); }}
                 min={new Date().toISOString().split("T")[0]}
-                className={inputCls} />
+                className={`${inputCls} ${form.date && !dateAllowed ? "border-red-400 ring-2 ring-red-200" : ""}`} />
+              {form.date && !dateAllowed && (
+                <p className="text-[12px] text-red-500 mt-1.5">
+                  Inspections aren't available on {DAY_NAMES[new Date(form.date + "T12:00:00").getDay()]}s.
+                  {availableDays.length > 0 && ` Choose: ${availableDays.join(", ")}.`}
+                </p>
+              )}
             </div>
 
             {/* Time slot — show configured slots or free-text if none configured */}
@@ -230,7 +262,7 @@ function InspectionModal({ property, workspaceSlug, onClose }: { property: Prope
                 className={`${inputCls} resize-none`}
                 placeholder="Any specific questions or requirements..." />
             </div>
-            <button type="submit" disabled={loading}
+            <button type="submit" disabled={loading || !dateAllowed}
               className="w-full py-3 bg-emerald-600 text-white text-[14px] font-bold rounded-xl hover:bg-emerald-700 active:scale-[0.98] transition-all disabled:opacity-60 flex items-center justify-center gap-2">
               {loading ? <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" /> : null}
               {loading ? "Submitting…" : "Submit Request"}
@@ -295,6 +327,7 @@ function ImageGallery({ images }: { images: string[] }) {
 
 // ── Property Detail View ──────────────────────────────────────────────────────
 function PropertyDetail({ property, workspaceSlug, onBack }: { property: Property; workspaceSlug: string; onBack: () => void }) {
+  const navigate = useNavigate();
   const [showInspection, setShowInspection] = useState(false);
   const images = [
     ...(property.featured_image ? [property.featured_image] : []),
@@ -416,11 +449,17 @@ function PropertyDetail({ property, workspaceSlug, onBack }: { property: Propert
           )}
 
           {/* CTA */}
-          <button onClick={() => setShowInspection(true)}
-            className="w-full py-3.5 bg-emerald-600 hover:bg-emerald-700 active:scale-[0.98] text-white text-[15px] font-bold rounded-xl transition-all shadow-sm shadow-emerald-600/20 flex items-center justify-center gap-2">
-            Book a Site Inspection
-            <ArrowRight className="size-4" />
-          </button>
+          <div className="flex flex-col sm:flex-row gap-3">
+            <button onClick={() => navigate(`/estates/${workspaceSlug}/${property.id}`)}
+              className="flex-1 py-3.5 bg-emerald-600 hover:bg-emerald-700 active:scale-[0.98] text-white text-[15px] font-bold rounded-xl transition-all shadow-sm shadow-emerald-600/20 flex items-center justify-center gap-2">
+              Buy Property
+              <ArrowRight className="size-4" />
+            </button>
+            <button onClick={() => setShowInspection(true)}
+              className="flex-1 py-3.5 border-2 border-emerald-600 text-emerald-700 hover:bg-emerald-50 active:scale-[0.98] text-[15px] font-bold rounded-xl transition-all flex items-center justify-center gap-2">
+              Book Inspection
+            </button>
+          </div>
         </motion.div>
       </div>
     </div>
@@ -696,8 +735,8 @@ function TopBar({ workspaceSlug: _workspaceSlug }: { workspaceSlug: string }) {
     <header className={`sticky top-0 z-30 transition-all duration-200 ${scrolled ? "bg-white/95 backdrop-blur-md shadow-sm border-b border-neutral-100" : "bg-transparent"}`}>
       <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
         <div className="flex items-center gap-2.5">
-          <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-600 shadow-sm shadow-emerald-600/30">
-            <Building2 className="size-4 text-white" />
+          <div className="flex h-8 w-8 items-center justify-center rounded-xl overflow-hidden bg-emerald-600 shadow-sm shadow-emerald-600/30">
+            <img src="/logo.png" alt="TerraTrail" className="w-full h-full object-cover" />
           </div>
           <span className={`text-[15px] font-extrabold tracking-tight transition-colors ${scrolled ? "text-neutral-900" : "text-white"}`}>TerraTrail</span>
         </div>
@@ -722,8 +761,8 @@ function Footer() {
     <footer className="border-t border-neutral-100 bg-white mt-12 py-8">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-3">
         <div className="flex items-center gap-2">
-          <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-emerald-600">
-            <Building2 className="size-3 text-white" />
+          <div className="flex h-6 w-6 items-center justify-center rounded-lg overflow-hidden bg-emerald-600">
+            <img src="/logo.png" alt="TerraTrail" className="w-full h-full object-cover" />
           </div>
           <span className="text-[13px] font-bold text-neutral-800">TerraTrail</span>
         </div>

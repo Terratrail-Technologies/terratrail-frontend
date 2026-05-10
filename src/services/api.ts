@@ -56,6 +56,9 @@ export interface User {
   address?: string;
   country?: string;
   state?: string;
+  bank_name?: string;
+  bank_account_name?: string;
+  bank_account_number?: string;
 }
 
 export interface AuthResponse {
@@ -280,6 +283,23 @@ async function publicRequest<T>(path: string): Promise<T> {
   return (json?.data ?? json) as T;
 }
 
+async function publicPost<T>(path: string, body: Record<string, unknown>): Promise<T> {
+  const _t0 = Date.now();
+  const response = await fetch(`${BASE_URL}${path}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  _logReq("POST", path, response.status, Date.now() - _t0);
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}));
+    const msg = (err as any)?.message ?? (err as any)?.detail ?? `HTTP ${response.status}`;
+    throw new Error(msg);
+  }
+  const json = await response.json();
+  return (json?.data ?? json) as T;
+}
+
 function buildParams(params: Record<string, unknown>): string {
   const searchParams = new URLSearchParams();
   Object.entries(params).forEach(([key, value]) => {
@@ -316,6 +336,8 @@ export const api = {
       publicRequest<{ valid: boolean; rep_name: string | null }>(
         `/public/${workspaceSlug}/validate-referral/?code=${encodeURIComponent(code)}`
       ),
+    bookInspection: (workspaceSlug: string, propertyId: string, data: Record<string, unknown>) =>
+      publicPost<any>(`/public/${workspaceSlug}/properties/${propertyId}/book-inspection/`, data),
   },
 
   // ── Health ────────────────────────────────────────────────────────────────
@@ -436,8 +458,8 @@ export const api = {
 
   // ── Site Inspections ─────────────────────────────────────────────────────
   siteInspections: {
-    list: (status?: string) =>
-      request<any>(`/customers/site-inspections/${status ? `?status=${status}` : ""}`).then(unwrapList),
+    list: (params?: { status?: string; property?: string }) =>
+      request<any>(`/customers/site-inspections/${buildParams(params ?? {})}`).then(unwrapList),
     get: (id: string) => request<any>(`/customers/site-inspections/${id}/`),
     create: (data: any) =>
       request<any>("/customers/site-inspections/", { method: "POST", body: JSON.stringify(data) }),
@@ -445,6 +467,11 @@ export const api = {
       request<any>(`/customers/site-inspections/${id}/`, { method: "PATCH", body: JSON.stringify(data) }),
     delete: (id: string) =>
       request<void>(`/customers/site-inspections/${id}/`, { method: "DELETE" }),
+    convert: (id: string, customerId: string) =>
+      request<any>(`/customers/site-inspections/${id}/`, {
+        method: "PATCH",
+        body: JSON.stringify({ is_converted: true, converted_customer: customerId }),
+      }),
   },
 
   // ── Sales Reps / Commissions ──────────────────────────────────────────────

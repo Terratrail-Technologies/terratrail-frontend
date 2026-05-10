@@ -1,35 +1,57 @@
-import { Link } from "react-router";
-import { Home, ArrowLeft } from "lucide-react";
+import { Link, useNavigate } from "react-router";
+import { Home, ArrowLeft, Search } from "lucide-react";
 import { usePageTitle } from "../hooks/usePageTitle";
 
 export function NotFound() {
   usePageTitle("Page Not Found");
+  const navigate = useNavigate();
+
   return (
-    <div className="min-h-screen bg-neutral-50 flex items-center justify-center p-8">
-      <div className="text-center max-w-md">
-        <div className="w-24 h-24 bg-neutral-100 rounded-full flex items-center justify-center mx-auto mb-6">
-          <div className="text-4xl font-bold text-neutral-400">404</div>
+    <div className="min-h-screen bg-gradient-to-br from-neutral-50 via-white to-emerald-50/30 flex items-center justify-center p-6">
+      <div className="w-full max-w-lg text-center">
+
+        {/* Illustration */}
+        <div className="relative mx-auto mb-8 w-40 h-40">
+          <div className="absolute inset-0 rounded-full bg-emerald-100/60 animate-pulse" />
+          <div className="absolute inset-4 rounded-full bg-emerald-50 border-2 border-emerald-200 flex items-center justify-center">
+            <Search className="size-14 text-emerald-400 stroke-[1.5]" />
+          </div>
+          <span className="absolute -top-1 -right-1 text-[11px] font-black bg-emerald-600 text-white rounded-full w-8 h-8 flex items-center justify-center shadow-lg shadow-emerald-200">
+            404
+          </span>
         </div>
-        <h1 className="text-2xl font-semibold text-neutral-900 mb-2">Page Not Found</h1>
-        <p className="text-neutral-600 mb-8">
-          The page you're looking for doesn't exist or has been moved.
+
+        {/* Text */}
+        <h1 className="text-[28px] font-extrabold text-neutral-900 tracking-tight mb-3">
+          Page not found
+        </h1>
+        <p className="text-[15px] text-neutral-500 leading-relaxed mb-8 max-w-sm mx-auto">
+          The page you're looking for doesn't exist or may have been moved.
+          Double-check the URL or head back home.
         </p>
-        <div className="flex items-center justify-center gap-3">
+
+        {/* Actions */}
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
           <Link
             to="/"
-            className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-md hover:bg-emerald-700 transition-colors"
+            className="inline-flex items-center gap-2 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-[14px] font-semibold rounded-xl transition-colors shadow-sm shadow-emerald-200 w-full sm:w-auto justify-center"
           >
-            <Home className="w-4 h-4" />
+            <Home className="size-4" />
             Go to Dashboard
           </Link>
           <button
-            onClick={() => window.history.back()}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-neutral-300 text-neutral-700 rounded-md hover:bg-neutral-50 transition-colors"
+            onClick={() => navigate(-1)}
+            className="inline-flex items-center gap-2 px-5 py-2.5 bg-white border border-neutral-200 hover:border-neutral-300 hover:bg-neutral-50 text-neutral-700 text-[14px] font-semibold rounded-xl transition-colors w-full sm:w-auto justify-center"
           >
-            <ArrowLeft className="w-4 h-4" />
+            <ArrowLeft className="size-4" />
             Go Back
           </button>
         </div>
+
+        {/* Footer hint */}
+        <p className="text-[12px] text-neutral-400 mt-10">
+          TerraTrail &mdash; Real Estate Management Platform
+        </p>
       </div>
     </div>
   );

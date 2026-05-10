@@ -536,8 +536,8 @@ function NavContent() {
       {/* ── Logo / brand ─────────────────────────────────────────── */}
       <SidebarHeader className="h-[60px] border-b border-sidebar-border">
         <div className="flex items-center gap-2.5 px-3 h-full">
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-700 shadow-md shadow-emerald-200/60">
-            <Building2 className="size-[15px] text-white" />
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl overflow-hidden bg-emerald-600 shadow-md shadow-emerald-200/60">
+            <img src="/logo.png" alt="TerraTrail" className="w-full h-full object-cover" />
           </div>
           <div className="flex flex-col leading-tight min-w-0">
             <span className="text-[13px] font-semibold tracking-tight text-neutral-900 truncate">

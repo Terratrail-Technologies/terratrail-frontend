@@ -49,6 +49,11 @@ interface Customer {
   email: string;
   phone: string;
   address?: string;
+  next_of_kin_name?: string;
+  next_of_kin_phone?: string;
+  next_of_kin_relationship?: string;
+  referral_source?: string;
+  referral_code?: string;
   primary_subscription: Subscription | null;
   subscriptions?: Subscription[];
   active_subscriptions: number;
@@ -162,12 +167,19 @@ function EditCustomerModal({
   onSaved: () => void;
 }) {
   const [form, setForm] = useState({
-    full_name: customer.full_name ?? "",
-    email:     customer.email ?? "",
-    phone:     customer.phone ?? "",
-    address:   customer.address ?? "",
+    full_name:              customer.full_name ?? "",
+    email:                  customer.email ?? "",
+    phone:                  customer.phone ?? "",
+    address:                customer.address ?? "",
+    next_of_kin_name:       customer.next_of_kin_name ?? "",
+    next_of_kin_phone:      customer.next_of_kin_phone ?? "",
+    next_of_kin_relationship: customer.next_of_kin_relationship ?? "",
+    referral_source:        customer.referral_source ?? "",
+    referral_code:          customer.referral_code ?? "",
   });
   const [saving, setSaving] = useState(false);
+
+  const set = (k: keyof typeof form, v: string) => setForm((f) => ({ ...f, [k]: v }));
 
   const handleSubmit = async () => {
     if (!form.full_name.trim()) { toast.error("Name is required."); return; }
@@ -185,6 +197,8 @@ function EditCustomerModal({
   };
 
   const inputCls = "w-full h-9 px-3 rounded-lg border border-neutral-200 text-[13px] focus:outline-none focus:ring-1 focus:ring-emerald-500/40 focus:border-emerald-400";
+  const labelCls = "text-[12px] font-medium text-neutral-600 block mb-1.5";
+  const sectionCls = "text-[11px] font-semibold text-neutral-400 uppercase tracking-wider pb-2 border-b border-neutral-100 mb-3";
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
@@ -192,33 +206,85 @@ function EditCustomerModal({
         initial={{ opacity: 0, scale: 0.96 }}
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0, scale: 0.96 }}
-        className="bg-white rounded-2xl shadow-2xl w-full max-w-md border border-neutral-100"
+        className="bg-white rounded-2xl shadow-2xl w-full max-w-lg border border-neutral-100 flex flex-col max-h-[90vh]"
       >
-        <div className="flex items-center justify-between p-5 border-b border-neutral-100">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-neutral-100 shrink-0">
           <h2 className="font-semibold text-neutral-900">Edit Customer</h2>
           <button onClick={onClose} className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-neutral-100">
             <X className="w-4 h-4 text-neutral-500" />
           </button>
         </div>
-        <div className="p-5 space-y-4">
-          {[
-            { field: "full_name", label: "Full Name", type: "text" },
-            { field: "email",     label: "Email",     type: "email" },
-            { field: "phone",     label: "Phone",     type: "tel" },
-            { field: "address",   label: "Address",   type: "text" },
-          ].map(({ field, label, type }) => (
-            <div key={field}>
-              <label className="text-[12px] font-medium text-neutral-600 block mb-1.5">{label}</label>
-              <input
-                type={type}
-                value={(form as any)[field]}
-                onChange={(e) => setForm((f) => ({ ...f, [field]: e.target.value }))}
-                className={inputCls}
-              />
+
+        <div className="overflow-y-auto flex-1 px-5 py-4 space-y-5">
+          {/* Section 1: Personal Info */}
+          <div>
+            <p className={sectionCls}>Personal Information</p>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="col-span-2">
+                <label className={labelCls}>Full Name <span className="text-red-500">*</span></label>
+                <input type="text" value={form.full_name} onChange={(e) => set("full_name", e.target.value)} className={inputCls} placeholder="e.g. Adebayo Okafor" />
+              </div>
+              <div>
+                <label className={labelCls}>Email</label>
+                <input type="email" value={form.email} onChange={(e) => set("email", e.target.value)} className={inputCls} placeholder="email@example.com" />
+              </div>
+              <div>
+                <label className={labelCls}>Phone</label>
+                <input type="tel" value={form.phone} onChange={(e) => set("phone", e.target.value)} className={inputCls} placeholder="+234..." />
+              </div>
+              <div className="col-span-2">
+                <label className={labelCls}>Address</label>
+                <input type="text" value={form.address} onChange={(e) => set("address", e.target.value)} className={inputCls} placeholder="Street, city, state" />
+              </div>
             </div>
-          ))}
+          </div>
+
+          {/* Section 2: Next of Kin */}
+          <div>
+            <p className={sectionCls}>Next of Kin</p>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className={labelCls}>Full Name</label>
+                <input type="text" value={form.next_of_kin_name} onChange={(e) => set("next_of_kin_name", e.target.value)} className={inputCls} placeholder="Next of kin name" />
+              </div>
+              <div>
+                <label className={labelCls}>Phone</label>
+                <input type="tel" value={form.next_of_kin_phone} onChange={(e) => set("next_of_kin_phone", e.target.value)} className={inputCls} placeholder="+234..." />
+              </div>
+              <div className="col-span-2">
+                <label className={labelCls}>Relationship</label>
+                <select value={form.next_of_kin_relationship} onChange={(e) => set("next_of_kin_relationship", e.target.value)} className={inputCls}>
+                  <option value="">Select relationship</option>
+                  {["Spouse", "Parent", "Sibling", "Child", "Friend", "Other"].map((r) => (
+                    <option key={r} value={r}>{r}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </div>
+
+          {/* Section 3: Referral */}
+          <div>
+            <p className={sectionCls}>Referral</p>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className={labelCls}>Referral Source</label>
+                <select value={form.referral_source} onChange={(e) => set("referral_source", e.target.value)} className={inputCls}>
+                  <option value="">Select source</option>
+                  {["Social Media", "Friend / Family", "Sales Rep", "Event", "Website", "Other"].map((s) => (
+                    <option key={s} value={s}>{s}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className={labelCls}>Referral Code</label>
+                <input type="text" value={form.referral_code} onChange={(e) => set("referral_code", e.target.value)} className={inputCls} placeholder="e.g. REF-0012" />
+              </div>
+            </div>
+          </div>
         </div>
-        <div className="flex items-center justify-end gap-2.5 p-5 border-t border-neutral-100">
+
+        <div className="flex items-center justify-end gap-2.5 px-5 py-4 border-t border-neutral-100 shrink-0">
           <Button variant="outline" onClick={onClose} className="text-[13px] h-9">Cancel</Button>
           <Button onClick={handleSubmit} disabled={saving} className="bg-emerald-600 hover:bg-emerald-700 text-white text-[13px] h-9 gap-1.5">
             {saving ? <><Loader2 className="w-3.5 h-3.5 animate-spin" />Saving…</> : <><Save className="w-3.5 h-3.5" />Save Changes</>}
@@ -247,6 +313,12 @@ function OverviewTab({ customer }: { customer: Customer }) {
             { icon: MapPin,   label: "Address",     value: customer.address || "—" },
             { icon: Calendar, label: "Date Added",  value: fmtDate(customer.created_at) },
             { icon: User,     label: "Sales Rep",   value: customer.sales_rep_name || customer.assigned_rep_name || "—" },
+            ...(customer.next_of_kin_name ? [
+              { icon: User,  label: "Next of Kin",  value: `${customer.next_of_kin_name}${customer.next_of_kin_relationship ? ` (${customer.next_of_kin_relationship})` : ""}` },
+              { icon: Phone, label: "Kin Phone",    value: customer.next_of_kin_phone || "—" },
+            ] : []),
+            ...(customer.referral_source ? [{ icon: User, label: "Referred Via", value: customer.referral_source }] : []),
+            ...(customer.referral_code   ? [{ icon: User, label: "Referral Code", value: customer.referral_code }]   : []),
           ].map(({ icon: Icon, label, value }) => (
             <div key={label} className="flex items-start gap-3">
               <div className="p-1.5 rounded-lg bg-neutral-100 mt-0.5 shrink-0">

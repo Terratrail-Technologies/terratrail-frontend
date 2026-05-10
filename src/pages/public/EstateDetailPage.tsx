@@ -33,6 +33,7 @@ interface Property {
   amenities: { id: string; name: string; status: string }[];
   documents: { id: string; document_type: string; document_type_display: string; custom_document_name: string; status: string; document_file: string; notes: string }[];
   land_sizes: LandSize[];
+  bank_accounts: { id: string; bank_name: string; account_name: string; account_number: string; is_active: boolean }[];
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -152,13 +153,57 @@ function Gallery({ cover, images }: { cover: string | null; images: { id: string
 
 // ── Request Inspection Modal ──────────────────────────────────────────────────
 
+// Day index → name mapping (matches JS Date.getDay())
+const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+
+interface InspectionSlot {
+  id: string;
+  label: string;
+  start_time: string;
+  mode: "RECURRING" | "ONE_TIME";
+  date: string;
+  is_active: boolean;
+}
+
+interface InspectionConfig {
+  available_days: string[];   // e.g. ["Monday","Wednesday","Friday"]
+  time_slots: (string | InspectionSlot)[];
+  max_persons: number;
+  is_active: boolean;
+}
+
+function isDateAllowed(dateStr: string, availableDays: string[]): boolean {
+  if (!availableDays || availableDays.length === 0) return true;
+  const dayName = DAY_NAMES[new Date(dateStr + "T12:00:00").getDay()];
+  return availableDays.includes(dayName);
+}
+
+function getSlotsForDate(dateStr: string, rawSlots: (string | InspectionSlot)[]): { label: string; start_time: string }[] {
+  if (!rawSlots || rawSlots.length === 0) return [];
+  const dayName = DAY_NAMES[new Date(dateStr + "T12:00:00").getDay()];
+
+  return rawSlots
+    .map((s): InspectionSlot =>
+      typeof s === "string"
+        ? { id: s, label: s, start_time: s, mode: "RECURRING", date: "", is_active: true }
+        : s
+    )
+    .filter((s) => {
+      if (!s.is_active) return false;
+      if (s.mode === "ONE_TIME") return s.date === dateStr;
+      // RECURRING — slot is valid on any configured available day
+      return true; // day-level filtering is already handled by isDateAllowed
+    })
+    .map((s) => ({ label: s.label || s.start_time, start_time: s.start_time }));
+}
+
 function InspectionModal({ property, workspaceSlug, onClose }: {
   property: Property; workspaceSlug: string; onClose: () => void;
 }) {
   const [form, setForm] = useState({ name: "", email: "", phone: "", date: "", message: "" });
   const [sent, setSent] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [config, setConfig] = useState<{ time_slots?: string[]; max_persons?: number } | null>(null);
+  const [config, setConfig] = useState<InspectionConfig | null>(null);
   const [timeSlot, setTimeSlot] = useState("");
   const set = (k: string, v: string) => setForm((f) => ({ ...f, [k]: v }));
 
@@ -168,22 +213,37 @@ function InspectionModal({ property, workspaceSlug, onClose }: {
       .catch(() => setConfig(null));
   }, [workspaceSlug, property.id]);
 
+  // Reset time slot when date changes
+  const handleDateChange = (dateStr: string) => {
+    setForm((f) => ({ ...f, date: dateStr }));
+    setTimeSlot("");
+  };
+
+  const availableDays = config?.available_days ?? [];
+  const dateAllowed = form.date ? isDateAllowed(form.date, availableDays) : true;
+  const slotsForDate = form.date ? getSlotsForDate(form.date, config?.time_slots ?? []) : [];
+  const hasSlots = slotsForDate.length > 0;
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.name || !form.phone || !form.date) return;
+    if (!dateAllowed) return;
     setLoading(true);
     try {
-      await api.siteInspections.create({
-        workspace_slug: workspaceSlug,
+      await api.public.bookInspection(workspaceSlug, property.id, {
         name: form.name, email: form.email, phone: form.phone,
         inspection_date: form.date, inspection_time: timeSlot || undefined,
-        notes: form.message, linked_property: property.id, property_name: property.name,
+        notes: form.message,
+        inspection_type: "PHYSICAL",
+        category: "RESIDENTIAL",
       });
       setSent(true);
     } catch (err: any) {
       alert(err.message ?? "Failed to submit request.");
     } finally { setLoading(false); }
   };
+
+  const inputCls = "w-full h-10 px-3 rounded-xl border border-neutral-200 text-[13px] focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400 bg-white";
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
@@ -209,38 +269,68 @@ function InspectionModal({ property, workspaceSlug, onClose }: {
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="p-5 space-y-4">
+            {/* Show available days hint if configured */}
+            {availableDays.length > 0 && (
+              <div className="bg-emerald-50 border border-emerald-100 rounded-xl px-3 py-2.5 text-[12px] text-emerald-700">
+                <span className="font-semibold">Available days: </span>
+                {availableDays.join(", ")}
+              </div>
+            )}
+
             <div className="grid grid-cols-2 gap-4">
               <div className="col-span-2">
                 <label className="text-[12px] font-medium text-neutral-600 block mb-1.5">Full Name *</label>
-                <input value={form.name} onChange={(e) => set("name", e.target.value)} required
-                  className="w-full h-10 px-3 rounded-xl border border-neutral-200 text-[13px] focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400" />
+                <input value={form.name} onChange={(e) => set("name", e.target.value)} required className={inputCls} />
               </div>
               <div>
                 <label className="text-[12px] font-medium text-neutral-600 block mb-1.5">Phone *</label>
-                <input value={form.phone} onChange={(e) => set("phone", e.target.value)} required type="tel"
-                  className="w-full h-10 px-3 rounded-xl border border-neutral-200 text-[13px] focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400" />
+                <input value={form.phone} onChange={(e) => set("phone", e.target.value)} required type="tel" className={inputCls} />
               </div>
               <div>
                 <label className="text-[12px] font-medium text-neutral-600 block mb-1.5">Email</label>
-                <input value={form.email} onChange={(e) => set("email", e.target.value)} type="email"
-                  className="w-full h-10 px-3 rounded-xl border border-neutral-200 text-[13px] focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400" />
+                <input value={form.email} onChange={(e) => set("email", e.target.value)} type="email" className={inputCls} />
               </div>
+
               <div className="col-span-2">
                 <label className="text-[12px] font-medium text-neutral-600 block mb-1.5">Preferred Date *</label>
-                <input value={form.date} onChange={(e) => set("date", e.target.value)} required type="date"
+                <input
+                  value={form.date}
+                  onChange={(e) => handleDateChange(e.target.value)}
+                  required type="date"
                   min={new Date().toISOString().slice(0, 10)}
-                  className="w-full h-10 px-3 rounded-xl border border-neutral-200 text-[13px] focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400" />
+                  className={`${inputCls} ${form.date && !dateAllowed ? "border-red-300 ring-2 ring-red-200" : ""}`}
+                />
+                {form.date && !dateAllowed && (
+                  <p className="text-[11.5px] text-red-500 mt-1">
+                    Inspections are not available on {DAY_NAMES[new Date(form.date + "T12:00:00").getDay()]}s.
+                    Available: {availableDays.join(", ")}.
+                  </p>
+                )}
               </div>
-              {config?.time_slots && config.time_slots.length > 0 && (
+
+              {/* Time slot — filtered to the selected date's day + active slots only */}
+              {form.date && dateAllowed && hasSlots && (
                 <div className="col-span-2">
-                  <label className="text-[12px] font-medium text-neutral-600 block mb-1.5">Preferred Time</label>
-                  <select value={timeSlot} onChange={(e) => setTimeSlot(e.target.value)}
-                    className="w-full h-10 px-3 rounded-xl border border-neutral-200 text-[13px] focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400 bg-white">
-                    <option value="">Select time slot</option>
-                    {config.time_slots.map((t) => <option key={t} value={t}>{t}</option>)}
+                  <label className="text-[12px] font-medium text-neutral-600 block mb-1.5">
+                    Preferred Time <span className="text-neutral-400 font-normal">(select a slot)</span>
+                  </label>
+                  <select value={timeSlot} onChange={(e) => setTimeSlot(e.target.value)} className={inputCls}>
+                    <option value="">— Select a time slot —</option>
+                    {slotsForDate.map((s) => (
+                      <option key={s.start_time} value={s.start_time}>{s.label} ({s.start_time})</option>
+                    ))}
                   </select>
                 </div>
               )}
+
+              {form.date && dateAllowed && !hasSlots && config?.time_slots && config.time_slots.length > 0 && (
+                <div className="col-span-2">
+                  <p className="text-[12px] text-amber-600 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2">
+                    No time slots available for this date. Please choose another day.
+                  </p>
+                </div>
+              )}
+
               <div className="col-span-2">
                 <label className="text-[12px] font-medium text-neutral-600 block mb-1.5">Message (optional)</label>
                 <textarea value={form.message} onChange={(e) => set("message", e.target.value)} rows={3}
@@ -248,7 +338,9 @@ function InspectionModal({ property, workspaceSlug, onClose }: {
                   className="w-full px-3 py-2 rounded-xl border border-neutral-200 text-[13px] focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400 resize-none" />
               </div>
             </div>
-            <button type="submit" disabled={loading || !form.name || !form.phone || !form.date}
+
+            <button type="submit"
+              disabled={loading || !form.name || !form.phone || !form.date || !dateAllowed}
               className="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-semibold text-[14px] flex items-center justify-center gap-2 transition-colors">
               {loading ? <><Loader2 className="size-4 animate-spin" />Submitting…</> : "Submit Request"}
             </button>
@@ -725,8 +817,25 @@ function BuyFlow({ property, workspaceSlug, initialPlanId, onClose }: {
             {/* Payment instructions */}
             <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 text-[13px]">
               <h4 className="font-bold text-blue-800 mb-2">Payment Instructions</h4>
-              <p className="text-blue-700 mb-3">Make your initial payment to any of the estate's bank accounts, then upload your receipt below.</p>
-              <p className="text-[12px] text-blue-600">Your booking will be reviewed and confirmed by our team within 24–48 hours. You will receive an email and SMS once your subscription is activated.</p>
+              <p className="text-blue-700 mb-3">Make your initial payment to any of the bank accounts below, then upload your receipt.</p>
+              {(() => {
+                const activeAccounts = (property.bank_accounts ?? []).filter((a) => a.is_active);
+                if (activeAccounts.length === 0) {
+                  return <p className="text-[12px] text-blue-600 italic">Contact our team for payment account details.</p>;
+                }
+                return (
+                  <div className="space-y-2 mb-3">
+                    {activeAccounts.map((acct) => (
+                      <div key={acct.id} className="bg-white border border-blue-100 rounded-lg px-3 py-2.5">
+                        <p className="text-[11px] font-semibold text-blue-400 uppercase tracking-wide mb-0.5">{acct.bank_name}</p>
+                        <p className="text-[13px] font-bold text-neutral-800 tracking-wider">{acct.account_number}</p>
+                        <p className="text-[12px] text-neutral-500">{acct.account_name}</p>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()}
+              <p className="text-[12px] text-blue-600">Your booking will be reviewed and confirmed within 24–48 hours. You will receive an email once your subscription is activated.</p>
             </div>
 
             {/* Receipt */}
@@ -747,7 +856,7 @@ function BuyFlow({ property, workspaceSlug, initialPlanId, onClose }: {
             <div className="space-y-3">
               {[
                 { key: "decl1", text: "I confirm that the information I have provided is accurate and complete." },
-                { key: "decl2", text: "I understand that this booking is subject to review and approval by the estate manager." },
+                { key: "decl2", text: "I understand that this payment needs to be verified and confirmed." },
               ].map(({ key, text }) => (
                 <label key={key} className="flex items-start gap-3 cursor-pointer">
                   <input type="checkbox" checked={(state as any)[key]} onChange={(e) => set(key as keyof BuyState, e.target.checked)}
@@ -864,10 +973,15 @@ export default function EstateDetailPage() {
       {/* Sticky Nav */}
       <div className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-neutral-100 shadow-sm">
         <div className="max-w-5xl mx-auto px-4 flex items-center justify-between h-14">
-          <button onClick={() => navigate(`/estates/${workspaceSlug}`)}
-            className="flex items-center gap-2 text-[13px] font-semibold text-neutral-700 hover:text-emerald-600 transition-colors">
-            <ChevronLeft className="size-4" /> All Properties
-          </button>
+          <div className="flex items-center gap-3">
+            <div className="flex h-7 w-7 items-center justify-center rounded-lg overflow-hidden bg-emerald-600 shadow-sm">
+              <img src="/logo.png" alt="TerraTrail" className="w-full h-full object-cover" />
+            </div>
+            <button onClick={() => navigate(`/estates/${workspaceSlug}`)}
+              className="flex items-center gap-1.5 text-[13px] font-semibold text-neutral-700 hover:text-emerald-600 transition-colors">
+              <ChevronLeft className="size-4" /> All Properties
+            </button>
+          </div>
           <span className="font-bold text-neutral-900 text-[14px] hidden sm:block truncate max-w-xs">{property.name}</span>
           <div className="flex gap-2">
             <button onClick={() => setShowInspection(true)}
@@ -1018,11 +1132,11 @@ export default function EstateDetailPage() {
             {tab === "documents" && (
               <FadeIn>
                 <h2 className="text-[18px] font-bold text-neutral-900 mb-6">Estate Documents</h2>
-                {property.documents.length === 0 ? (
+                {(property.documents ?? []).length === 0 ? (
                   <p className="text-neutral-400 text-[14px]">Documents will be available soon.</p>
                 ) : (
                   <div className="space-y-2">
-                    {property.documents.map((doc) => (
+                    {(property.documents ?? []).map((doc) => (
                       <div key={doc.id} className="flex items-center justify-between p-4 bg-white rounded-xl border border-neutral-100 shadow-sm">
                         <div className="flex items-center gap-3">
                           <div className="w-9 h-9 rounded-lg bg-blue-50 flex items-center justify-center">
@@ -1104,7 +1218,7 @@ export default function EstateDetailPage() {
       </FadeIn>
 
       {/* Bottom CTA */}
-      <div className="bg-neutral-900 py-12 px-4 text-center text-white">
+      {/* <div className="bg-neutral-900 py-12 px-4 text-center text-white">
         <h2 className="text-xl font-bold mb-2">Ready to own land at {property.name}?</h2>
         <p className="text-neutral-400 text-[14px] mb-6">Join hundreds of property owners. Start with a flexible payment plan.</p>
         <div className="flex gap-3 justify-center flex-wrap">
@@ -1117,7 +1231,7 @@ export default function EstateDetailPage() {
             Request Inspection
           </button>
         </div>
-      </div>
+      </div> */}
 
       {/* Modals */}
       <AnimatePresence>

@@ -1,4 +1,4 @@
-import { createBrowserRouter } from "react-router";
+import { createBrowserRouter, isRouteErrorResponse, useRouteError } from "react-router";
 import { MainLayout } from "./layouts/MainLayout";
 import { Overview } from "./pages/Overview";
 import { Properties } from "./pages/Properties";
@@ -15,6 +15,7 @@ import { DataExport } from "./pages/DataExport";
 import { WorkspaceSettings } from "./pages/settings/WorkspaceSettings";
 import { AccountSettings } from "./pages/settings/AccountSettings";
 import { NotFound } from "./pages/NotFound";
+import { ServerError } from "./pages/ServerError";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { AcceptInvite } from "./pages/AcceptInvite";
 import EstatesPage from "./pages/public/EstatesPage";
@@ -34,17 +35,25 @@ import { CreateNewPassword } from "./onboarding/pages/CreateNewPassword";
 import { WorkspaceSetup } from "./onboarding/pages/WorkspaceSetup";
 import { SelectPlan } from "./onboarding/pages/SelectPlan";
 
+function RouteErrorElement() {
+  const error = useRouteError();
+  if (isRouteErrorResponse(error) && error.status === 404) return <NotFound />;
+  const message = error instanceof Error ? error.message : String(error ?? "Unknown error");
+  return <ServerError message={message} />;
+}
+
 export const router = createBrowserRouter([
   // ── Public pages (no auth required) ──────────────────────────────────────
-  { path: "/landing", Component: LandingPage },
-  { path: "/accept-invite/:token", Component: AcceptInvite },
-  { path: "/estates/:workspaceSlug", Component: EstatesPage },
-  { path: "/estates/:workspaceSlug/:propertyId", Component: EstateDetailPage },
+  { path: "/landing", Component: LandingPage, errorElement: <RouteErrorElement /> },
+  { path: "/accept-invite/:token", Component: AcceptInvite, errorElement: <RouteErrorElement /> },
+  { path: "/estates/:workspaceSlug", Component: EstatesPage, errorElement: <RouteErrorElement /> },
+  { path: "/estates/:workspaceSlug/:propertyId", Component: EstateDetailPage, errorElement: <RouteErrorElement /> },
 
   // ── Onboarding (standalone, no MainLayout) ──────────────────────────────
   {
     path: "/auth/",
     Component: OnboardingLayout,
+    errorElement: <RouteErrorElement />,
     children: [
       { index: true, Component: SignIn },
       { path: "sign-in", Component: SignIn },
@@ -59,10 +68,12 @@ export const router = createBrowserRouter([
   // ── Main app (protected – redirect to /auth/sign-in if not logged in) ──
   {
     Component: ProtectedRoute,
+    errorElement: <RouteErrorElement />,
     children: [
       {
         path: "/",
         Component: MainLayout,
+        errorElement: <RouteErrorElement />,
         children: [
           { index: true, Component: Overview },
           { path: "properties", Component: Properties },

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Check, Loader2 } from "lucide-react";
+import { Check, Loader2, Building2 } from "lucide-react";
 import { toast } from "sonner";
 import { api, type User } from "../../services/api";
 import { useCurrentUser } from "../../hooks/useCurrentUser";
@@ -35,6 +35,9 @@ export function AccountSettings() {
           address:       u.address     ?? "",
           country:       u.country     ?? "Nigeria",
           state:         u.state       ?? "",
+          bank_name:           (u as any).bank_name           ?? "",
+          bank_account_name:   (u as any).bank_account_name   ?? "",
+          bank_account_number: (u as any).bank_account_number ?? "",
         });
       })
       .catch(() => {
@@ -186,6 +189,39 @@ export function AccountSettings() {
               >
                 {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
                 {saving ? "Saving…" : "Save Changes"}
+              </button>
+            </div>
+          </div>
+
+          {/* Bank Account Details */}
+          <div className="bg-white rounded-lg border border-neutral-200 p-6">
+            <div className="flex items-center gap-2.5 mb-5">
+              <Building2 className="size-4 text-neutral-400" />
+              <h3 className="font-medium text-neutral-900">Bank Account Details</h3>
+            </div>
+            <p className="text-sm text-neutral-500 mb-5">Used for commission payouts. Ensure details are accurate.</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+              <div className="col-span-full">
+                <label className={labelCls}>Bank Name</label>
+                <input className={inputCls} value={(form as any).bank_name ?? ""} onChange={set("bank_name" as any)} placeholder="e.g. GTBank, First Bank" />
+              </div>
+              <div>
+                <label className={labelCls}>Account Name</label>
+                <input className={inputCls} value={(form as any).bank_account_name ?? ""} onChange={set("bank_account_name" as any)} placeholder="Name on account" />
+              </div>
+              <div>
+                <label className={labelCls}>Account Number</label>
+                <input className={inputCls} value={(form as any).bank_account_number ?? ""} onChange={set("bank_account_number" as any)} placeholder="10-digit account number" maxLength={10} />
+              </div>
+            </div>
+            <div className="mt-6 flex justify-end">
+              <button
+                onClick={handleSave}
+                disabled={saving}
+                className="inline-flex items-center gap-2 px-6 py-2 bg-emerald-600 text-white rounded-md hover:bg-emerald-700 disabled:opacity-60 transition-colors text-sm font-medium"
+              >
+                {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                {saving ? "Saving…" : "Save Bank Details"}
               </button>
             </div>
           </div>

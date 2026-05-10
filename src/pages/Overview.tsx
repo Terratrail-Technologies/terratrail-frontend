@@ -331,16 +331,16 @@ export function Overview() {
           </div>
           <div className="p-6 sm:p-8 pt-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8">
-              {/* Total Revenue – FILTERABLE + HIDEABLE */}
+              {/* Total Revenue */}
               <div className="space-y-1.5">
                 <div className="text-[11.5px] font-medium text-slate-400">Total Revenue</div>
                 <div className="text-xl sm:text-2xl font-bold text-white tracking-tight leading-none">
                   {maskStr(safeStats.revenue)}
                 </div>
-                <div className="text-[10.5px] text-slate-500">From paid subscriptions</div>
+                <div className="text-[10.5px] text-slate-500">All money received</div>
               </div>
- 
-              {/* Outstanding Balance – NOT filtered, HIDEABLE */}
+
+              {/* Outstanding Balance */}
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
                   <div className="text-[11.5px] font-medium text-slate-400">Outstanding Balance</div>
@@ -351,13 +351,13 @@ export function Overview() {
                 <div className="text-xl sm:text-2xl font-bold text-amber-400 tracking-tight leading-none">
                   {maskStr(safeStats.outstanding_balance)}
                 </div>
-                <div className="text-[10.5px] text-slate-500">Unpaid installments</div>
+                <div className="text-[10.5px] text-slate-500">Unpaid subscribed properties</div>
               </div>
 
-              {/* Potential Revenue – NOT filtered, HIDEABLE */}
+              {/* Contract Value */}
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
-                  <div className="text-[11.5px] font-medium text-slate-400">Potential Revenue</div>
+                  <div className="text-[11.5px] font-medium text-slate-400">Contract Value</div>
                   <div className="w-5 h-5 rounded-full bg-blue-500/20 flex items-center justify-center">
                     <TrendingUp className="w-2.5 h-2.5 text-blue-500" />
                   </div>
@@ -365,16 +365,16 @@ export function Overview() {
                 <div className="text-xl sm:text-2xl font-bold text-blue-400 tracking-tight leading-none">
                   {maskStr(safeStats.potential_revenue)}
                 </div>
-                <div className="text-[10.5px] text-slate-500">If all subscriptions complete</div>
+                <div className="text-[10.5px] text-slate-500">Active & completed subscriptions</div>
               </div>
- 
-              {/* Net Revenue – FILTERABLE + HIDEABLE */}
+
+              {/* Net Income */}
               <div className="space-y-1.5">
-                <div className="text-[11.5px] font-medium text-slate-400">Net Revenue</div>
+                <div className="text-[11.5px] font-medium text-slate-400">Net Income</div>
                 <div className="text-xl sm:text-2xl font-bold text-emerald-400 tracking-tight leading-none">
                   {maskStr(safeStats.net_revenue)}
                 </div>
-                <div className="text-[10.5px] text-slate-500">Revenue minus commissions</div>
+                <div className="text-[10.5px] text-slate-500">Total revenue minus commission</div>
               </div>
             </div>
           </div>
