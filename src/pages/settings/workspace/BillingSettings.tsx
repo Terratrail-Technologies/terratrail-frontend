@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Check, Loader2, Star, Building2, Users, UserCheck, MessageCircle, CreditCard } from "lucide-react";
 import { toast } from "sonner";
 import { api } from "../../../services/api";
@@ -38,28 +38,44 @@ export function BillingSettings() {
   const [selecting,      setSelecting]     = useState<string | null>(null);
   const [billing,        setBilling]       = useState<"monthly" | "yearly">("monthly");
 
-  useEffect(() => {
-    Promise.all([
-      api.workspaces.billingPlans(),
-      api.workspaces.billingUsage(),
-      api.workspaces.detail(),
-    ])
-      .then(([p, u, d]) => {
-        setPlans(Array.isArray(p?.plans) ? p.plans : []);
-        setPaymentDetails(p?.payment_details ?? null);
-        setUsage(u);
-        setWs(d);
-      })
-      .catch(() => {})
-      .finally(() => setLoading(false));
+  const loadData = useCallback(async () => {
+    try {
+      const [p, u, d] = await Promise.all([
+        api.workspaces.billingPlans(),
+        api.workspaces.billingUsage(),
+        api.workspaces.detail(),
+      ]);
+      setPlans(Array.isArray(p?.plans) ? p.plans : []);
+      setPaymentDetails(p?.payment_details ?? null);
+      setUsage(u);
+      setWs(d);
+    } catch {
+      // ignore
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    loadData();
+    const id = setInterval(() => {
+      Promise.all([api.workspaces.billingUsage(), api.workspaces.detail()])
+        .then(([u, d]) => { setUsage(u); setWs(d); })
+        .catch(() => {});
+    }, 60_000);
+    return () => clearInterval(id);
+  }, [loadData]);
 
   const handleSelect = async (planKey: string) => {
     setSelecting(planKey);
     try {
       await api.workspaces.selectPlan({ plan: planKey });
-      const updated = await api.workspaces.detail();
+      const [updated, newUsage] = await Promise.all([
+        api.workspaces.detail(),
+        api.workspaces.billingUsage(),
+      ]);
       setWs(updated);
+      setUsage(newUsage);
       const plan = plans.find((p) => p.key === planKey);
       toast.success(`Switched to ${plan?.name ?? planKey} plan.`);
     } catch (err: any) {
@@ -99,21 +115,22 @@ export function BillingSettings() {
       </div>
 
       {/* ── Usage ─────────────────────────────────────────────────────────── */}
-      {usage && (
+      {usage?.resources && (
         <div className="bg-white rounded-xl border border-neutral-200 p-6">
           <h3 className="font-semibold text-neutral-900 mb-5">Usage</h3>
           <div className="space-y-4">
-            {Object.entries(usage).map(([key, val]: any) => {
+            {Object.entries(usage.resources).map(([key, val]: any) => {
               if (typeof val !== "object" || val === null) return null;
               const used  = val.used  ?? 0;
-              const limit = val.limit ?? 0;
-              const pct   = limit > 0 ? Math.min(100, Math.round((used / limit) * 100)) : 0;
+              const limit = val.limit ?? null;
+              const isUnlimited = limit == null || limit >= 9999;
+              const pct   = !isUnlimited && limit > 0 ? Math.min(100, Math.round((used / limit) * 100)) : 0;
               const label = key.replace(/_/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase());
               return (
                 <div key={key}>
                   <div className="flex items-center justify-between mb-1.5">
                     <span className="text-[13px] text-neutral-700 font-medium">{label}</span>
-                    <span className="text-[12px] text-neutral-500">{used} / {limit === 9999 ? "∞" : limit}</span>
+                    <span className="text-[12px] text-neutral-500">{used} / {isUnlimited ? "∞" : limit}</span>
                   </div>
                   <div className="h-1.5 rounded-full bg-neutral-100 overflow-hidden">
                     <div

@@ -5,9 +5,13 @@ import s from "../styles/onboarding.module.css";
 const Logo = () => (
   <div className={s.logoWrap}>
     <div className={s.logoIcon}>
-      <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-        <path d="M3 5h12M9 5v8" stroke="#fff" strokeWidth="2" strokeLinecap="round" />
-      </svg>
+      <img src="/logo.png" alt="TerraTrail" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 7 }}
+        onError={(e) => {
+          (e.currentTarget as HTMLImageElement).style.display = "none";
+          (e.currentTarget.parentElement as HTMLElement).innerHTML =
+            '<svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M3 5h12M9 5v8" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg>';
+        }}
+      />
     </div>
     <span className={s.logoText}>TerraTrail</span>
   </div>

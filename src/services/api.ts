@@ -548,6 +548,10 @@ export const api = {
       request<any>(`/workspaces/members/${pk}/`, { method: "PATCH", body: JSON.stringify(data) }),
     removeMember: (pk: string) =>
       request<void>(`/workspaces/members/${pk}/`, { method: "DELETE" }),
+    uploadLogo: (formData: FormData) =>
+      requestFile<any>("/workspaces/detail/", formData, "PATCH"),
+    export: (params: { type: string; format: string; date_from?: string; date_to?: string; status?: string }) =>
+      request<any>(`/workspaces/export/${buildParams(params as Record<string, unknown>)}`),
   },
 
   // ── Banking / Account Verification (Paystack) ────────────────────────────

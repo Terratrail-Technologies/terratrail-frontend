@@ -25,6 +25,7 @@ import { PropertyDetail } from "./pages/PropertyDetail";
 import { PaymentsPage } from "./pages/PaymentsPage";
 import { AllocationPage } from "./pages/AllocationPage";
 import { NotificationsPage } from "./pages/NotificationsPage";
+import { HelpPage } from "./pages/HelpPage";
 // Onboarding – isolated module, no MainLayout dependency
 import { OnboardingLayout } from "./onboarding/components/OnboardingLayout";
 import { SignIn } from "./onboarding/pages/SignIn";
@@ -92,6 +93,7 @@ export const router = createBrowserRouter([
           { path: "allocation", Component: AllocationPage },
           { path: "notifications", Component: NotificationsPage },
           { path: "data-export", Component: DataExport },
+          { path: "help", Component: HelpPage },
           { path: "settings/*", Component: WorkspaceSettings },
           { path: "account", Component: AccountSettings },
           { path: "*", Component: NotFound },

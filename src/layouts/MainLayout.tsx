@@ -434,9 +434,9 @@ const ALL_NAV_ITEMS = [
 ];
 
 const ALL_BOTTOM_ITEMS = [
-  { icon: Settings,    label: "Workspace", href: "/settings", roles: ["OWNER","ADMIN"] },
-  { icon: HelpCircle,  label: "Help",      href: "#",         roles: ["OWNER","ADMIN","SALES_REP","CUSTOMER"] },
-  { icon: User,        label: "Account",   href: "/account",  roles: ["OWNER","ADMIN","SALES_REP","CUSTOMER"] },
+  { icon: Settings,    label: "Workspace", href: "/settings",  roles: ["OWNER","ADMIN"] },
+  { icon: HelpCircle,  label: "Help",      href: "/help",      roles: ["OWNER","ADMIN","SALES_REP","CUSTOMER"] },
+  { icon: User,        label: "Account",   href: "/account",   roles: ["OWNER","ADMIN","SALES_REP","CUSTOMER"] },
 ];
 
 // Priority items shown in the mobile bottom nav (max 5 slots)
@@ -616,25 +616,37 @@ function NavContent() {
             {/* Plan usage pill — real-time */}
             {planUsage && (
               <div className="mx-3 mb-3 rounded-lg border border-emerald-100 bg-emerald-50 px-3 py-2.5">
-                <div className="flex items-center justify-between mb-1.5">
-                  <span className="text-[11px] font-bold text-emerald-800 truncate">
-                    {planUsage.plan_display ?? planUsage.plan ?? "Free Plan"}
-                  </span>
-                  <span className="text-[10px] font-semibold text-emerald-600 shrink-0 ml-1">
-                    {planUsage.properties_percent ?? planUsage.usage_percent ?? 0}%
-                  </span>
-                </div>
-                <div className="h-1 rounded-full bg-emerald-100 overflow-hidden">
-                  <motion.div
-                    initial={{ width: 0 }}
-                    animate={{ width: `${Math.min(planUsage.properties_percent ?? planUsage.usage_percent ?? 0, 100)}%` }}
-                    transition={{ duration: 0.8, ease: "easeOut" }}
-                    className="h-full rounded-full bg-emerald-500"
-                  />
-                </div>
-                <div className="text-[10px] text-emerald-600/70 mt-1.5">
-                  {planUsage.properties_used ?? 0} / {planUsage.properties_limit ?? "∞"} Properties
-                </div>
+                {(() => {
+                  const props = planUsage?.resources?.properties;
+                  const used = props?.used ?? 0;
+                  const limit = props?.limit ?? null;
+                  const isUnlimited = limit == null || limit >= 9999;
+                  const pct = !isUnlimited && limit > 0 ? Math.min(100, Math.round((used / limit) * 100)) : 0;
+                  const planName = planUsage.plan ?? "Free";
+                  return (
+                    <>
+                      <div className="flex items-center justify-between mb-1.5">
+                        <span className="text-[11px] font-bold text-emerald-800 truncate capitalize">
+                          {planName.charAt(0) + planName.slice(1).toLowerCase()} Plan
+                        </span>
+                        <span className="text-[10px] font-semibold text-emerald-600 shrink-0 ml-1">
+                          {pct}%
+                        </span>
+                      </div>
+                      <div className="h-1 rounded-full bg-emerald-100 overflow-hidden">
+                        <motion.div
+                          initial={{ width: 0 }}
+                          animate={{ width: `${pct}%` }}
+                          transition={{ duration: 0.8, ease: "easeOut" }}
+                          className="h-full rounded-full bg-emerald-500"
+                        />
+                      </div>
+                      <div className="text-[10px] text-emerald-600/70 mt-1.5">
+                        {used} / {isUnlimited ? "∞" : limit} Properties
+                      </div>
+                    </>
+                  );
+                })()}
               </div>
             )}
 

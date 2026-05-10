@@ -17,6 +17,7 @@ import { toast } from "sonner";
 import { usePageTitle } from "../hooks/usePageTitle";
 import { useWorkspaceRole } from "../hooks/useWorkspaceRole";
 import { useCurrentUser } from "../hooks/useCurrentUser";
+import { api } from "../services/api";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -149,6 +150,45 @@ function formatDate(iso: string) {
 
 function uniqueId() {
   return Math.random().toString(36).slice(2) + Date.now().toString(36);
+}
+
+function objectsToCSV(rows: Record<string, any>[]): string {
+  if (!rows.length) return "";
+  const headers = Object.keys(rows[0]);
+  const escape = (v: any) => {
+    const s = v == null ? "" : String(v);
+    return s.includes(",") || s.includes('"') || s.includes("\n") ? `"${s.replace(/"/g, '""')}"` : s;
+  };
+  return [headers.join(","), ...rows.map((r) => headers.map((h) => escape(r[h])).join(","))].join("\n");
+}
+
+function downloadFile(content: string, filename: string, mime: string) {
+  const blob = new Blob([content], { type: mime });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+async function fetchExportData(typeId: ExportTypeId, filters: FilterState): Promise<any[]> {
+  const params: any = {};
+  if (filters.date_from) params.date_from = filters.date_from;
+  if (filters.date_to)   params.date_to   = filters.date_to;
+  if (filters.status)    params.status     = filters.status;
+
+  switch (typeId) {
+    case "customers":     return api.customers.list();
+    case "bookings":      return api.subscriptions.list(params);
+    case "properties":    return api.properties.list();
+    case "customer-reps": return api.customerReps?.list?.() ?? [];
+    case "transactions":  return api.payments.list(params);
+    case "installments":  return api.installments.list(params);
+    case "revenue":       return api.dashboard.getStats({ from: filters.date_from || null, to: filters.date_to || null }).then((s) => [s]);
+    case "activity":      return api.workspaces.activity().then((r: any) => r?.results ?? r ?? []);
+    default:              return [];
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -286,7 +326,7 @@ export function DataExport() {
     setFilters({ date_from: "", date_to: "", status: "" });
   }
 
-  function handleGenerateExport() {
+  async function handleGenerateExport() {
     const job: ExportJob = {
       id: uniqueId(),
       typeId: selectedType,
@@ -298,14 +338,32 @@ export function DataExport() {
     };
 
     setHistory((prev) => [job, ...prev]);
-    toast.info("Export started — generating your file…");
+    toast.info("Fetching data…");
 
-    setTimeout(() => {
+    try {
+      const rows = await fetchExportData(selectedType, filters);
+      if (!rows.length) {
+        setHistory((prev) => prev.map((j) => j.id === job.id ? { ...j, status: "Failed" } : j));
+        toast.error("No data found for the selected filters.");
+        return;
+      }
+
+      const csv = objectsToCSV(rows);
+      const timestamp = new Date().toISOString().slice(0, 10);
+      const filename = `${selectedType}-${timestamp}.${format.toLowerCase()}`;
+      const mime = format === "CSV" ? "text/csv" : "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+
+      // Store CSV in job for download
       setHistory((prev) =>
-        prev.map((j) => (j.id === job.id ? { ...j, status: "Ready" } : j))
+        prev.map((j) =>
+          j.id === job.id ? { ...j, status: "Ready", _data: csv, _filename: filename, _mime: mime } : j
+        )
       );
-      toast.success(`${selectedTypeMeta.name} export is ready.`);
-    }, 2000);
+      toast.success(`${selectedTypeMeta.name} export ready — ${rows.length} records.`);
+    } catch (err: any) {
+      setHistory((prev) => prev.map((j) => j.id === job.id ? { ...j, status: "Failed" } : j));
+      toast.error(err.message ?? "Export failed.");
+    }
   }
 
   function handleDelete(id: string) {
@@ -313,9 +371,10 @@ export function DataExport() {
     toast.success("Export removed from history.");
   }
 
-  function handleDownload(job: ExportJob) {
-    if (job.status !== "Ready") return;
-    toast.info(`Downloading ${job.typeName}.${job.format.toLowerCase()}…`);
+  function handleDownload(job: ExportJob & { _data?: string; _filename?: string; _mime?: string }) {
+    if (job.status !== "Ready" || !job._data) return;
+    downloadFile(job._data, job._filename ?? `export.${job.format.toLowerCase()}`, job._mime ?? "text/csv");
+    toast.success(`Downloaded ${job._filename}`);
   }
 
   // -------------------------------------------------------------------------

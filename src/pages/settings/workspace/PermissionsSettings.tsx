@@ -1,114 +1,158 @@
-import { useState } from "react";
-import { Check, AlertCircle } from "lucide-react";
-import { Badge } from "../../../components/ui/badge";
+import { useState, useEffect } from "react";
+import { Check, AlertCircle, Loader2 } from "lucide-react";
+import { toast } from "sonner";
+import { api } from "../../../services/api";
 import { usePageTitle } from "../../../hooks/usePageTitle";
+
+function Toggle({ checked, disabled, onChange }: { checked: boolean; disabled?: boolean; onChange: (v: boolean) => void }) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      disabled={disabled}
+      onClick={() => !disabled && onChange(!checked)}
+      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+        disabled ? "opacity-40 cursor-not-allowed" : "cursor-pointer"
+      } ${checked ? "bg-emerald-500" : "bg-neutral-200"}`}
+    >
+      <span
+        className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform ${
+          checked ? "translate-x-6" : "translate-x-1"
+        }`}
+      />
+    </button>
+  );
+}
 
 export function PermissionsSettings() {
   usePageTitle("Permissions");
-  const [approveBookings, setApproveBookings] = useState(false);
-  const [manageSubscriptions, setManageSubscriptions] = useState(false);
-  const [manageSalesReps, setManageSalesReps] = useState(false);
+  const [settings, setSettings] = useState<any>(null);
+  const [loading,  setLoading]  = useState(true);
+  const [saving,   setSaving]   = useState(false);
+
+  useEffect(() => {
+    api.workspaces.getSettings()
+      .then(setSettings)
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  const set = (key: string, value: boolean) => {
+    setSettings((prev: any) => {
+      const next = { ...prev, [key]: value };
+      // Cascade: turning off approve_bookings also turns off manage_subscriptions
+      if (key === "can_reps_approve_bookings" && !value) {
+        next.can_reps_manage_subscriptions = false;
+      }
+      return next;
+    });
+  };
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      await api.workspaces.updateSettings({
+        can_reps_approve_bookings:      settings.can_reps_approve_bookings,
+        can_reps_manage_subscriptions:  settings.can_reps_manage_subscriptions,
+        can_reps_manage_sales_reps:     settings.can_reps_manage_sales_reps,
+      });
+      toast.success("Permissions saved. Changes take effect immediately.");
+    } catch (err: any) {
+      toast.error(err.message ?? "Failed to save permissions.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-32">
+        <Loader2 className="w-7 h-7 animate-spin text-emerald-500" />
+      </div>
+    );
+  }
+
+  const approveBookings     = !!settings?.can_reps_approve_bookings;
+  const manageSubscriptions = !!settings?.can_reps_manage_subscriptions;
+  const manageSalesReps     = !!settings?.can_reps_manage_sales_reps;
+
+  const PERMISSIONS = [
+    {
+      key:   "can_reps_approve_bookings",
+      value: approveBookings,
+      title: "Allow Customer Representatives to Approve / Reject Bookings",
+      desc:  "Customer reps can approve or reject booking requests — the same permission as admin for that specific action. When ON, reps see Approve and Reject buttons on pending bookings assigned to them.",
+      locked: false,
+      lockReason: null,
+    },
+    {
+      key:   "can_reps_manage_subscriptions",
+      value: manageSubscriptions,
+      title: "Allow Customer Representatives to Manage Subscriptions",
+      desc:  "Customer reps can record payments, approve payment receipts, view installment schedules, and update customer profiles.",
+      locked: !approveBookings,
+      lockReason: 'Enable "Approve/Reject Bookings" above to unlock this permission.',
+    },
+    {
+      key:   "can_reps_manage_sales_reps",
+      value: manageSalesReps,
+      title: "Allow Customer Representatives to Manage Sales Reps and Commission",
+      desc:  "Customer reps can access the Sales Reps module, add / edit / deactivate realtors, view commissions, and mark commissions as paid.",
+      locked: false,
+      lockReason: null,
+    },
+  ];
 
   return (
     <div className="max-w-3xl space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-lg font-medium text-neutral-900">Permissions</h2>
-          <p className="text-sm text-neutral-500 mt-1">
-            Control what customer reps and other roles can do in this workspace
-          </p>
-        </div>
-        <Badge variant="secondary">Not Started</Badge>
+      <div>
+        <h2 className="text-lg font-semibold text-neutral-900">Permissions</h2>
+        <p className="text-sm text-neutral-500 mt-1">
+          Control what customer representatives can do. Settings apply to every customer rep simultaneously and take effect immediately.
+        </p>
       </div>
 
-      {/* Customer Representatives Permissions */}
-      <div className="bg-white rounded-lg border border-neutral-200 p-6 space-y-6">
-        <h3 className="font-medium text-neutral-900">Customer Representatives Permissions</h3>
-
-        <div className="space-y-6">
-          {/* Permission 1 */}
-          <div className="flex items-start gap-4">
-            <input
-              type="checkbox"
-              id="approve-bookings"
-              checked={approveBookings}
-              onChange={(e) => {
-                setApproveBookings(e.target.checked);
-                if (!e.target.checked) {
-                  setManageSubscriptions(false);
-                }
-              }}
-              className="mt-1 w-4 h-4 text-emerald-600 border-neutral-300 rounded focus:ring-emerald-500"
-            />
+      <div className="bg-white rounded-xl border border-neutral-200 divide-y divide-neutral-100">
+        {PERMISSIONS.map((perm) => (
+          <div key={perm.key} className="flex items-start gap-4 p-5">
             <div className="flex-1">
-              <label htmlFor="approve-bookings" className="font-medium text-neutral-900 cursor-pointer">
-                Allow Customer Representatives to Approve/Reject Bookings
-              </label>
-              <p className="text-sm text-neutral-600 mt-1">
-                Customer reps can approve or reject bookings (same as admin for that action)
+              <p className={`text-sm font-semibold mb-1 ${perm.locked ? "text-neutral-400" : "text-neutral-900"}`}>
+                {perm.title}
               </p>
-            </div>
-          </div>
-
-          {/* Permission 2 - Dependent */}
-          <div className="flex items-start gap-4">
-            <input
-              type="checkbox"
-              id="manage-subscriptions"
-              checked={manageSubscriptions}
-              onChange={(e) => setManageSubscriptions(e.target.checked)}
-              disabled={!approveBookings}
-              className="mt-1 w-4 h-4 text-emerald-600 border-neutral-300 rounded focus:ring-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed"
-            />
-            <div className="flex-1">
-              <label
-                htmlFor="manage-subscriptions"
-                className={`font-medium cursor-pointer ${
-                  approveBookings ? "text-neutral-900" : "text-neutral-400"
-                }`}
-              >
-                Allow Customer Representatives to Manage Subscriptions
-              </label>
-              <p className={`text-sm mt-1 ${approveBookings ? "text-neutral-600" : "text-neutral-400"}`}>
-                Requires "Approve/Reject Bookings" to be enabled first
+              <p className={`text-sm leading-relaxed ${perm.locked ? "text-neutral-400" : "text-neutral-600"}`}>
+                {perm.desc}
               </p>
-              {!approveBookings && (
-                <div className="mt-2 flex items-start gap-2 text-xs text-amber-600">
-                  <AlertCircle className="w-3 h-3 mt-0.5 flex-shrink-0" />
-                  <span>This permission is locked until the parent permission is enabled</span>
+              {perm.locked && perm.lockReason && (
+                <div className="mt-2 flex items-start gap-1.5 text-[12px] text-amber-600 font-medium">
+                  <AlertCircle className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+                  {perm.lockReason}
                 </div>
               )}
             </div>
-          </div>
-
-          {/* Permission 3 */}
-          <div className="flex items-start gap-4">
-            <input
-              type="checkbox"
-              id="manage-sales-reps"
-              checked={manageSalesReps}
-              onChange={(e) => setManageSalesReps(e.target.checked)}
-              className="mt-1 w-4 h-4 text-emerald-600 border-neutral-300 rounded focus:ring-emerald-500"
-            />
-            <div className="flex-1">
-              <label htmlFor="manage-sales-reps" className="font-medium text-neutral-900 cursor-pointer">
-                Allow Customer Representatives to Manage Sales Reps and Commission
-              </label>
-              <p className="text-sm text-neutral-600 mt-1">
-                Customer reps can see all sales representatives and manage them (same permission as admin for
-                sales-reps area)
-              </p>
+            <div className="pt-0.5 shrink-0">
+              <Toggle
+                checked={perm.value}
+                disabled={perm.locked}
+                onChange={(v) => set(perm.key, v)}
+              />
             </div>
           </div>
-        </div>
+        ))}
       </div>
 
-      {/* Save Button */}
+      <div className="bg-blue-50 border border-blue-100 rounded-xl px-4 py-3 text-[12.5px] text-blue-700 leading-relaxed">
+        Owner and Admin roles are never affected by these permission settings — they always retain full access.
+      </div>
+
       <div className="flex justify-end">
-        <button className="inline-flex items-center gap-2 px-6 py-2 bg-emerald-600 text-white rounded-md hover:bg-emerald-700 transition-colors">
-          <Check className="w-4 h-4" />
-          Save Changes
+        <button
+          onClick={handleSave}
+          disabled={saving || !settings}
+          className="inline-flex items-center gap-2 px-6 py-2.5 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 disabled:opacity-60 transition-colors text-sm font-semibold shadow-sm shadow-emerald-200"
+        >
+          {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+          {saving ? "Saving…" : "Save Changes"}
         </button>
       </div>
     </div>
