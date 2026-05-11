@@ -14,14 +14,13 @@ interface SignUpForm {
   password: string;
 }
 
-const GoogleIcon = () => (
-  <svg width="17" height="17" viewBox="0 0 48 48" fill="none">
-    <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.08 17.74 9.5 24 9.5z"/>
-    <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
-    <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
-    <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.35-8.16 2.35-6.26 0-11.57-3.59-13.46-8.83l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
-  </svg>
-);
+const FEATURES = [
+  { title: "Multi-property management", desc: "Track estates, units, and pricing plans in one place." },
+  { title: "Installment & payment tracking", desc: "Automated schedules, receipts, and overdue alerts." },
+  { title: "Sales rep commissions", desc: "Tiered commission tracking with one-click payouts." },
+  { title: "Customer self-service portal", desc: "Customers view plans, pay, and track progress online." },
+  { title: "Site inspection scheduling", desc: "Public booking page, attendance tracking, and follow-ups." },
+];
 
 const LockIcon = () => (
   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -37,6 +36,7 @@ export function SignUp() {
   const prefillEmail = searchParams.get("email") ?? "";
   const { register: authRegister } = useAuth();
   const [loading, setLoading] = useState(false);
+  const [formError, setFormError] = useState("");
 
   const { register, handleSubmit, formState: { errors } } = useForm<SignUpForm>({
     defaultValues: { email: prefillEmail },
@@ -44,6 +44,7 @@ export function SignUp() {
 
   const onSubmit = async (data: SignUpForm) => {
     setLoading(true);
+    setFormError("");
     try {
       await authRegister({
         first_name: data.first_name.trim(),
@@ -56,95 +57,148 @@ export function SignUp() {
         state: { email: data.email, flow: "signup", inviteToken: inviteToken || undefined },
       });
     } catch (err: any) {
-      toast.error(err.message || "Something went wrong. Please try again.");
+      setFormError(err.message || "Something went wrong. Please try again.");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <>
-      <h1 className={s.heading}>Create your account</h1>
-      <p className={s.subtext}>Join TerraTrail to manage your estate portfolio.</p>
-
-      <form className={s.form} onSubmit={handleSubmit(onSubmit)} noValidate>
-        {/* Name row */}
-        <div className={s.grid2}>
-          <FormInput
-            label="First Name"
-            placeholder="Praise"
-            autoComplete="given-name"
-            error={errors.first_name?.message}
-            {...register("first_name", { required: "Required" })}
-          />
-          <FormInput
-            label="Last Name"
-            placeholder="Adebayo"
-            autoComplete="family-name"
-            error={errors.last_name?.message}
-            {...register("last_name", { required: "Required" })}
-          />
+    <div className={s.signupSplit}>
+      {/* ── Left panel ─────────────────────────────────────────── */}
+      <div className={s.signupLeft}>
+        <div className={s.logoWrap} style={{ marginBottom: 28 }}>
+          <div className={s.logoIcon}>
+            <img
+              src="/logo.png"
+              alt="Terratrail"
+              style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 7 }}
+              onError={(e) => {
+                (e.currentTarget as HTMLImageElement).style.display = "none";
+                (e.currentTarget.parentElement as HTMLElement).innerHTML =
+                  '<svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M3 5h12M9 5v8" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg>';
+              }}
+            />
+          </div>
+          <span className={s.logoText} style={{ color: "#fff" }}>Terratrail</span>
         </div>
 
-        <FormInput
-          label="Work/Personal Email"
-          type="email"
-          placeholder="you@company.com"
-          autoComplete="email"
-          error={errors.email?.message}
-          {...register("email", {
-            required: "Email is required",
-            pattern: { value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/, message: "Enter a valid email" },
-          })}
-        />
+        <p style={{ fontSize: 20, fontWeight: 800, color: "#fff", margin: "0 0 6px", lineHeight: 1.25, letterSpacing: "-0.4px", fontFamily: "inherit" }}>
+          Real Estate Management,<br />Simplified.
+        </p>
+        <p style={{ fontSize: 13, color: "rgba(255,255,255,0.6)", margin: "0 0 28px", lineHeight: 1.6, fontFamily: "inherit" }}>
+          Built for Nigerian real estate companies managing properties, subscriptions, and field teams.
+        </p>
 
-        <PasswordInput
-          label="Password"
-          placeholder="At least 8 characters"
-          autoComplete="new-password"
-          error={errors.password?.message}
-          {...register("password", {
-            required: "Password is required",
-            minLength: { value: 8, message: "Minimum 8 characters" },
-          })}
-        />
+        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+          {FEATURES.map((f) => (
+            <div key={f.title} style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
+              <div style={{ width: 20, height: 20, borderRadius: "50%", background: "rgba(255,255,255,0.12)", border: "1.5px solid rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 1 }}>
+                <svg width="10" height="10" viewBox="0 0 12 12" fill="none">
+                  <path d="M2 6l3 3 5-5" stroke="#6ee7b7" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </div>
+              <div>
+                <p style={{ fontSize: 13, fontWeight: 700, color: "#fff", margin: 0, fontFamily: "inherit" }}>{f.title}</p>
+                <p style={{ fontSize: 11.5, color: "rgba(255,255,255,0.55)", margin: "1px 0 0", fontFamily: "inherit", lineHeight: 1.45 }}>{f.desc}</p>
+              </div>
+            </div>
+          ))}
+        </div>
 
-        <button type="submit" className={s.btn} disabled={loading}>
-          <span className={s.btnInner}>
-            {loading && <span className={s.spinner} />}
-            {loading ? "Creating account…" : "Create My Account"}
-          </span>
-        </button>
-
-        <div className={s.divider}>Or</div>
-
-        <button
-          type="button"
-          className={s.googleBtn}
-          onClick={() => toast.info("Google sign-in coming soon.")}
-        >
-          <GoogleIcon />
-          Continue with Google
-        </button>
-      </form>
-
-      <p className={s.footer}>
-        Already have an account?{" "}
-        <button type="button" className={s.footerLink} onClick={() => navigate("/auth/sign-in")}>
-          Log in here
-        </button>
-      </p>
-
-      <p className={s.termsText}>
-        By signing up, you agree to our{" "}
-        <a href="#" onClick={(e) => e.preventDefault()}>Terms of Service</a> and{" "}
-        <a href="#" onClick={(e) => e.preventDefault()}>Privacy Policy</a>.
-      </p>
-
-      <div className={s.securityBadge}>
-        <LockIcon />
-        Data encrypted with bank-grade security
+        <div style={{ marginTop: "auto", paddingTop: 28, borderTop: "1px solid rgba(255,255,255,0.1)", fontSize: 11.5, color: "rgba(255,255,255,0.4)", fontFamily: "inherit" }}>
+          Trusted by real estate companies across Nigeria
+        </div>
       </div>
-    </>
+
+      {/* ── Right panel — form ─────────────────────────────────── */}
+      <div className={s.signupRight}>
+        <h1 className={s.heading}>Create your account</h1>
+        <p className={s.subtext}>Join Terratrail to manage your estate portfolio.</p>
+
+        <form className={s.form} onSubmit={handleSubmit(onSubmit)} noValidate>
+          <div className={s.grid2}>
+            <FormInput
+              label="First Name"
+              placeholder="Praise"
+              autoComplete="given-name"
+              error={errors.first_name?.message}
+              {...register("first_name", { required: "Required" })}
+            />
+            <FormInput
+              label="Last Name"
+              placeholder="Adebayo"
+              autoComplete="family-name"
+              error={errors.last_name?.message}
+              {...register("last_name", { required: "Required" })}
+            />
+          </div>
+
+          <FormInput
+            label="Work / Personal Email"
+            type="email"
+            placeholder="you@company.com"
+            autoComplete="email"
+            error={errors.email?.message}
+            {...register("email", {
+              required: "Email is required",
+              pattern: { value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/, message: "Enter a valid email" },
+            })}
+          />
+
+          <PasswordInput
+            label="Password"
+            placeholder="At least 8 characters"
+            autoComplete="new-password"
+            error={errors.password?.message}
+            {...register("password", {
+              required: "Password is required",
+              minLength: { value: 8, message: "Minimum 8 characters" },
+            })}
+          />
+
+          {formError && (
+            <div style={{
+              background: "#fef2f2",
+              border: "1px solid #fecaca",
+              borderRadius: 6,
+              padding: "9px 12px",
+              fontSize: 12.5,
+              color: "#dc2626",
+              fontWeight: 600,
+              fontFamily: "inherit",
+            }}>
+              {formError}
+            </div>
+          )}
+
+          <button type="submit" className={s.btn} disabled={loading}>
+            <span className={s.btnInner}>
+              {loading && <span className={s.spinner} />}
+              {loading ? "Creating account…" : "Create My Account"}
+            </span>
+          </button>
+        </form>
+
+        <p className={s.footer}>
+          Already have an account?{" "}
+          <button type="button" className={s.footerLink} onClick={() => navigate("/auth/sign-in")}>
+            Log in here
+          </button>
+        </p>
+
+        <p className={s.termsText}>
+          By signing up, you agree to our{" "}
+          <a href="https://terratrail.io/terms" target="_blank" rel="noopener noreferrer">Terms of Service</a>{" "}
+          and{" "}
+          <a href="https://terratrail.io/privacy" target="_blank" rel="noopener noreferrer">Privacy Policy</a>.
+        </p>
+
+        <div className={s.securityBadge}>
+          <LockIcon />
+          Data encrypted with bank-grade security
+        </div>
+      </div>
+    </div>
   );
 }

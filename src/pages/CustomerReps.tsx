@@ -84,7 +84,7 @@ function InviteModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: (
     setLoading(true);
     setError("");
     try {
-      const res = await api.workspaces.invite({ email, role: "SALES_REP" });
+      const res = await api.workspaces.invite({ email, role: "CUSTOMER_REP" });
       if (res?.token) {
         setInviteLink(`${window.location.origin}/accept-invite/${res.token}`);
       }
@@ -214,7 +214,7 @@ export function CustomerReps() {
     api.workspaces.listMembers()
       .then((data) => {
         const list = (Array.isArray(data) ? data : []) as Member[];
-        setMembers(list.filter((m) => m.role === "SALES_REP"));
+        setMembers(list.filter((m) => m.role === "CUSTOMER_REP"));
       })
       .catch(() => setMembers([]))
       .finally(() => setLoading(false));

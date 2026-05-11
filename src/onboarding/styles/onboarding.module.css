@@ -1096,3 +1096,42 @@
   gap: 3px;
   font-family: inherit;
 }
+
+/* ─── Sign-up split panel ────────────────────────────────────── */
+.cardSignup {
+  max-width: 860px !important;
+  padding: 0 !important;
+  overflow: hidden;
+}
+
+.signupSplit {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  min-height: 560px;
+}
+
+.signupLeft {
+  background: linear-gradient(175deg, #0c1730 0%, #1c2268 60%, #0a1528 100%);
+  padding: 36px 28px 32px;
+  display: flex;
+  flex-direction: column;
+}
+
+.signupRight {
+  padding: 36px 32px 28px;
+  background: #fff;
+  overflow-y: auto;
+}
+
+@media (max-width: 640px) {
+  .signupSplit {
+    grid-template-columns: 1fr;
+  }
+  .signupLeft {
+    padding: 24px 20px 22px;
+    min-height: unset;
+  }
+  .signupRight {
+    padding: 24px 20px 20px;
+  }
+}

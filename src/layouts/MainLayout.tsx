@@ -422,21 +422,21 @@ function NavbarUserMenu() {
 }
 
 const ALL_NAV_ITEMS = [
-  { icon: LayoutDashboard, label: "Overview",        href: "/",               roles: ["OWNER","ADMIN","SALES_REP","CUSTOMER"] },
-  { icon: Building2,       label: "Properties",      href: "/properties",     roles: ["OWNER","ADMIN","SALES_REP"] },
-  { icon: Users,           label: "Customers",       href: "/customers",      roles: ["OWNER","ADMIN"] },
+  { icon: LayoutDashboard, label: "Overview",        href: "/",               roles: ["OWNER","ADMIN","SALES_REP","CUSTOMER","CUSTOMER_REP"] },
+  { icon: Building2,       label: "Properties",      href: "/properties",     roles: ["OWNER","ADMIN","SALES_REP","CUSTOMER_REP"] },
+  { icon: Users,           label: "Customers",       href: "/customers",      roles: ["OWNER","ADMIN","CUSTOMER_REP"] },
   { icon: UsersRound,      label: "Customer Reps",   href: "/customer-reps",  roles: ["OWNER","ADMIN"] },
   { icon: UserCheck,       label: "Sales Reps",      href: "/sales-reps",     roles: ["OWNER","ADMIN"] },
-  { icon: ClipboardList,   label: "Site Inspection", href: "/site-inspection",roles: ["OWNER","ADMIN","SALES_REP"] },
-  { icon: CreditCard,      label: "Payments",        href: "/payments",       roles: ["OWNER","ADMIN"] },
+  { icon: ClipboardList,   label: "Site Inspection", href: "/site-inspection",roles: ["OWNER","ADMIN","SALES_REP","CUSTOMER_REP"] },
+  { icon: CreditCard,      label: "Payments",        href: "/payments",       roles: ["OWNER","ADMIN","CUSTOMER_REP"] },
   { icon: MapPin,          label: "Allocation",      href: "/allocation",     roles: ["OWNER","ADMIN"] },
   { icon: Download,        label: "Data Export",     href: "/data-export",    roles: ["OWNER","ADMIN"] },
 ];
 
 const ALL_BOTTOM_ITEMS = [
   { icon: Settings,    label: "Workspace", href: "/settings",  roles: ["OWNER","ADMIN"] },
-  { icon: HelpCircle,  label: "Help",      href: "/help",      roles: ["OWNER","ADMIN","SALES_REP","CUSTOMER"] },
-  { icon: User,        label: "Account",   href: "/account",   roles: ["OWNER","ADMIN","SALES_REP","CUSTOMER"] },
+  { icon: HelpCircle,  label: "Help",      href: "/help",      roles: ["OWNER","ADMIN","SALES_REP","CUSTOMER","CUSTOMER_REP"] },
+  { icon: User,        label: "Account",   href: "/account",   roles: ["OWNER","ADMIN","SALES_REP","CUSTOMER","CUSTOMER_REP"] },
 ];
 
 // Priority items shown in the mobile bottom nav (max 5 slots)
@@ -528,7 +528,7 @@ function NavContent() {
 
   // Role badge label for sidebar
   const roleBadge: Record<string, string> = {
-    OWNER: "Owner", ADMIN: "Admin", SALES_REP: "Sales Rep", CUSTOMER: "Customer",
+    OWNER: "Owner", ADMIN: "Admin", SALES_REP: "Sales Rep", CUSTOMER: "Customer", CUSTOMER_REP: "Customer Rep",
   };
 
   return (

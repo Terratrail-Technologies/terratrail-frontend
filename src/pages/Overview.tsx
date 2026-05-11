@@ -7,6 +7,7 @@ import {
   TrendingUp, TrendingDown,
   UserPlus, LayoutDashboard,
   Eye, EyeOff, Loader2,
+  Building2, MapPin, Plus,
 } from "lucide-react";
 import { motion } from "motion/react";
 import { Skeleton } from "../components/ui/skeleton";
@@ -235,11 +236,15 @@ export function Overview() {
             </div>
 
             <div className="flex items-center gap-2 shrink-0">
-              {/* Pending badge — hidden on very small screens */}
+              {/* Pending payments badge — clickable link to payments page */}
               {!isFiltered && (
-                <div className="hidden sm:flex text-[11px] text-neutral-500 bg-neutral-50 border border-neutral-100 px-2.5 py-1 rounded-full whitespace-nowrap">
-                  Pending: <span className="font-semibold text-neutral-700 ml-1">{safeStats.pending_payments}</span>
-                </div>
+                <Link
+                  to="/payments?status=pending"
+                  className="hidden sm:flex items-center gap-1 text-[11px] text-amber-700 bg-amber-50 border border-amber-100 px-2.5 py-1 rounded-full whitespace-nowrap hover:bg-amber-100 transition-colors font-medium"
+                >
+                  Pending payments:
+                  <span className="font-bold ml-0.5">{safeStats.pending_payments}</span>
+                </Link>
               )}
               {/* Visibility toggle */}
               <button
@@ -432,19 +437,72 @@ export function Overview() {
           ))}
         </div>
 
+        {/* ── Properties Overview ───────────────────────────────── */}
+        <motion.div variants={item}>
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-[13px] font-semibold text-neutral-800 flex items-center gap-2">
+              <Building2 className="w-4 h-4 text-neutral-400" />
+              Properties Overview
+            </h3>
+            <Link to="/properties" className="text-[11.5px] text-emerald-600 hover:underline font-medium">View all →</Link>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+            {[
+              { label: "Total Properties", value: safeStats.total_properties ?? 0, color: "text-neutral-900", accent: "bg-neutral-500" },
+              { label: "Active Subs", value: safeStats.active_subscriptions, color: "text-emerald-700", accent: "bg-emerald-500" },
+              { label: "Completed", value: safeStats.completed_subscriptions ?? 0, color: "text-blue-700", accent: "bg-blue-500" },
+              { label: "Pending Allocation", value: safeStats.pending_allocation ?? 0, color: "text-amber-700", accent: "bg-amber-500" },
+              { label: "Allocated", value: safeStats.allocated ?? 0, color: "text-violet-700", accent: "bg-violet-500" },
+            ].map((stat) => (
+              <div key={stat.label} className="relative bg-white rounded-xl border border-neutral-100 p-4 shadow-[0_1px_3px_rgba(0,0,0,0.05)] overflow-hidden">
+                <div className={`absolute top-0 left-0 right-0 h-0.5 ${stat.accent}`} />
+                <div className={`text-[22px] font-bold leading-tight ${stat.color}`}>{stat.value}</div>
+                <div className="text-[11px] font-medium text-neutral-400 mt-0.5 leading-tight">{stat.label}</div>
+              </div>
+            ))}
+          </div>
+        </motion.div>
+
+        {/* ── Customer Overview ─────────────────────────────────── */}
+        <motion.div variants={item}>
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-[13px] font-semibold text-neutral-800 flex items-center gap-2">
+              <Users className="w-4 h-4 text-neutral-400" />
+              Customer Overview
+            </h3>
+            <Link to="/customers" className="text-[11.5px] text-emerald-600 hover:underline font-medium">View all →</Link>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            {[
+              { label: "Total Customers", value: safeStats.total_customers, color: "text-neutral-900", accent: "bg-neutral-500" },
+              { label: "Active Subscriptions", value: safeStats.active_subscriptions, color: "text-emerald-700", accent: "bg-emerald-500" },
+              { label: "Completed Subs", value: safeStats.completed_subscriptions ?? 0, color: "text-blue-700", accent: "bg-blue-500" },
+              { label: "Defaulting Subs", value: safeStats.defaulting_subscriptions ?? 0, color: "text-red-700", accent: "bg-red-500" },
+            ].map((stat) => (
+              <div key={stat.label} className="relative bg-white rounded-xl border border-neutral-100 p-4 shadow-[0_1px_3px_rgba(0,0,0,0.05)] overflow-hidden">
+                <div className={`absolute top-0 left-0 right-0 h-0.5 ${stat.accent}`} />
+                <div className={`text-[22px] font-bold leading-tight ${stat.color}`}>{stat.value}</div>
+                <div className="text-[11px] font-medium text-neutral-400 mt-0.5 leading-tight">{stat.label}</div>
+              </div>
+            ))}
+          </div>
+        </motion.div>
+
         {/* ── Leaderboards – FILTERABLE ──────────────────────────── */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {[
             {
               title: "Top Properties by Revenue",
+              empty: "No approved payments recorded yet.",
               rows: (revenueBreakdown || []).slice(0, 5).map((p: any, i: number) => ({
-                key: p.property, rank: i + 1, name: p.property,
-                sub: `${p.payment_count} payments`,
+                key: p.property || i, rank: i + 1, name: p.property || "—",
+                sub: `${p.payment_count} payment${p.payment_count !== 1 ? "s" : ""}`,
                 right: maskStr(p.total_revenue),
               })),
             },
             {
               title: "Top Sales Reps",
+              empty: "No sales reps with commissions yet.",
               rows: (leaderboard || []).slice(0, 5).map((r: any, i: number) => ({
                 key: r.id, rank: i + 1, name: r.name,
                 sub: r.tier,
@@ -453,6 +511,7 @@ export function Overview() {
             },
             {
               title: "Top Customers by Revenue",
+              empty: "No customer payment data yet.",
               rows: (customerLeaderboard?.top_by_revenue || []).slice(0, 5).map((c: any, i: number) => ({
                 key: c.id, rank: i + 1, name: c.full_name,
                 sub: c.email,
@@ -460,7 +519,8 @@ export function Overview() {
               })),
             },
             {
-              title: "Properties by Units",
+              title: "Properties by Active Units",
+              empty: "No properties with active subscriptions.",
               rows: (propertyLeaderboard?.top_by_subscriptions || []).slice(0, 5).map((p: any, i: number) => ({
                 key: p.id, rank: i + 1, name: p.name,
                 sub: "Active units",
@@ -477,7 +537,9 @@ export function Overview() {
                 )}
               </div>
               <div className="p-3 space-y-0.5">
-                {board.rows.map((row: any) => (
+                {board.rows.length === 0 ? (
+                  <p className="text-[12px] text-neutral-400 text-center py-6">{board.empty}</p>
+                ) : board.rows.map((row: any) => (
                   <div key={row.key}
                     className="flex items-center justify-between px-2 py-2 rounded-lg hover:bg-neutral-50 transition-colors">
                     <div className="flex items-center gap-3">
@@ -506,16 +568,26 @@ export function Overview() {
           <div className="relative">
             <h3 className="text-[15px] font-semibold text-emerald-900 mb-1">Quick Actions</h3>
             <p className="text-[12.5px] text-emerald-700/70 mb-5 max-w-lg leading-relaxed">
-              Get started quickly with your most frequent tasks or explore new ways to manage your workspace.
+              Get started quickly with your most frequent tasks.
             </p>
             <div className="flex flex-wrap gap-2.5">
-              <Link to="/customers"
+              <Link to="/properties/new"
                 className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-all text-[13px] font-medium shadow-sm">
+                <Plus className="w-3.5 h-3.5" />
+                Add a Property
+              </Link>
+              <Link to="/customers"
+                className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-emerald-200 text-emerald-800 rounded-lg hover:bg-emerald-50 transition-all text-[13px] font-medium">
                 <Users className="w-3.5 h-3.5" />
                 Manage Customers
               </Link>
+              <Link to="/payments?status=pending"
+                className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-amber-200 text-amber-800 rounded-lg hover:bg-amber-50 transition-all text-[13px] font-medium">
+                <MapPin className="w-3.5 h-3.5" />
+                Review Pending Payments
+              </Link>
               <Link to="/settings/people"
-                className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-emerald-200 text-emerald-800 rounded-lg hover:bg-emerald-50 transition-all text-[13px] font-medium">
+                className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-neutral-200 text-neutral-700 rounded-lg hover:bg-neutral-50 transition-all text-[13px] font-medium">
                 <UserPlus className="w-3.5 h-3.5" />
                 Invite Team Member
               </Link>

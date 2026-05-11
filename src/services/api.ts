@@ -29,7 +29,12 @@ export interface DashboardStats {
   commission_pending: string;
   commission_potential: string;
   active_subscriptions: number;
+  completed_subscriptions: number;
+  defaulting_subscriptions: number;
+  pending_allocation: number;
+  allocated: number;
   total_customers: number;
+  total_properties: number;
   overdue_installments: number;
   pending_payments: number;
   filters: {
