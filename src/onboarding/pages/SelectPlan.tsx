@@ -15,32 +15,37 @@ const fmt = (n: number) =>
 
 const FALLBACK_PLANS = [
   {
-    key: "FREE", name: "Free", price_monthly: 0, price_yearly: 0, currency: "NGN",
-    contact_sales: false, description: "Get started at no cost.", recommended: false,
+    key: "FREE", name: "Free", price_quarterly: 0, currency: "NGN",
+    billing_period: "quarterly", contact_sales: false,
+    description: "Get started at no cost.", recommended: false,
     features: ["1 property", "2 customers", "Basic tracking"],
     limits: { properties: 1, customers: 2, team_members: 1 },
   },
   {
-    key: "STARTER", name: "Starter", price_monthly: 50000, price_yearly: 500000, currency: "NGN",
-    contact_sales: false, description: "For growing agencies.", recommended: false,
-    features: ["Commission tracking", "Audit logs", "Custom subdomain"],
-    limits: { properties: 5, customers: 500, team_members: null },
+    key: "STARTER", name: "Starter", price_quarterly: 300000, currency: "NGN",
+    billing_period: "quarterly", contact_sales: false,
+    description: "For growing agencies.", recommended: false,
+    features: ["3 properties", "500 customers", "Commission tracking", "10 team members"],
+    limits: { properties: 3, customers: 500, team_members: 10 },
   },
   {
-    key: "GROWTH", name: "Growth", price_monthly: 100000, price_yearly: 1000000, currency: "NGN",
-    contact_sales: false, description: "Best value for growing teams.", recommended: true,
-    features: ["Priority support", "Advanced reports", "All Starter features"],
+    key: "GROWTH", name: "Growth", price_quarterly: 450000, currency: "NGN",
+    billing_period: "quarterly", contact_sales: false,
+    description: "Best value for growing teams.", recommended: true,
+    features: ["10 properties", "2,000 customers", "Priority support"],
     limits: { properties: 10, customers: 2000, team_members: null },
   },
   {
-    key: "SCALE", name: "Scale", price_monthly: 200000, price_yearly: 2000000, currency: "NGN",
-    contact_sales: false, description: "For large operations.", recommended: false,
-    features: ["All Growth features", "Dedicated onboarding"],
-    limits: { properties: 30, customers: 5000, team_members: null },
+    key: "SCALE", name: "Scale", price_quarterly: 750000, currency: "NGN",
+    billing_period: "quarterly", contact_sales: false,
+    description: "For large operations.", recommended: false,
+    features: ["20 properties", "5,000 customers", "3 workspaces"],
+    limits: { properties: 20, customers: 5000, team_members: null },
   },
   {
-    key: "ENTERPRISE", name: "Enterprise", price_monthly: 0, price_yearly: 0, currency: "NGN",
-    contact_sales: true, description: "Custom SLA and unlimited scale.", recommended: false,
+    key: "ENTERPRISE", name: "Enterprise", price_quarterly: 0, currency: "NGN",
+    billing_period: "quarterly", contact_sales: true,
+    description: "Custom SLA and unlimited scale.", recommended: false,
     features: ["Unlimited everything", "Dedicated account manager", "Custom SLA"],
     limits: { properties: null, customers: null, team_members: null },
   },
@@ -52,7 +57,6 @@ export function SelectPlan() {
   const [selected, setSelected]     = useState("FREE");
   const [loading, setLoading]       = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [billing, setBilling]       = useState<"monthly" | "yearly">("monthly");
 
   useEffect(() => {
     setLoading(true);
@@ -87,23 +91,7 @@ export function SelectPlan() {
     <>
       <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.22 }}>
         <h1 className={s.heading}>Choose your plan</h1>
-        <p className={s.subtext}>Start free and upgrade as you grow. No credit card required.</p>
-
-        {/* Billing toggle */}
-        <div className={s.billingToggle}>
-          <button
-            type="button"
-            onClick={() => setBilling("monthly")}
-            className={[s.billingBtn, billing === "monthly" ? s.billingBtnActive : ""].join(" ")}
-          >Monthly</button>
-          <button
-            type="button"
-            onClick={() => setBilling("yearly")}
-            className={[s.billingBtn, billing === "yearly" ? s.billingBtnActive : ""].join(" ")}
-          >
-            Yearly <span className={s.discountBadge}>Save 17%</span>
-          </button>
-        </div>
+        <p className={s.subtext}>Start free and upgrade as you grow. Billed quarterly (every 3 months).</p>
       </motion.div>
 
       {loading ? (
@@ -118,7 +106,7 @@ export function SelectPlan() {
           transition={{ delay: 0.08, duration: 0.22 }}
         >
           {displayPlans.map((plan, i) => {
-            const price = billing === "yearly" ? plan.price_yearly : plan.price_monthly;
+            const price = plan.price_quarterly ?? plan.price_monthly ?? 0;
             const isSelected = selected === plan.key;
             const isEnterprise = plan.key === "ENTERPRISE";
             const limits = plan.limits ?? {};
@@ -155,12 +143,12 @@ export function SelectPlan() {
                   className={s.planPrice}
                   style={{ color: isEnterprise ? "#93c5fd" : price === 0 ? "#16a34a" : "#1c2268" }}
                 >
-                  {plan.contact_sales ? "Contact sales" : price === 0 ? "Free" : `${fmt(price)}/mo`}
+                  {plan.contact_sales ? "Contact sales" : price === 0 ? "Free" : `${fmt(price)}/qtr`}
                 </span>
 
-                {billing === "yearly" && plan.price_monthly > 0 && !plan.contact_sales && (
-                  <span style={{ fontSize: 10, color: isEnterprise ? "rgba(255,255,255,0.6)" : "#16a34a", marginBottom: 4, display: "block" }}>
-                    Save {fmt((plan.price_monthly * 12) - plan.price_yearly)} vs monthly
+                {price > 0 && !plan.contact_sales && (
+                  <span style={{ fontSize: 10, color: isEnterprise ? "rgba(255,255,255,0.6)" : "#64748b", marginBottom: 4, display: "block" }}>
+                    Billed every 3 months
                   </span>
                 )}
 

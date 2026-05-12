@@ -209,7 +209,12 @@ export function Overview() {
     commission_pending: "0",
     commission_potential: "0",
     active_subscriptions: 0,
+    completed_subscriptions: 0,
+    defaulting_subscriptions: 0,
+    pending_allocation: 0,
+    allocated: 0,
     total_customers: 0,
+    total_properties: 0,
     overdue_installments: 0,
     pending_payments: 0,
     filters: { date_from: null, date_to: null }

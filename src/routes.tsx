@@ -35,6 +35,7 @@ import { ForgotPassword } from "./onboarding/pages/ForgotPassword";
 import { CreateNewPassword } from "./onboarding/pages/CreateNewPassword";
 import { WorkspaceSetup } from "./onboarding/pages/WorkspaceSetup";
 import { SelectPlan } from "./onboarding/pages/SelectPlan";
+import { SelectWorkspace } from "./onboarding/pages/SelectWorkspace";
 
 function RouteErrorElement() {
   const error = useRouteError();
@@ -64,6 +65,7 @@ export const router = createBrowserRouter([
       { path: "reset-password", Component: CreateNewPassword },
       { path: "workspace-setup", Component: WorkspaceSetup },
       { path: "select-plan", Component: SelectPlan },
+      { path: "select-workspace", Component: SelectWorkspace },
     ],
   },
   // ── Main app (protected – redirect to /auth/sign-in if not logged in) ──

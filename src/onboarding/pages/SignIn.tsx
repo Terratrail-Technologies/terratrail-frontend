@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { FormInput } from "../components/FormInput";
 import { PasswordInput } from "../components/PasswordInput";
 import { useAuth } from "../../hooks/useAuth";
+import { api } from "../../services/api";
 import s from "../styles/onboarding.module.css";
 
 interface SignInForm {
@@ -30,6 +31,20 @@ export function SignIn() {
     setFormError("");
     try {
       await login({ email: data.email, password: data.password });
+      // Check how many workspaces this user belongs to
+      try {
+        const workspaces: any[] = await api.workspaces.mine();
+        if (Array.isArray(workspaces) && workspaces.length > 1) {
+          toast.success("Welcome back!");
+          navigate("/auth/select-workspace", { replace: true });
+          return;
+        }
+        if (Array.isArray(workspaces) && workspaces.length === 1) {
+          localStorage.setItem("tt_workspace_slug", workspaces[0].slug);
+        }
+      } catch {
+        // mine() not critical — proceed normally, workspace resolves from localStorage
+      }
       toast.success("Welcome back!");
       navigate(nextUrl, { replace: true });
     } catch (err: any) {

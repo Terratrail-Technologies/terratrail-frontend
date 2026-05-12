@@ -2023,8 +2023,8 @@ export function PropertyDetail() {
     if (!id) return;
     setLoadingIns(true);
     try {
-      const all: any[] = await api.siteInspections.list();
-      setInspections(all.filter((i: any) => i.linked_property === id));
+      const all: any[] = await api.siteInspections.list({ property: id });
+      setInspections(all);
     } catch { setInspections([]); }
     finally { setLoadingIns(false); }
   }, [id]);

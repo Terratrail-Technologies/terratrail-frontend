@@ -406,6 +406,13 @@ function NavbarUserMenu() {
               <Settings className="size-3.5 text-neutral-400" />
               Workspace Settings
             </button>
+            <button
+              onClick={() => { setOpen(false); navigate("/auth/select-workspace"); }}
+              className="w-full flex items-center gap-2.5 px-3 py-2 text-[12px] font-medium text-neutral-700 hover:bg-neutral-50 transition-colors"
+            >
+              <Building2 className="size-3.5 text-neutral-400" />
+              Switch Workspace
+            </button>
             <div className="my-1 border-t border-neutral-50" />
             <button
               onClick={handleLogout}

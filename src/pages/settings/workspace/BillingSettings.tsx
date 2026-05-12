@@ -36,7 +36,6 @@ export function BillingSettings() {
   const [ws,             setWs]            = useState<any>(null);
   const [loading,        setLoading]       = useState(true);
   const [selecting,      setSelecting]     = useState<string | null>(null);
-  const [billing,        setBilling]       = useState<"monthly" | "yearly">("monthly");
 
   const loadData = useCallback(async () => {
     try {
@@ -150,28 +149,15 @@ export function BillingSettings() {
         <div className="space-y-4">
           <div className="flex items-center justify-between flex-wrap gap-3">
             <h3 className="font-semibold text-neutral-900">Available Plans</h3>
-            {/* Billing cycle toggle */}
-            <div className="flex items-center gap-1 bg-neutral-100 rounded-xl p-1 text-[12px] font-semibold">
-              <button
-                onClick={() => setBilling("monthly")}
-                className={cn("px-3 py-1.5 rounded-lg transition-colors",
-                  billing === "monthly" ? "bg-white text-neutral-900 shadow-sm" : "text-neutral-500 hover:text-neutral-700")}
-              >Monthly</button>
-              <button
-                onClick={() => setBilling("yearly")}
-                className={cn("px-3 py-1.5 rounded-lg transition-colors",
-                  billing === "yearly" ? "bg-white text-neutral-900 shadow-sm" : "text-neutral-500 hover:text-neutral-700")}
-              >
-                Yearly
-                <span className="ml-1.5 text-[10px] bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded-full">Save 17%</span>
-              </button>
-            </div>
+            <span className="text-[11.5px] text-neutral-500 bg-neutral-100 px-2.5 py-1 rounded-full font-medium">
+              Billed quarterly (every 3 months)
+            </span>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
             {plans.map((plan: any) => {
               const isCurrent = plan.key === currentPlan;
-              const price = billing === "yearly" ? plan.price_yearly : plan.price_monthly;
+              const price = plan.price_quarterly ?? plan.price_monthly ?? 0;
               const limits = plan.limits ?? {};
 
               return (
@@ -204,12 +190,7 @@ export function BillingSettings() {
                     ) : (
                       <div>
                         <span className="text-[22px] font-bold text-neutral-900">{fmt(price)}</span>
-                        <span className="text-[12px] text-neutral-400 ml-1">/ {billing === "yearly" ? "year" : "month"}</span>
-                        {billing === "yearly" && plan.price_monthly > 0 && (
-                          <p className="text-[11px] text-emerald-600 font-medium mt-0.5">
-                            Save {fmt((plan.price_monthly * 12) - plan.price_yearly)} vs monthly
-                          </p>
-                        )}
+                        <span className="text-[12px] text-neutral-400 ml-1">/ quarter</span>
                       </div>
                     )}
                     {plan.description && (

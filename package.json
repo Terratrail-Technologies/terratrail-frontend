@@ -1,11 +1,12 @@
 {
-  "name": "@figma/my-make-file",
+  "name": "@terratrail/frontend",
   "private": true,
-  "version": "0.0.1",
+  "version": "1.0",
   "type": "module",
   "scripts": {
     "build": "vite build",
-    "dev": "vite"
+    "dev": "vite",
+    "start": "serve -s dist -l $PORT"
   },
   "dependencies": {
     "@emotion/react": "11.14.0",
