@@ -1,5 +1,5 @@
 /**
- * TerraTrail API Client
+ * Terratrail API Client
  * Base URL: configurable via VITE_API_URL env var, defaults to localhost for dev.
  *
  * Security features:
@@ -400,6 +400,11 @@ export const api = {
     uploadFeaturedImage: (id: string, file: File) => {
       const fd = new FormData();
       fd.append("featured_image", file);
+      return requestFile<any>(`/properties/${id}/`, fd, "PATCH");
+    },
+    uploadBrochure: (id: string, file: File) => {
+      const fd = new FormData();
+      fd.append("brochure", file);
       return requestFile<any>(`/properties/${id}/`, fd, "PATCH");
     },
     uploadGalleryImage: (propertyId: string, file: File, order = 0) => {

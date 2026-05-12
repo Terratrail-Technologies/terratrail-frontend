@@ -26,6 +26,8 @@ import { PaymentsPage } from "./pages/PaymentsPage";
 import { AllocationPage } from "./pages/AllocationPage";
 import { NotificationsPage } from "./pages/NotificationsPage";
 import { HelpPage } from "./pages/HelpPage";
+import { TermsPage } from "./pages/TermsPage";
+import { PrivacyPage } from "./pages/PrivacyPage";
 // Onboarding – isolated module, no MainLayout dependency
 import { OnboardingLayout } from "./onboarding/components/OnboardingLayout";
 import { SignIn } from "./onboarding/pages/SignIn";
@@ -46,6 +48,8 @@ function RouteErrorElement() {
 
 export const router = createBrowserRouter([
   // ── Public pages (no auth required) ──────────────────────────────────────
+  { path: "/terms", Component: TermsPage, errorElement: <RouteErrorElement /> },
+  { path: "/privacy", Component: PrivacyPage, errorElement: <RouteErrorElement /> },
   { path: "/landing", Component: LandingPage, errorElement: <RouteErrorElement /> },
   { path: "/accept-invite/:token", Component: AcceptInvite, errorElement: <RouteErrorElement /> },
   { path: "/estates/:workspaceSlug", Component: EstatesPage, errorElement: <RouteErrorElement /> },

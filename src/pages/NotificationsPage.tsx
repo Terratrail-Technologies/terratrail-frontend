@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+﻿import { useState, useCallback } from "react";
 import { useNavigate } from "react-router";
 import { Bell, RefreshCw, Loader2, Inbox } from "lucide-react";
 import { motion } from "motion/react";
@@ -18,7 +18,7 @@ interface NotificationItem {
 const TYPE_CONFIG: Record<string, { label: string; cls: string }> = {
   inspection:   { label: "Inspection",   cls: "bg-amber-100 text-amber-700" },
   customer:     { label: "Customer",     cls: "bg-blue-100 text-blue-700" },
-  payment:      { label: "Payment",      cls: "bg-emerald-100 text-emerald-700" },
+  payment:      { label: "Payment",      cls: "bg-[#d6e0f5] text-[#0E2C72]" },
   subscription: { label: "Subscription", cls: "bg-violet-100 text-violet-700" },
   commission:   { label: "Commission",   cls: "bg-pink-100 text-pink-700" },
 };
@@ -83,8 +83,8 @@ export function NotificationsPage() {
       <div className="bg-white border-b border-neutral-100 px-4 sm:px-6 lg:px-8 py-4 md:py-5">
         <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-emerald-50 flex items-center justify-center">
-              <Bell className="size-4 text-emerald-600" />
+            <div className="w-8 h-8 rounded-xl bg-[#0E2C72]/8 flex items-center justify-center">
+              <Bell className="size-4 text-[#0E2C72]" />
             </div>
             <div>
               <h1 className="text-[17px] font-semibold text-neutral-900">Notifications</h1>
@@ -109,7 +109,7 @@ export function NotificationsPage() {
         <div className="flex items-center gap-0.5">
           {FILTER_TABS.map((f) => (
             <button key={f} onClick={() => setFilter(f)}
-              className={`px-3.5 py-2 text-[12.5px] font-semibold border-b-2 transition-colors ${filter === f ? "border-emerald-500 text-emerald-700" : "border-transparent text-neutral-500 hover:text-neutral-700"}`}>
+              className={`px-3.5 py-2 text-[12.5px] font-semibold border-b-2 transition-colors ${filter === f ? "border-[#0E2C72] text-[#0E2C72]" : "border-transparent text-neutral-500 hover:text-neutral-700"}`}>
               {f}
             </button>
           ))}
@@ -171,3 +171,4 @@ export function NotificationsPage() {
     </div>
   );
 }
+

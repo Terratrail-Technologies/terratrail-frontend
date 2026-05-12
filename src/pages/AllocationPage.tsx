@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+﻿import { useState, useCallback } from "react";
 import { MapPin, CheckCircle2, Clock, X, Upload, Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { toast } from "sonner";
@@ -11,7 +11,7 @@ import { Skeleton } from "../components/ui/skeleton";
 const fmtDate = (d: string) =>
   d ? new Date(d).toLocaleDateString("en-NG", { day: "numeric", month: "short", year: "numeric" }) : "—";
 
-const inputCls = "w-full h-9 px-3 rounded-lg border border-neutral-200 text-[13px] focus:outline-none focus:ring-1 focus:ring-emerald-500/40 focus:border-emerald-400 bg-white";
+const inputCls = "w-full h-9 px-3 rounded-lg border border-neutral-200 text-[13px] focus:outline-none focus:ring-1 focus:ring-[#1a3d8f]/40 focus:border-[#2a52a8] bg-white";
 const labelCls = "text-[12px] font-medium text-neutral-600 block mb-1.5";
 
 function initials(name: string) {
@@ -59,7 +59,7 @@ function AllocateModal({ sub, onClose, onDone }: {
           </button>
         </div>
 
-        <div className="px-5 py-3 bg-emerald-50/50 border-b border-emerald-100">
+        <div className="px-5 py-3 bg-[#0E2C72]/6/50 border-b border-[#0E2C72]/15">
           <p className="text-[12.5px] font-semibold text-neutral-800">{sub.customer_name}</p>
           <p className="text-[11.5px] text-neutral-500">{sub.property_name} · {sub.land_size} SQM</p>
         </div>
@@ -76,7 +76,7 @@ function AllocateModal({ sub, onClose, onDone }: {
           </div>
           <div>
             <label className={labelCls}>Allocation Letter <span className="text-[11px] text-neutral-400">(PDF — recommended)</span></label>
-            <label className="block w-full border-2 border-dashed border-neutral-200 rounded-lg p-4 text-center cursor-pointer hover:border-emerald-400 transition-colors">
+            <label className="block w-full border-2 border-dashed border-neutral-200 rounded-lg p-4 text-center cursor-pointer hover:border-[#2a52a8] transition-colors">
               <Upload className="size-5 mx-auto mb-1 text-neutral-400" />
               <span className="text-[12px] text-neutral-500">{letter ? letter.name : "Click to upload PDF"}</span>
               <input type="file" accept=".pdf" className="hidden" onChange={(e) => setLetter(e.target.files?.[0] ?? null)} />
@@ -85,14 +85,14 @@ function AllocateModal({ sub, onClose, onDone }: {
           <div>
             <label className={labelCls}>Notes <span className="text-[11px] text-neutral-400">(optional)</span></label>
             <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2}
-              className="w-full px-3 py-2 rounded-lg border border-neutral-200 text-[13px] focus:outline-none focus:ring-1 focus:ring-emerald-500/40 focus:border-emerald-400 resize-none bg-white"
+              className="w-full px-3 py-2 rounded-lg border border-neutral-200 text-[13px] focus:outline-none focus:ring-1 focus:ring-[#1a3d8f]/40 focus:border-[#2a52a8] resize-none bg-white"
               placeholder="Internal notes…" />
           </div>
         </div>
 
         <div className="px-5 py-4 border-t border-neutral-100 flex gap-2.5">
           <Button onClick={handleSubmit} disabled={saving}
-            className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white gap-1.5">
+            className="flex-1 bg-[#0E2C72] hover:bg-[#0a2260] text-white gap-1.5">
             {saving ? <><Loader2 className="size-3.5 animate-spin" />Allocating…</> : "Confirm Allocation"}
           </Button>
           <Button variant="outline" onClick={onClose} className="px-4">Cancel</Button>
@@ -157,14 +157,14 @@ export function AllocationPage() {
                 </div>
               </div>
               <div className="relative bg-white rounded-xl border border-neutral-100 p-4 shadow-sm overflow-hidden">
-                <div className="absolute top-0 left-0 right-0 h-0.5 bg-emerald-500" />
+                <div className="absolute top-0 left-0 right-0 h-0.5 bg-[#1a3d8f]" />
                 <div className="flex items-start justify-between">
                   <div>
                     <p className="text-[11px] text-neutral-400 uppercase tracking-wider font-semibold mb-1">Allocated</p>
                     <p className="text-2xl font-bold text-neutral-900">{allocated.length}</p>
                     <p className="text-[11px] text-neutral-400 mt-1">Plot numbers assigned</p>
                   </div>
-                  <div className="p-2 rounded-xl bg-emerald-50 text-emerald-600"><CheckCircle2 className="size-4" /></div>
+                  <div className="p-2 rounded-xl bg-[#0E2C72]/6 text-[#0E2C72]"><CheckCircle2 className="size-4" /></div>
                 </div>
               </div>
               <div className="relative bg-white rounded-xl border border-neutral-100 p-4 shadow-sm overflow-hidden">
@@ -192,7 +192,7 @@ export function AllocationPage() {
                 </div>
                 {uniqueProps.length > 0 && (
                   <select value={filterProp} onChange={(e) => setFilterProp(e.target.value)}
-                    className="h-9 px-2.5 border border-neutral-200 bg-white rounded-lg text-[12px] text-neutral-700 focus:outline-none focus:ring-1 focus:ring-emerald-500/30">
+                    className="h-9 px-2.5 border border-neutral-200 bg-white rounded-lg text-[12px] text-neutral-700 focus:outline-none focus:ring-1 focus:ring-[#1a3d8f]/30">
                     <option value="">All Properties</option>
                     {uniqueProps.map((p) => <option key={p} value={p}>{p}</option>)}
                   </select>
@@ -213,7 +213,7 @@ export function AllocationPage() {
                       <tr key={s.id} className="border-b border-neutral-50 hover:bg-neutral-50/50 transition-colors">
                         <td className="px-4 py-3 whitespace-nowrap">
                           <div className="flex items-center gap-2.5">
-                            <div className="w-7 h-7 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center text-[10px] font-bold text-white shrink-0">
+                            <div className="w-7 h-7 rounded-full bg-gradient-to-br from-[#2a52a8] to-[#0E2C72] flex items-center justify-center text-[10px] font-bold text-white shrink-0">
                               {initials(s.customer_name ?? "?")}
                             </div>
                             <div>
@@ -226,7 +226,7 @@ export function AllocationPage() {
                         <td className="px-4 py-3 text-[12px] text-neutral-600 whitespace-nowrap">{s.property_name}</td>
                         <td className="px-4 py-3 whitespace-nowrap">
                           {s.plot_number ? (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10.5px] font-bold bg-emerald-100 text-emerald-700">
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10.5px] font-bold bg-[#d6e0f5] text-[#0E2C72]">
                               <CheckCircle2 className="size-3" /> Allocated
                             </span>
                           ) : (
@@ -241,7 +241,7 @@ export function AllocationPage() {
                         <td className="px-4 py-3 whitespace-nowrap">
                           {s.allocation_letter ? (
                             <a href={s.allocation_letter} target="_blank" rel="noopener noreferrer"
-                              className="text-[12px] text-emerald-600 hover:text-emerald-700 font-medium">
+                              className="text-[12px] text-[#0E2C72] hover:text-[#0a2260] font-medium">
                               Download
                             </a>
                           ) : <span className="text-neutral-300 text-[12px]">—</span>}
@@ -250,7 +250,7 @@ export function AllocationPage() {
                           <button
                             onClick={() => setAllocating(s)}
                             disabled={!!s.plot_number}
-                            className="px-3 py-1.5 rounded-lg bg-emerald-600 text-white text-[11.5px] font-semibold hover:bg-emerald-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                            className="px-3 py-1.5 rounded-lg bg-[#0E2C72] text-white text-[11.5px] font-semibold hover:bg-[#0a2260] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                           >
                             Allocate
                           </button>
@@ -280,3 +280,5 @@ export function AllocationPage() {
     </div>
   );
 }
+
+

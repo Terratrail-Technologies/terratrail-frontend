@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+﻿import { useState, useEffect } from "react";
 import { Search, Mail, UserPlus, Loader2, X, Check, Copy, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { api } from "../../../services/api";
@@ -8,7 +8,7 @@ import { usePageTitle } from "../../../hooks/usePageTitle";
 const ROLE_COLORS: Record<string, string> = {
   OWNER:      "bg-purple-50 text-purple-700",
   ADMIN:      "bg-blue-50 text-blue-700",
-  SALES_REP:  "bg-emerald-50 text-emerald-700",
+  SALES_REP:  "bg-[#0E2C72]/6 text-[#0E2C72]",
   CUSTOMER:   "bg-neutral-100 text-neutral-600",
 };
 
@@ -125,7 +125,7 @@ export function PeopleSettings() {
       <div className="flex items-center gap-3">
         <button
           onClick={() => setShowInvite(true)}
-          className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-md hover:bg-emerald-700 transition-colors text-sm font-medium"
+          className="inline-flex items-center gap-2 px-4 py-2 bg-[#0E2C72] text-white rounded-md hover:bg-[#0a2260] transition-colors text-sm font-medium"
         >
           <UserPlus className="w-4 h-4" />
           Invite Member
@@ -140,7 +140,7 @@ export function PeopleSettings() {
           placeholder="Search by name or email…"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="w-full pl-10 pr-4 py-2 border border-neutral-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+          className="w-full pl-10 pr-4 py-2 border border-neutral-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-[#1a3d8f]"
         />
       </div>
 
@@ -148,7 +148,7 @@ export function PeopleSettings() {
       <div className="bg-white rounded-lg border border-neutral-200 overflow-hidden">
         {loading ? (
           <div className="flex items-center justify-center py-16">
-            <Loader2 className="w-6 h-6 animate-spin text-emerald-500" />
+            <Loader2 className="w-6 h-6 animate-spin text-[#1a3d8f]" />
           </div>
         ) : (
           <table className="w-full">
@@ -177,7 +177,7 @@ export function PeopleSettings() {
                   <tr key={m.id} className="hover:bg-neutral-50 transition-colors">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center text-[11px] font-bold text-emerald-700 shrink-0">
+                        <div className="w-8 h-8 rounded-full bg-[#d6e0f5] flex items-center justify-center text-[11px] font-bold text-[#0E2C72] shrink-0">
                           {initials}
                         </div>
                         <span className="text-sm font-medium text-neutral-900">{name}</span>
@@ -197,12 +197,12 @@ export function PeopleSettings() {
                             value={role}
                             onChange={(e) => handleRoleUpdate(m.id, e.target.value)}
                             disabled={updatingMember === m.id}
-                            className="px-2 py-1 border border-neutral-200 rounded-md text-xs bg-white focus:outline-none focus:ring-1 focus:ring-emerald-500 disabled:opacity-60"
+                            className="px-2 py-1 border border-neutral-200 rounded-md text-xs bg-white focus:outline-none focus:ring-1 focus:ring-[#1a3d8f] disabled:opacity-60"
                           >
                             <option value="ADMIN">Admin</option>
                             <option value="SALES_REP">Sales Rep</option>
                           </select>
-                          {updatingMember === m.id && <Loader2 className="w-3.5 h-3.5 animate-spin text-emerald-500" />}
+                          {updatingMember === m.id && <Loader2 className="w-3.5 h-3.5 animate-spin text-[#1a3d8f]" />}
                           <button
                             onClick={() => setConfirmDelete(m)}
                             title="Remove member"
@@ -265,9 +265,9 @@ export function PeopleSettings() {
 
             {inviteLink ? (
               <div className="space-y-4">
-                <div className="flex items-center gap-2 p-3 rounded-lg bg-emerald-50 border border-emerald-100">
-                  <Check className="w-4 h-4 text-emerald-600 shrink-0" />
-                  <p className="text-sm text-emerald-800">Invitation sent to <strong>{inviteEmail}</strong></p>
+                <div className="flex items-center gap-2 p-3 rounded-lg bg-[#0E2C72]/6 border border-[#0E2C72]/15">
+                  <Check className="w-4 h-4 text-[#0E2C72] shrink-0" />
+                  <p className="text-sm text-[#0a2260]">Invitation sent to <strong>{inviteEmail}</strong></p>
                 </div>
                 <div>
                   <p className="text-xs font-medium text-neutral-500 mb-1.5">Share this link if the email doesn't arrive</p>
@@ -275,7 +275,7 @@ export function PeopleSettings() {
                     <input readOnly value={inviteLink}
                       className="flex-1 px-3 py-2 text-xs border border-neutral-200 rounded-md bg-neutral-50 text-neutral-600 truncate" />
                     <button onClick={copyInviteLink}
-                      className="shrink-0 flex items-center gap-1.5 px-3 py-2 bg-emerald-600 text-white text-sm font-medium rounded-md hover:bg-emerald-700 transition-colors">
+                      className="shrink-0 flex items-center gap-1.5 px-3 py-2 bg-[#0E2C72] text-white text-sm font-medium rounded-md hover:bg-[#0a2260] transition-colors">
                       {linkCopied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
                       {linkCopied ? "Copied!" : "Copy"}
                     </button>
@@ -296,7 +296,7 @@ export function PeopleSettings() {
                       value={inviteEmail}
                       onChange={(e) => setInviteEmail(e.target.value)}
                       placeholder="colleague@company.com"
-                      className="w-full px-4 py-2 border border-neutral-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                      className="w-full px-4 py-2 border border-neutral-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-[#1a3d8f]"
                     />
                   </div>
 
@@ -305,7 +305,7 @@ export function PeopleSettings() {
                     <select
                       value={inviteRole}
                       onChange={(e) => setInviteRole(e.target.value)}
-                      className="w-full px-4 py-2 border border-neutral-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white"
+                      className="w-full px-4 py-2 border border-neutral-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-[#1a3d8f] bg-white"
                     >
                       <option value="ADMIN">Admin</option>
                       <option value="SALES_REP">Customer Rep / Sales Rep</option>
@@ -323,7 +323,7 @@ export function PeopleSettings() {
                   <button
                     onClick={handleInvite}
                     disabled={inviting || !inviteEmail.trim()}
-                    className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-md hover:bg-emerald-700 disabled:opacity-60 text-sm transition-colors"
+                    className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2 bg-[#0E2C72] text-white rounded-md hover:bg-[#0a2260] disabled:opacity-60 text-sm transition-colors"
                   >
                     {inviting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Mail className="w-4 h-4" />}
                     {inviting ? "Sending…" : "Send Invite"}
@@ -337,3 +337,5 @@ export function PeopleSettings() {
     </div>
   );
 }
+
+

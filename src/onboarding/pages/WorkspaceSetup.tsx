@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useId } from "react";
+﻿import { useState, useEffect, useRef, useId } from "react";
 import { useNavigate } from "react-router";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
@@ -100,6 +100,7 @@ export function WorkspaceSetup() {
   const [step, setStep] = useState(0);
   const [dir, setDir] = useState(1);
   const [loading, setLoading] = useState(false);
+  const [step1Error, setStep1Error] = useState("");
 
   // ── Slug state ───────────────────────────────────────────────────────────────
   const [slugStatus, setSlugStatus]         = useState<SlugStatus>("idle");
@@ -159,10 +160,11 @@ export function WorkspaceSetup() {
       return;
     }
     if (slugStatus === "checking") {
-      toast.error("Please wait for slug availability check to finish.");
+      setStep1Error("Please wait for the slug availability check to finish.");
       return;
     }
     setLoading(true);
+    setStep1Error("");
     try {
       const res = await api.workspaces.create({
         name: data.name,
@@ -174,10 +176,9 @@ export function WorkspaceSetup() {
       });
       const slug = res?.slug ?? toSlug(data.name);
       localStorage.setItem("tt_workspace_slug", slug);
-      toast.success("Workspace created!");
       goNext();
     } catch (err: any) {
-      toast.error(err.message || "Could not create workspace. Please try again.");
+      setStep1Error(err.message || "Could not create workspace. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -228,7 +229,7 @@ export function WorkspaceSetup() {
           <motion.div key="step0" custom={dir} variants={slideVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.22, ease: [0.4,0,0.2,1] }}>
             <div className={s.wsHero}><BuildingIcon /></div>
             <h1 className={s.heading}>Set up your workspace</h1>
-            <p className={s.subtext}>Your company's digital office on TerraTrail.</p>
+            <p className={s.subtext}>Your company's digital office on Terratrail.</p>
 
             <form className={s.form} onSubmit={submitStep1} noValidate>
               {/* Company name */}
@@ -329,6 +330,21 @@ export function WorkspaceSetup() {
                 />
               </div>
 
+              {step1Error && (
+                <div style={{
+                  background: "#fef2f2",
+                  border: "1px solid #fecaca",
+                  borderRadius: 6,
+                  padding: "9px 12px",
+                  fontSize: 12.5,
+                  color: "#dc2626",
+                  fontWeight: 600,
+                  fontFamily: "inherit",
+                }}>
+                  {step1Error}
+                </div>
+              )}
+
               <button type="submit" className={s.btn} disabled={loading || slugStatus === "checking" || slugStatus === "taken"}>
                 <span className={s.btnInner}>
                   {loading && <span className={s.spinner} />}
@@ -346,7 +362,7 @@ export function WorkspaceSetup() {
               <SlidersIcon />
             </div>
             <h1 className={s.heading}>Configure preferences</h1>
-            <p className={s.subtext}>Tailor how TerraTrail works for your business. You can change these anytime.</p>
+            <p className={s.subtext}>Tailor how Terratrail works for your business. You can change these anytime.</p>
 
             <form className={s.form} onSubmit={submitStep2} noValidate>
               <ToggleRow label="First payment = first month" desc="Count the initial payment as the first installment month." fieldId="initial_payment_as_first_month" register={form2.register} />
@@ -393,3 +409,4 @@ function ToggleRow({ label, desc, fieldId, register }: { label: string; desc: st
     </div>
   );
 }
+

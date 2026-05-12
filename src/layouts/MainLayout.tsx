@@ -280,7 +280,7 @@ function NotificationBell() {
             <span className="text-[12.5px] font-semibold text-neutral-800">Notifications</span>
             <button
               onClick={() => { fetchEvents(); }}
-              className="text-[11px] text-emerald-600 hover:text-emerald-700 font-medium"
+              className="text-[11px] text-[#0E2C72] hover:text-[#0a2260] font-medium"
             >
               Refresh
             </button>
@@ -305,12 +305,12 @@ function NotificationBell() {
                       onClick={() => { setOpen(false); navigate(n.href); }}
                       className={cn(
                         "w-full px-4 py-2.5 hover:bg-neutral-50 transition-colors text-left",
-                        isNew && "bg-emerald-50/40"
+                        isNew && "bg-[#0E2C72]/5"
                       )}
                     >
                       <div className="flex items-start gap-2.5">
                         {isNew && (
-                          <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+                          <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-[#0E2C72] shrink-0" />
                         )}
                         <span className={cn("text-[9.5px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded mt-0.5 shrink-0", typeColor(n.type))}>
                           {typeLabel(n.type)}
@@ -333,7 +333,7 @@ function NotificationBell() {
           <div className="border-t border-neutral-50 px-4 py-2.5">
             <button
               onClick={() => { setOpen(false); navigate("/notifications"); }}
-              className="text-[11.5px] text-emerald-600 hover:text-emerald-700 font-medium w-full text-center"
+              className="text-[11.5px] text-[#0E2C72] hover:text-[#0a2260] font-medium w-full text-center"
             >
               View all notifications →
             </button>
@@ -374,7 +374,7 @@ function NavbarUserMenu() {
         className="flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-neutral-50 transition-colors"
         title={displayName}
       >
-        <div className="h-7 w-7 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center text-[11px] font-bold text-white shrink-0 shadow-sm select-none">
+        <div className="h-7 w-7 rounded-full bg-gradient-to-br from-[#1a45a0] to-[#0E2C72] flex items-center justify-center text-[11px] font-bold text-white shrink-0 shadow-sm select-none">
           {initials}
         </div>
         <span className="hidden md:block text-[12px] font-semibold text-neutral-700 max-w-[120px] truncate">
@@ -480,11 +480,11 @@ function MobileBottomNav() {
               to={navItem.href}
               className={cn(
                 "flex-1 flex flex-col items-center justify-center gap-[3px] transition-colors duration-150 relative",
-                active ? "text-emerald-600" : "text-neutral-400 hover:text-neutral-600"
+                active ? "text-[#0E2C72]" : "text-neutral-400 hover:text-neutral-600"
               )}
             >
               {active && (
-                <span className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-0.5 rounded-full bg-emerald-500" />
+                <span className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-0.5 rounded-full bg-[#0E2C72]" />
               )}
               <navItem.icon className="size-[20px] shrink-0" />
               <span className="text-[10px] font-semibold tracking-tight leading-none shrink-0">
@@ -543,8 +543,8 @@ function NavContent() {
       {/* ── Logo / brand ─────────────────────────────────────────── */}
       <SidebarHeader className="h-[60px] border-b border-sidebar-border">
         <div className="flex items-center gap-2.5 px-3 h-full">
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl overflow-hidden bg-emerald-600 shadow-md shadow-emerald-200/60">
-            <img src="/logo.png" alt="TerraTrail" className="w-full h-full object-cover" />
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl overflow-hidden bg-[#0E2C72] shadow-md shadow-[#0E2C72]/20">
+            <img src="/logo.png" alt="Terratrail" className="w-full h-full object-cover" />
           </div>
           <div className="flex flex-col leading-tight min-w-0">
             <span className="text-[13px] font-semibold tracking-tight text-neutral-900 truncate">
@@ -566,12 +566,12 @@ function NavContent() {
                 <SidebarMenuButton
                   asChild
                   onClick={() => setOpenMobile(false)}
-                  className="h-10 rounded-lg px-3 text-[13.5px] font-bold transition-all duration-200 text-white bg-emerald-600 hover:bg-emerald-700 shadow-md shadow-emerald-200/50 border border-emerald-500"
+                  className="h-10 rounded-lg px-3 text-[13.5px] font-bold transition-all duration-200 text-white bg-[#0E2C72] hover:bg-[#0a2260] shadow-md shadow-[#0E2C72]/30 border border-[#1a45a0]"
                 >
                   <a href={`/estates/${slug}`} target="_blank" rel="noopener noreferrer">
-                    <Globe className="size-[16px] text-emerald-100" />
+                    <Globe className="size-[16px] text-blue-200" />
                     <span>View Estate</span>
-                    <span className="ml-auto text-[10px] text-emerald-200 font-medium">↗</span>
+                    <span className="ml-auto text-[10px] text-blue-200 font-medium">↗</span>
                   </a>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -598,7 +598,7 @@ function NavContent() {
                       className={cn(
                         "h-9 rounded-lg px-3 text-[13px] font-semibold transition-all duration-150",
                         active
-                          ? "bg-emerald-50 text-emerald-700 [&>svg]:text-emerald-600"
+                          ? "bg-[#0E2C72]/8 text-[#0E2C72] [&>svg]:text-[#0E2C72]"
                           : "text-neutral-600 hover:bg-neutral-50 hover:text-neutral-900 [&>svg]:text-neutral-400"
                       )}
                     >
@@ -606,7 +606,7 @@ function NavContent() {
                         <navItem.icon className="size-[15px]" />
                         <span>{navItem.label}</span>
                         {active && (
-                          <div className="ml-auto w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+                          <div className="ml-auto w-1.5 h-1.5 rounded-full bg-[#0E2C72] shrink-0" />
                         )}
                       </Link>
                     </SidebarMenuButton>
@@ -622,7 +622,7 @@ function NavContent() {
           <SidebarGroupContent>
             {/* Plan usage pill — real-time */}
             {planUsage && (
-              <div className="mx-3 mb-3 rounded-lg border border-emerald-100 bg-emerald-50 px-3 py-2.5">
+              <div className="mx-3 mb-3 rounded-lg border border-[#0E2C72]/15 bg-[#0E2C72]/5 px-3 py-2.5">
                 {(() => {
                   const props = planUsage?.resources?.properties;
                   const used = props?.used ?? 0;
@@ -633,22 +633,22 @@ function NavContent() {
                   return (
                     <>
                       <div className="flex items-center justify-between mb-1.5">
-                        <span className="text-[11px] font-bold text-emerald-800 truncate capitalize">
+                        <span className="text-[11px] font-bold text-[#0E2C72] truncate capitalize">
                           {planName.charAt(0) + planName.slice(1).toLowerCase()} Plan
                         </span>
-                        <span className="text-[10px] font-semibold text-emerald-600 shrink-0 ml-1">
+                        <span className="text-[10px] font-semibold text-[#0E2C72]/70 shrink-0 ml-1">
                           {pct}%
                         </span>
                       </div>
-                      <div className="h-1 rounded-full bg-emerald-100 overflow-hidden">
+                      <div className="h-1 rounded-full bg-[#0E2C72]/15 overflow-hidden">
                         <motion.div
                           initial={{ width: 0 }}
                           animate={{ width: `${pct}%` }}
                           transition={{ duration: 0.8, ease: "easeOut" }}
-                          className="h-full rounded-full bg-emerald-500"
+                          className="h-full rounded-full bg-[#0E2C72]"
                         />
                       </div>
-                      <div className="text-[10px] text-emerald-600/70 mt-1.5">
+                      <div className="text-[10px] text-[#0E2C72]/60 mt-1.5">
                         {used} / {isUnlimited ? "∞" : limit} Properties
                       </div>
                     </>
@@ -670,7 +670,7 @@ function NavContent() {
                       className={cn(
                         "h-9 rounded-lg px-3 text-[13px] font-semibold transition-all duration-150",
                         active
-                          ? "bg-emerald-50 text-emerald-700 [&>svg]:text-emerald-600"
+                          ? "bg-[#0E2C72]/8 text-[#0E2C72] [&>svg]:text-[#0E2C72]"
                           : "text-neutral-500 hover:bg-neutral-50 hover:text-neutral-900 [&>svg]:text-neutral-400"
                       )}
                     >
@@ -693,13 +693,13 @@ function NavContent() {
           onClick={() => { setOpenMobile(false); navigate("/account"); }}
           className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg hover:bg-neutral-50 transition-colors cursor-pointer group"
         >
-          <div className="h-7 w-7 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center text-[11px] font-bold text-white shrink-0 shadow-sm">
+          <div className="h-7 w-7 rounded-full bg-gradient-to-br from-[#1a45a0] to-[#0E2C72] flex items-center justify-center text-[11px] font-bold text-white shrink-0 shadow-sm">
             {initials}
           </div>
           <div className="flex flex-col items-start leading-tight gap-0 min-w-0 flex-1">
             <span className="text-[12px] font-semibold text-neutral-800 truncate">{displayName}</span>
             {role && (
-              <span className="text-[10px] text-emerald-600 font-semibold truncate">
+              <span className="text-[10px] text-[#0E2C72] font-semibold truncate">
                 {roleBadge[role] ?? role}
               </span>
             )}

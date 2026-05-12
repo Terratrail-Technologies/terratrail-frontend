@@ -1,4 +1,4 @@
-import { useState } from "react";
+﻿import { useState } from "react";
 import {
   Users,
   Calendar,
@@ -128,7 +128,7 @@ const STATUS_CONFIG: Record<
   { cls: string; icon: React.ElementType; animate: boolean }
 > = {
   Processing: { cls: "bg-amber-50 text-amber-700", icon: Loader2, animate: true },
-  Ready: { cls: "bg-emerald-50 text-emerald-700", icon: CheckCircle2, animate: false },
+  Ready: { cls: "bg-[#0E2C72]/6 text-[#0E2C72]", icon: CheckCircle2, animate: false },
   Failed: { cls: "bg-red-50 text-red-700", icon: AlertCircle, animate: false },
 };
 
@@ -225,25 +225,25 @@ function ExportTypeCard({ type, selected, onClick }: ExportTypeCardProps) {
       onClick={onClick}
       className={`w-full text-left rounded-xl border p-4 transition-all ${
         selected
-          ? "border-emerald-500 bg-emerald-50"
-          : "border-neutral-100 bg-white hover:border-emerald-300 hover:shadow-sm"
+          ? "border-[#0E2C72] bg-[#0E2C72]/6"
+          : "border-neutral-100 bg-white hover:border-[#0E2C72]/40 hover:shadow-sm"
       }`}
     >
       <div
         className={`w-10 h-10 rounded-lg flex items-center justify-center mb-3 transition-colors ${
-          selected ? "bg-emerald-100" : "bg-neutral-50"
+          selected ? "bg-[#d6e0f5]" : "bg-neutral-50"
         }`}
       >
         <Icon
-          className={`w-5 h-5 transition-colors ${selected ? "text-emerald-600" : "text-neutral-500"}`}
+          className={`w-5 h-5 transition-colors ${selected ? "text-[#0E2C72]" : "text-neutral-500"}`}
         />
       </div>
       <p
-        className={`text-sm font-semibold mb-1 ${selected ? "text-emerald-800" : "text-neutral-800"}`}
+        className={`text-sm font-semibold mb-1 ${selected ? "text-[#0E2C72]" : "text-neutral-800"}`}
       >
         {type.name}
       </p>
-      <p className={`text-xs leading-snug ${selected ? "text-emerald-700" : "text-neutral-500"}`}>
+      <p className={`text-xs leading-snug ${selected ? "text-[#0E2C72]" : "text-neutral-500"}`}>
         {type.description}
       </p>
     </button>
@@ -296,7 +296,7 @@ export function DataExport() {
   if (roleLoading) {
     return (
       <div className="min-h-screen bg-neutral-50 flex items-center justify-center">
-        <Loader2 className="w-6 h-6 text-emerald-600 animate-spin" />
+        <Loader2 className="w-6 h-6 text-[#0E2C72] animate-spin" />
       </div>
     );
   }
@@ -442,7 +442,7 @@ export function DataExport() {
                             type="date"
                             value={filters.date_from}
                             onChange={(e) => handleFilterChange("date_from", e.target.value)}
-                            className="w-full text-sm border border-neutral-200 rounded-lg px-3 py-2 text-neutral-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition"
+                            className="w-full text-sm border border-neutral-200 rounded-lg px-3 py-2 text-neutral-800 focus:outline-none focus:ring-2 focus:ring-[#1a3d8f] focus:border-transparent transition"
                           />
                         </div>
                         <div>
@@ -451,7 +451,7 @@ export function DataExport() {
                             type="date"
                             value={filters.date_to}
                             onChange={(e) => handleFilterChange("date_to", e.target.value)}
-                            className="w-full text-sm border border-neutral-200 rounded-lg px-3 py-2 text-neutral-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition"
+                            className="w-full text-sm border border-neutral-200 rounded-lg px-3 py-2 text-neutral-800 focus:outline-none focus:ring-2 focus:ring-[#1a3d8f] focus:border-transparent transition"
                           />
                         </div>
                       </div>
@@ -466,7 +466,7 @@ export function DataExport() {
                         <select
                           value={filters.status}
                           onChange={(e) => handleFilterChange("status", e.target.value)}
-                          className="w-full text-sm border border-neutral-200 rounded-lg px-3 py-2 text-neutral-800 bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition"
+                          className="w-full text-sm border border-neutral-200 rounded-lg px-3 py-2 text-neutral-800 bg-white focus:outline-none focus:ring-2 focus:ring-[#1a3d8f] focus:border-transparent transition"
                         >
                           <option value="">All statuses</option>
                           {statusOptions.map((s) => (
@@ -494,21 +494,21 @@ export function DataExport() {
                           onClick={() => setFormat(fmt)}
                           className={`flex-1 flex items-center gap-3 border rounded-xl px-4 py-3 transition-all ${
                             active
-                              ? "border-emerald-500 bg-emerald-50"
-                              : "border-neutral-200 bg-white hover:border-emerald-300"
+                              ? "border-[#0E2C72] bg-[#0E2C72]/6"
+                              : "border-neutral-200 bg-white hover:border-[#0E2C72]/40"
                           }`}
                         >
                           <span
                             className={`w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${
-                              active ? "border-emerald-500" : "border-neutral-300"
+                              active ? "border-[#0E2C72]" : "border-neutral-300"
                             }`}
                           >
                             {active && (
-                              <span className="w-2 h-2 rounded-full bg-emerald-500 block" />
+                              <span className="w-2 h-2 rounded-full bg-[#1a3d8f] block" />
                             )}
                           </span>
                           <span
-                            className={`text-sm font-medium ${active ? "text-emerald-800" : "text-neutral-700"}`}
+                            className={`text-sm font-medium ${active ? "text-[#0E2C72]" : "text-neutral-700"}`}
                           >
                             {fmt === "CSV" ? "CSV" : "Excel (.xlsx)"}
                           </span>
@@ -525,7 +525,7 @@ export function DataExport() {
                   </p>
                   <button
                     onClick={handleGenerateExport}
-                    className="w-full bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white text-sm font-semibold rounded-xl px-4 py-3 transition-colors flex items-center justify-center gap-2"
+                    className="w-full bg-[#0E2C72] hover:bg-[#0a2260] active:bg-[#0a2260] text-white text-sm font-semibold rounded-xl px-4 py-3 transition-colors flex items-center justify-center gap-2"
                   >
                     <Download className="w-4 h-4" />
                     Generate Export
@@ -646,7 +646,7 @@ export function DataExport() {
                                 title={job.status !== "Ready" ? "File not ready yet" : "Download"}
                                 className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
                                   job.status === "Ready"
-                                    ? "bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
+                                    ? "bg-[#0E2C72]/6 text-[#0E2C72] hover:bg-[#d6e0f5]"
                                     : "bg-neutral-50 text-neutral-300 cursor-not-allowed"
                                 }`}
                               >
@@ -676,3 +676,6 @@ export function DataExport() {
     </div>
   );
 }
+
+
+

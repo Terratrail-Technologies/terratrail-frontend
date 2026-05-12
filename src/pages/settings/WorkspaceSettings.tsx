@@ -1,4 +1,4 @@
-import { Link, useLocation, Routes, Route, Navigate } from "react-router";
+﻿import { Link, useLocation, Routes, Route, Navigate } from "react-router";
 import { Settings, Users, CreditCard, Package, Clock, Shield, Mail } from "lucide-react";
 import { cn } from "../../components/ui/utils";
 import { GeneralSettings } from "./workspace/GeneralSettings";
@@ -50,7 +50,7 @@ export function WorkspaceSettings() {
                   className={cn(
                     "flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13px] transition-all duration-200 whitespace-nowrap shrink-0",
                     active
-                      ? "bg-emerald-50 text-emerald-700 font-semibold shadow-sm shadow-emerald-100/50"
+                      ? "bg-[#0E2C72]/6 text-[#0E2C72] font-semibold shadow-sm shadow-[#0E2C72]/10/50"
                       : "text-neutral-500 hover:bg-neutral-50 hover:text-neutral-900"
                   )}
                 >
@@ -81,3 +81,5 @@ export function WorkspaceSettings() {
     </div>
   );
 }
+
+

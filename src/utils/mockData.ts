@@ -1,4 +1,4 @@
-// Mock data for TerraTrail platform
+// Mock data for Terratrail platform
 
 export const workspace = {
   name: "Tehillah Estate",

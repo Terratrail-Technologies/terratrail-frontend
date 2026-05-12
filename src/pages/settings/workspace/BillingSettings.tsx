@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+﻿import { useState, useEffect, useCallback } from "react";
 import { Check, Loader2, Star, Building2, Users, UserCheck, MessageCircle, CreditCard } from "lucide-react";
 import { toast } from "sonner";
 import { api } from "../../../services/api";
@@ -11,7 +11,7 @@ const fmt = (n: number) => `₦${n.toLocaleString("en-NG")}`;
 const PLAN_RING: Record<string, string> = {
   Free:       "border-neutral-200",
   Starter:    "border-blue-300",
-  Growth:     "border-emerald-400",
+  Growth:     "border-[#2a52a8]",
   Scale:      "border-violet-400",
   Enterprise: "border-amber-400",
 };
@@ -19,7 +19,7 @@ const PLAN_RING: Record<string, string> = {
 const PLAN_BADGE: Record<string, string> = {
   Free:       "bg-neutral-100 text-neutral-600",
   Starter:    "bg-blue-50 text-blue-700",
-  Growth:     "bg-emerald-50 text-emerald-700",
+  Growth:     "bg-[#0E2C72]/6 text-[#0E2C72]",
   Scale:      "bg-violet-50 text-violet-700",
   Enterprise: "bg-amber-50 text-amber-700",
 };
@@ -90,7 +90,7 @@ export function BillingSettings() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-32">
-        <Loader2 className="w-7 h-7 animate-spin text-emerald-500" />
+        <Loader2 className="w-7 h-7 animate-spin text-[#1a3d8f]" />
       </div>
     );
   }
@@ -133,7 +133,7 @@ export function BillingSettings() {
                   </div>
                   <div className="h-1.5 rounded-full bg-neutral-100 overflow-hidden">
                     <div
-                      className={cn("h-full rounded-full transition-all", pct >= 90 ? "bg-red-500" : pct >= 70 ? "bg-amber-500" : "bg-emerald-500")}
+                      className={cn("h-full rounded-full transition-all", pct >= 90 ? "bg-red-500" : pct >= 70 ? "bg-amber-500" : "bg-[#1a3d8f]")}
                       style={{ width: `${pct}%` }}
                     />
                   </div>
@@ -165,12 +165,12 @@ export function BillingSettings() {
                   key={plan.key}
                   className={cn(
                     "bg-white rounded-xl border p-5 flex flex-col gap-4 relative",
-                    isCurrent ? "ring-2 ring-emerald-500/40 border-emerald-400" : (PLAN_RING[plan.name] ?? "border-neutral-200"),
-                    plan.recommended && !isCurrent && "border-emerald-300"
+                    isCurrent ? "ring-2 ring-[#1a3d8f]/40 border-[#2a52a8]" : (PLAN_RING[plan.name] ?? "border-neutral-200"),
+                    plan.recommended && !isCurrent && "border-[#4a6fc0]"
                   )}
                 >
                   {plan.recommended && (
-                    <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 flex items-center gap-1 bg-emerald-600 text-white text-[10px] font-bold px-2.5 py-0.5 rounded-full shadow-sm">
+                    <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 flex items-center gap-1 bg-[#0E2C72] text-white text-[10px] font-bold px-2.5 py-0.5 rounded-full shadow-sm">
                       <Star className="w-2.5 h-2.5" /> Most Popular
                     </div>
                   )}
@@ -178,7 +178,7 @@ export function BillingSettings() {
                   {/* Plan name + current badge */}
                   <div className="flex items-center justify-between">
                     <h4 className="font-bold text-neutral-900 text-[15px]">{plan.name}</h4>
-                    {isCurrent && <Badge className="bg-emerald-50 text-emerald-700 text-[11px]">Current</Badge>}
+                    {isCurrent && <Badge className="bg-[#0E2C72]/6 text-[#0E2C72] text-[11px]">Current</Badge>}
                   </div>
 
                   {/* Price */}
@@ -225,7 +225,7 @@ export function BillingSettings() {
                     <ul className="space-y-1.5 text-[12px] text-neutral-600">
                       {plan.features.map((f: string) => (
                         <li key={f} className="flex items-start gap-1.5">
-                          <Check className="w-3.5 h-3.5 text-emerald-500 shrink-0 mt-0.5" />
+                          <Check className="w-3.5 h-3.5 text-[#1a3d8f] shrink-0 mt-0.5" />
                           {f}
                         </li>
                       ))}
@@ -245,7 +245,7 @@ export function BillingSettings() {
                       <button
                         onClick={() => handleSelect(plan.key)}
                         disabled={!!selecting}
-                        className="mt-auto inline-flex items-center justify-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white rounded-lg text-[13px] font-semibold transition-colors"
+                        className="mt-auto inline-flex items-center justify-center gap-2 px-4 py-2 bg-[#0E2C72] hover:bg-[#0a2260] disabled:opacity-60 text-white rounded-lg text-[13px] font-semibold transition-colors"
                       >
                         {selecting === plan.key && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
                         {selecting === plan.key ? "Switching…" : "Switch to this plan"}
@@ -263,8 +263,8 @@ export function BillingSettings() {
       {paymentDetails?.bank_name && (
         <div className="bg-white rounded-xl border border-neutral-200 p-6">
           <div className="flex items-center gap-2.5 mb-5">
-            <div className="w-8 h-8 bg-emerald-50 rounded-lg flex items-center justify-center">
-              <CreditCard className="w-4 h-4 text-emerald-600" />
+            <div className="w-8 h-8 bg-[#0E2C72]/6 rounded-lg flex items-center justify-center">
+              <CreditCard className="w-4 h-4 text-[#0E2C72]" />
             </div>
             <h3 className="font-semibold text-neutral-900">Payment Details</h3>
           </div>
@@ -295,3 +295,5 @@ export function BillingSettings() {
     </div>
   );
 }
+
+

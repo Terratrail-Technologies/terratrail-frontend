@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+﻿import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
 import {
   Users, ShoppingBag, AlertCircle, Search,
@@ -44,13 +44,13 @@ function SummaryCard({
   color: "emerald" | "blue" | "violet" | "amber"; sub?: string;
 }) {
   const colors = {
-    emerald: "bg-emerald-50 text-emerald-600",
+    emerald: "bg-[#0E2C72]/6 text-[#0E2C72]",
     blue:    "bg-blue-50 text-blue-600",
     violet:  "bg-violet-50 text-violet-600",
     amber:   "bg-amber-50 text-amber-600",
   };
   const accents = {
-    emerald: "bg-emerald-500",
+    emerald: "bg-[#1a3d8f]",
     blue:    "bg-blue-500",
     violet:  "bg-violet-500",
     amber:   "bg-amber-500",
@@ -121,9 +121,9 @@ function InviteModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: (
 
         {inviteLink ? (
           <div className="p-5 space-y-4">
-            <div className="flex items-center gap-2 p-2.5 rounded-xl bg-emerald-50 border border-emerald-100">
-              <Check className="size-4 text-emerald-600 shrink-0" />
-              <p className="text-[12px] text-emerald-800 font-medium">
+            <div className="flex items-center gap-2 p-2.5 rounded-xl bg-[#0E2C72]/6 border border-[#0E2C72]/15">
+              <Check className="size-4 text-[#0E2C72] shrink-0" />
+              <p className="text-[12px] text-[#0a2260] font-medium">
                 Invitation sent to <strong>{email}</strong>
               </p>
             </div>
@@ -133,7 +133,7 @@ function InviteModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: (
                 <input readOnly value={inviteLink}
                   className="flex-1 px-3 py-2 text-[11px] border border-neutral-200 rounded-lg bg-neutral-50 text-neutral-600 truncate" />
                 <button onClick={copyLink}
-                  className="shrink-0 px-3 py-2 bg-emerald-600 text-white text-[12px] font-semibold rounded-lg hover:bg-emerald-700 transition-colors flex items-center gap-1.5">
+                  className="shrink-0 px-3 py-2 bg-[#0E2C72] text-white text-[12px] font-semibold rounded-lg hover:bg-[#0a2260] transition-colors flex items-center gap-1.5">
                   {copied ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
                   {copied ? "Copied!" : "Copy"}
                 </button>
@@ -151,12 +151,12 @@ function InviteModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: (
               <input
                 type="email" required value={email} onChange={(e) => setEmail(e.target.value)}
                 placeholder="rep@example.com"
-                className="w-full px-3 py-2.5 text-[13px] border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className="w-full px-3 py-2.5 text-[13px] border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1a3d8f]"
               />
             </div>
             {error && <p className="text-[12px] text-red-600 bg-red-50 rounded-lg px-3 py-2">{error}</p>}
             <button type="submit" disabled={loading}
-              className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-[13px] font-semibold rounded-lg transition-colors">
+              className="w-full py-2.5 bg-[#0E2C72] hover:bg-[#0a2260] disabled:opacity-50 text-white text-[13px] font-semibold rounded-lg transition-colors">
               {loading ? "Sending…" : "Send Invitation"}
             </button>
           </form>
@@ -273,7 +273,7 @@ export function CustomerReps() {
           </div>
           <button
             onClick={() => setShowInvite(true)}
-            className="flex items-center gap-1.5 px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-[12px] font-semibold rounded-lg transition-colors shadow-sm"
+            className="flex items-center gap-1.5 px-3 py-2 bg-[#0E2C72] hover:bg-[#0a2260] text-white text-[12px] font-semibold rounded-lg transition-colors shadow-sm"
           >
             <UserPlus className="size-3.5" />
             <span className="hidden sm:inline">Invite Rep</span>
@@ -301,13 +301,13 @@ export function CustomerReps() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search by name or email..."
-              className="w-full pl-9 pr-4 py-2 text-[13px] border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400 bg-white"
+              className="w-full pl-9 pr-4 py-2 text-[13px] border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1a3d8f]/30 focus:border-[#2a52a8] bg-white"
             />
           </div>
           <div className="flex gap-1">
             {(["ALL", "ACTIVE", "INACTIVE"] as const).map((s) => (
               <button key={s} onClick={() => setStatusFilter(s)}
-                className={`px-3 py-2 text-[12px] font-semibold rounded-lg transition-colors ${statusFilter === s ? "bg-emerald-600 text-white" : "bg-white border border-neutral-200 text-neutral-600 hover:border-emerald-300"}`}>
+                className={`px-3 py-2 text-[12px] font-semibold rounded-lg transition-colors ${statusFilter === s ? "bg-[#0E2C72] text-white" : "bg-white border border-neutral-200 text-neutral-600 hover:border-[#0E2C72]/40"}`}>
                 {s === "ALL" ? "All" : s.charAt(0) + s.slice(1).toLowerCase()}
               </button>
             ))}
@@ -322,14 +322,14 @@ export function CustomerReps() {
             return (
               <div key={m.id} className="bg-white rounded-xl border border-neutral-100 p-4 shadow-[0_1px_3px_rgba(0,0,0,0.05)]">
                 <div className="flex items-center gap-3 mb-3">
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center text-[12px] font-bold text-white shrink-0">
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#2a52a8] to-[#0E2C72] flex items-center justify-center text-[12px] font-bold text-white shrink-0">
                     {initials}
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="text-[13.5px] font-semibold text-neutral-900 truncate">{m.user_name}</div>
                     <div className="text-[11.5px] text-neutral-400 truncate">{m.user_email}</div>
                   </div>
-                  <span className={`inline-flex px-2.5 py-0.5 rounded-full text-[11px] font-bold shrink-0 ${m.is_active ? "bg-emerald-100 text-emerald-700" : "bg-neutral-100 text-neutral-500"}`}>
+                  <span className={`inline-flex px-2.5 py-0.5 rounded-full text-[11px] font-bold shrink-0 ${m.is_active ? "bg-[#d6e0f5] text-[#0E2C72]" : "bg-neutral-100 text-neutral-500"}`}>
                     {m.is_active ? "Active" : "Inactive"}
                   </span>
                 </div>
@@ -348,7 +348,7 @@ export function CustomerReps() {
                   </div>
                   <div>
                     <div className="text-[10px] font-semibold uppercase tracking-wider text-neutral-400">Revenue</div>
-                    <div className="text-emerald-700 font-semibold">{fmt(m.total_revenue_managed ?? 0)}</div>
+                    <div className="text-[#0E2C72] font-semibold">{fmt(m.total_revenue_managed ?? 0)}</div>
                   </div>
                 </div>
                 <div className="flex gap-2 pt-3 border-t border-neutral-50">
@@ -411,12 +411,12 @@ export function CustomerReps() {
                       {/* Name */}
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center text-[11px] font-bold text-white shrink-0">
+                          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#2a52a8] to-[#0E2C72] flex items-center justify-center text-[11px] font-bold text-white shrink-0">
                             {initials}
                           </div>
                           <button
                             onClick={() => navigate(`/customer-reps/${m.id}`)}
-                            className="font-semibold text-neutral-800 hover:text-emerald-700 truncate max-w-[140px] text-left transition-colors">
+                            className="font-semibold text-neutral-800 hover:text-[#0a2260] truncate max-w-[140px] text-left transition-colors">
                             {m.user_name}
                           </button>
                         </div>
@@ -428,7 +428,7 @@ export function CustomerReps() {
                           <span className="text-neutral-600 truncate max-w-[160px]">{m.user_email}</span>
                           <button onClick={() => copyEmail(m.user_email)}
                             className="p-1 rounded hover:bg-neutral-100 text-neutral-400 hover:text-neutral-700 shrink-0">
-                            {copied === m.user_email ? <Check className="size-3 text-emerald-600" /> : <Copy className="size-3" />}
+                            {copied === m.user_email ? <Check className="size-3 text-[#0E2C72]" /> : <Copy className="size-3" />}
                           </button>
                         </div>
                       </td>
@@ -446,13 +446,13 @@ export function CustomerReps() {
                       <td className="px-4 py-3 text-center font-semibold text-neutral-700">{m.active_subscriptions_count ?? 0}</td>
 
                       {/* Revenue */}
-                      <td className="px-4 py-3 text-right font-semibold text-emerald-700">
+                      <td className="px-4 py-3 text-right font-semibold text-[#0E2C72]">
                         {fmt(m.total_revenue_managed ?? 0)}
                       </td>
 
                       {/* Status */}
                       <td className="px-4 py-3 text-center">
-                        <span className={`inline-flex px-2.5 py-0.5 rounded-full text-[11px] font-bold ${m.is_active ? "bg-emerald-100 text-emerald-700" : "bg-neutral-100 text-neutral-500"}`}>
+                        <span className={`inline-flex px-2.5 py-0.5 rounded-full text-[11px] font-bold ${m.is_active ? "bg-[#d6e0f5] text-[#0E2C72]" : "bg-neutral-100 text-neutral-500"}`}>
                           {m.is_active ? "Active" : "Inactive"}
                         </span>
                       </td>
@@ -478,4 +478,6 @@ export function CustomerReps() {
     </div>
   );
 }
+
+
 

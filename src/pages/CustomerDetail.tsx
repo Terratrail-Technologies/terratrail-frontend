@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+﻿import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router";
 import {
   ArrowLeft, User, Phone, Mail, MapPin, Calendar,
@@ -76,7 +76,7 @@ const fmtDate = (d?: string | null) =>
   d ? new Date(d).toLocaleDateString("en-NG", { day: "numeric", month: "short", year: "numeric" }) : "—";
 
 const avatarColors = [
-  ["bg-emerald-100", "text-emerald-700"],
+  ["bg-[#d6e0f5]", "text-[#0E2C72]"],
   ["bg-blue-100", "text-blue-700"],
   ["bg-violet-100", "text-violet-700"],
   ["bg-amber-100", "text-amber-700"],
@@ -88,7 +88,7 @@ const avatarColor = (name: string) => avatarColors[name.charCodeAt(0) % avatarCo
 
 function SubStatusBadge({ status }: { status?: string }) {
   const map: Record<string, { cls: string; icon: React.ElementType; label: string }> = {
-    ACTIVE:     { cls: "bg-emerald-100 text-emerald-700", icon: CheckCircle2, label: "Active" },
+    ACTIVE:     { cls: "bg-[#d6e0f5] text-[#0E2C72]", icon: CheckCircle2, label: "Active" },
     COMPLETED:  { cls: "bg-blue-100 text-blue-700",       icon: CheckCircle2, label: "Completed" },
     DEFAULTING: { cls: "bg-red-100 text-red-700",         icon: AlertTriangle, label: "Defaulting" },
     CANCELLED:  { cls: "bg-neutral-100 text-neutral-500", icon: XCircle, label: "Cancelled" },
@@ -107,7 +107,7 @@ function SubStatusBadge({ status }: { status?: string }) {
 function InspectionStatusBadge({ status }: { status: string }) {
   const map: Record<string, { cls: string; label: string }> = {
     PENDING:   { cls: "bg-amber-100 text-amber-700",   label: "Pending" },
-    ATTENDED:  { cls: "bg-emerald-100 text-emerald-700", label: "Attended" },
+    ATTENDED:  { cls: "bg-[#d6e0f5] text-[#0E2C72]", label: "Attended" },
     CANCELLED: { cls: "bg-red-100 text-red-600",        label: "Cancelled" },
   };
   const cfg = map[status] ?? map["PENDING"];
@@ -127,14 +127,14 @@ function StatCard({
   color: "emerald" | "blue" | "violet" | "amber" | "red"; sub?: string;
 }) {
   const c = {
-    emerald: "bg-emerald-50 text-emerald-600",
+    emerald: "bg-[#0E2C72]/6 text-[#0E2C72]",
     blue:    "bg-blue-50 text-blue-600",
     violet:  "bg-violet-50 text-violet-600",
     amber:   "bg-amber-50 text-amber-600",
     red:     "bg-red-50 text-red-600",
   }[color];
   const accent = {
-    emerald: "bg-emerald-500",
+    emerald: "bg-[#1a3d8f]",
     blue:    "bg-blue-500",
     violet:  "bg-violet-500",
     amber:   "bg-amber-500",
@@ -196,7 +196,7 @@ function EditCustomerModal({
     }
   };
 
-  const inputCls = "w-full h-9 px-3 rounded-lg border border-neutral-200 text-[13px] focus:outline-none focus:ring-1 focus:ring-emerald-500/40 focus:border-emerald-400";
+  const inputCls = "w-full h-9 px-3 rounded-lg border border-neutral-200 text-[13px] focus:outline-none focus:ring-1 focus:ring-[#1a3d8f]/40 focus:border-[#2a52a8]";
   const labelCls = "text-[12px] font-medium text-neutral-600 block mb-1.5";
   const sectionCls = "text-[11px] font-semibold text-neutral-400 uppercase tracking-wider pb-2 border-b border-neutral-100 mb-3";
 
@@ -286,7 +286,7 @@ function EditCustomerModal({
 
         <div className="flex items-center justify-end gap-2.5 px-5 py-4 border-t border-neutral-100 shrink-0">
           <Button variant="outline" onClick={onClose} className="text-[13px] h-9">Cancel</Button>
-          <Button onClick={handleSubmit} disabled={saving} className="bg-emerald-600 hover:bg-emerald-700 text-white text-[13px] h-9 gap-1.5">
+          <Button onClick={handleSubmit} disabled={saving} className="bg-[#0E2C72] hover:bg-[#0a2260] text-white text-[13px] h-9 gap-1.5">
             {saving ? <><Loader2 className="w-3.5 h-3.5 animate-spin" />Saving…</> : <><Save className="w-3.5 h-3.5" />Save Changes</>}
           </Button>
         </div>
@@ -367,7 +367,7 @@ function OverviewTab({ customer }: { customer: Customer }) {
               <div key={label}>
                 <p className="text-[11px] text-neutral-400 font-medium uppercase tracking-wide">{label}</p>
                 <p className={`text-[13px] font-semibold mt-0.5 ${
-                  highlight === "emerald" ? "text-emerald-700" :
+                  highlight === "emerald" ? "text-[#0E2C72]" :
                   highlight === "red"     ? "text-red-600" :
                   "text-neutral-800"
                 }`}>{value}</p>
@@ -422,7 +422,7 @@ function SubscriptionsTab({ customer }: { customer: Customer }) {
             </div>
             <div>
               <p className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wider mb-0.5">Amount Paid</p>
-              <p className="text-[13px] font-semibold text-emerald-700">{fmt(sub.amount_paid)}</p>
+              <p className="text-[13px] font-semibold text-[#0E2C72]">{fmt(sub.amount_paid)}</p>
             </div>
             <div>
               <p className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wider mb-0.5">Balance</p>
@@ -681,3 +681,5 @@ export function CustomerDetail() {
     </div>
   );
 }
+
+

@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 
-const APP_NAME = "TerraTrail";
+const APP_NAME = "Terratrail";
 
 export function usePageTitle(title: string) {
   useEffect(() => {

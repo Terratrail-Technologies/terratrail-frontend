@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+﻿import { useState, useEffect } from "react";
 import { Check, AlertCircle, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { api } from "../../../services/api";
@@ -14,7 +14,7 @@ function Toggle({ checked, disabled, onChange }: { checked: boolean; disabled?: 
       onClick={() => !disabled && onChange(!checked)}
       className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
         disabled ? "opacity-40 cursor-not-allowed" : "cursor-pointer"
-      } ${checked ? "bg-emerald-500" : "bg-neutral-200"}`}
+      } ${checked ? "bg-[#1a3d8f]" : "bg-neutral-200"}`}
     >
       <span
         className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform ${
@@ -68,7 +68,7 @@ export function PermissionsSettings() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-32">
-        <Loader2 className="w-7 h-7 animate-spin text-emerald-500" />
+        <Loader2 className="w-7 h-7 animate-spin text-[#1a3d8f]" />
       </div>
     );
   }
@@ -149,7 +149,7 @@ export function PermissionsSettings() {
         <button
           onClick={handleSave}
           disabled={saving || !settings}
-          className="inline-flex items-center gap-2 px-6 py-2.5 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 disabled:opacity-60 transition-colors text-sm font-semibold shadow-sm shadow-emerald-200"
+          className="inline-flex items-center gap-2 px-6 py-2.5 bg-[#0E2C72] text-white rounded-xl hover:bg-[#0a2260] disabled:opacity-60 transition-colors text-sm font-semibold shadow-sm shadow-[#0E2C72]/20"
         >
           {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
           {saving ? "Saving…" : "Save Changes"}
@@ -158,3 +158,5 @@ export function PermissionsSettings() {
     </div>
   );
 }
+
+

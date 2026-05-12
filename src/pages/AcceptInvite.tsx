@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router";
 import { toast } from "sonner";
 import { api } from "../services/api";
@@ -71,7 +71,7 @@ export function AcceptInvite() {
           <p className="text-sm text-neutral-500">{error || "This invitation link is invalid."}</p>
           <button
             onClick={() => navigate("/auth/sign-in")}
-            className="px-5 py-2 bg-emerald-600 text-white rounded-lg text-sm hover:bg-emerald-700 transition-colors"
+            className="px-5 py-2 bg-[#0E2C72] text-white rounded-lg text-sm hover:bg-[#0a2260] transition-colors"
           >
             Go to Sign In
           </button>
@@ -89,7 +89,7 @@ export function AcceptInvite() {
           <p className="text-sm text-neutral-500">This invitation has already been used.</p>
           <button
             onClick={() => navigate("/")}
-            className="px-5 py-2 bg-emerald-600 text-white rounded-lg text-sm hover:bg-emerald-700 transition-colors"
+            className="px-5 py-2 bg-[#0E2C72] text-white rounded-lg text-sm hover:bg-[#0a2260] transition-colors"
           >
             Go to Dashboard
           </button>
@@ -119,13 +119,13 @@ export function AcceptInvite() {
       <div className="bg-white rounded-xl border border-neutral-200 p-10 max-w-md w-full space-y-6">
         {/* Logo / Brand */}
         <div className="text-center">
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-emerald-100 mb-4">
+          <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-[#d6e0f5] mb-4">
             <span className="text-2xl">🌿</span>
           </div>
           <h1 className="text-xl font-semibold text-neutral-900">You're invited!</h1>
           <p className="text-sm text-neutral-500 mt-1">
             Join <span className="font-medium text-neutral-800">{invite.workspace_name}</span> as{" "}
-            <span className="font-medium text-emerald-700">{roleLabel}</span>
+            <span className="font-medium text-[#0E2C72]">{roleLabel}</span>
           </p>
         </div>
 
@@ -150,7 +150,7 @@ export function AcceptInvite() {
             <button
               onClick={handleAccept}
               disabled={accepting}
-              className="w-full py-2.5 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 disabled:opacity-60 transition-colors"
+              className="w-full py-2.5 bg-[#0E2C72] text-white rounded-lg text-sm font-medium hover:bg-[#0a2260] disabled:opacity-60 transition-colors"
             >
               {accepting ? "Joining…" : `Accept & Join ${invite.workspace_name}`}
             </button>
@@ -172,7 +172,7 @@ export function AcceptInvite() {
           <div className="space-y-3">
             <button
               onClick={handleSignIn}
-              className="w-full py-2.5 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 transition-colors"
+              className="w-full py-2.5 bg-[#0E2C72] text-white rounded-lg text-sm font-medium hover:bg-[#0a2260] transition-colors"
             >
               Sign in to accept
             </button>
@@ -188,3 +188,5 @@ export function AcceptInvite() {
     </div>
   );
 }
+
+

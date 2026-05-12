@@ -1,4 +1,4 @@
-import { Link, useNavigate } from "react-router";
+﻿import { Link, useNavigate } from "react-router";
 import { AlertTriangle, Home, RefreshCw, ArrowLeft } from "lucide-react";
 import { usePageTitle } from "../hooks/usePageTitle";
 
@@ -49,7 +49,7 @@ export function ServerError({ message, onRetry }: ServerErrorProps = {}) {
         <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mt-6">
           <button
             onClick={handleRetry}
-            className="inline-flex items-center gap-2 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-[14px] font-semibold rounded-xl transition-colors shadow-sm shadow-emerald-200 w-full sm:w-auto justify-center"
+            className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#0E2C72] hover:bg-[#0a2260] text-white text-[14px] font-semibold rounded-xl transition-colors shadow-sm shadow-[#0E2C72]/20 w-full sm:w-auto justify-center"
           >
             <RefreshCw className="size-4" />
             Try Again
@@ -71,9 +71,10 @@ export function ServerError({ message, onRetry }: ServerErrorProps = {}) {
         </div>
 
         <p className="text-[12px] text-neutral-400 mt-10">
-          TerraTrail &mdash; Real Estate Management Platform
+          Terratrail &mdash; Real Estate Management Platform
         </p>
       </div>
     </div>
   );
 }
+

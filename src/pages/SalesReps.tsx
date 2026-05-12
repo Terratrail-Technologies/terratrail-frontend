@@ -1,4 +1,4 @@
-import { useState } from "react";
+﻿import { useState } from "react";
 import { useNavigate } from "react-router";
 import { usePolling } from "../hooks/usePolling";
 import { usePageTitle } from "../hooks/usePageTitle";
@@ -29,6 +29,10 @@ interface SalesRep {
   is_active: boolean;
   total_earned: string;
   total_pending: string;
+  address: string;
+  bank_name: string;
+  bank_account_number: string;
+  bank_account_name: string;
   created_at: string;
   updated_at: string;
 }
@@ -101,6 +105,10 @@ function AddRepModal({ onClose, onSaved }: AddRepModalProps) {
     phone: "",
     tier: "STARTER" as Tier,
     referral_code: "",
+    address: "",
+    bank_name: "",
+    bank_account_number: "",
+    bank_account_name: "",
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -139,15 +147,19 @@ function AddRepModal({ onClose, onSaved }: AddRepModalProps) {
   };
 
   const inputCls =
-    "w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400 bg-white transition-colors";
+    "w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#1a3d8f]/30 focus:border-[#2a52a8] bg-white transition-colors";
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 p-4 overflow-y-auto">
-      <div className="bg-white rounded-t-2xl sm:rounded-xl shadow-xl w-full max-w-lg my-auto">
+      <form
+        onSubmit={(e) => { e.preventDefault(); handle(); }}
+        className="bg-white rounded-t-2xl sm:rounded-xl shadow-xl w-full max-w-lg my-auto"
+      >
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-200">
           <h2 className="font-semibold text-neutral-900">Add Sales Rep</h2>
           <button
+            type="button"
             onClick={onClose}
             className="p-1.5 hover:bg-neutral-100 rounded-md transition-colors"
           >
@@ -225,26 +237,51 @@ function AddRepModal({ onClose, onSaved }: AddRepModalProps) {
               />
             </div>
           </div>
+
+          <div className="border-t border-neutral-100 pt-4">
+            <p className="text-[11px] font-semibold text-neutral-500 uppercase tracking-wider mb-3">Account Details (optional)</p>
+            <div className="space-y-3">
+              <div>
+                <label className="block text-sm font-medium text-neutral-700 mb-1">Address</label>
+                <input value={form.address} onChange={f("address")} placeholder="e.g. 12 Victoria Island, Lagos" className={inputCls} />
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-neutral-700 mb-1">Bank Name</label>
+                  <input value={form.bank_name} onChange={f("bank_name")} placeholder="e.g. GTBank" className={inputCls} />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-neutral-700 mb-1">Account Number</label>
+                  <input value={form.bank_account_number} onChange={f("bank_account_number")} placeholder="0123456789" className={inputCls} />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-neutral-700 mb-1">Account Name</label>
+                <input value={form.bank_account_name} onChange={f("bank_account_name")} placeholder="As on bank records" className={inputCls} />
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Footer */}
         <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-neutral-200">
           <button
+            type="button"
             onClick={onClose}
             className="px-4 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-100 rounded-lg transition-colors"
           >
             Cancel
           </button>
           <button
-            onClick={handle}
+            type="submit"
             disabled={saving}
-            className="px-4 py-2 text-sm font-medium bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-50 transition-colors inline-flex items-center gap-2"
+            className="px-4 py-2 text-sm font-medium bg-[#0E2C72] text-white rounded-lg hover:bg-[#0a2260] disabled:opacity-50 transition-colors inline-flex items-center gap-2"
           >
             {saving && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
             Add Rep
           </button>
         </div>
-      </div>
+      </form>
     </div>
   );
 }
@@ -307,6 +344,10 @@ function EditRepModal({ rep, onClose, onSaved }: EditRepModalProps) {
     phone: rep.phone,
     tier: rep.tier,
     referral_code: rep.referral_code,
+    address: rep.address ?? "",
+    bank_name: rep.bank_name ?? "",
+    bank_account_number: rep.bank_account_number ?? "",
+    bank_account_name: rep.bank_account_name ?? "",
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -337,22 +378,22 @@ function EditRepModal({ rep, onClose, onSaved }: EditRepModalProps) {
   };
 
   const inputCls =
-    "w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400 bg-white transition-colors";
+    "w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#1a3d8f]/30 focus:border-[#2a52a8] bg-white transition-colors";
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 p-4 overflow-y-auto">
-      <div className="bg-white rounded-t-2xl sm:rounded-xl shadow-xl w-full max-w-lg my-auto">
+      <form
+        onSubmit={(e) => { e.preventDefault(); handle(); }}
+        className="bg-white rounded-t-2xl sm:rounded-xl shadow-xl w-full max-w-lg my-auto"
+      >
         <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-200">
           <h2 className="font-semibold text-neutral-900">Edit Sales Rep</h2>
-          <button
-            onClick={onClose}
-            className="p-1.5 hover:bg-neutral-100 rounded-md transition-colors"
-          >
+          <button type="button" onClick={onClose} className="p-1.5 hover:bg-neutral-100 rounded-md transition-colors">
             <X className="w-4 h-4" />
           </button>
         </div>
 
-        <div className="px-6 py-5 space-y-4">
+        <div className="px-6 py-5 space-y-4 max-h-[70vh] overflow-y-auto">
           {error && (
             <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
               <AlertCircle className="w-4 h-4 shrink-0" />
@@ -398,25 +439,44 @@ function EditRepModal({ rep, onClose, onSaved }: EditRepModalProps) {
               <input value={form.referral_code} onChange={f("referral_code")} placeholder="e.g. JOHN2024" className={inputCls} />
             </div>
           </div>
+
+          <div className="border-t border-neutral-100 pt-4">
+            <p className="text-[11px] font-semibold text-neutral-500 uppercase tracking-wider mb-3">Account Details (optional)</p>
+            <div className="space-y-3">
+              <div>
+                <label className="block text-sm font-medium text-neutral-700 mb-1">Address</label>
+                <input value={form.address} onChange={f("address")} placeholder="e.g. 12 Victoria Island, Lagos" className={inputCls} />
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-neutral-700 mb-1">Bank Name</label>
+                  <input value={form.bank_name} onChange={f("bank_name")} placeholder="e.g. GTBank" className={inputCls} />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-neutral-700 mb-1">Account Number</label>
+                  <input value={form.bank_account_number} onChange={f("bank_account_number")} placeholder="0123456789" className={inputCls} />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-neutral-700 mb-1">Account Name</label>
+                <input value={form.bank_account_name} onChange={f("bank_account_name")} placeholder="As on bank records" className={inputCls} />
+              </div>
+            </div>
+          </div>
         </div>
 
         <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-neutral-200">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-100 rounded-lg transition-colors"
-          >
+          <button type="button" onClick={onClose}
+            className="px-4 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-100 rounded-lg transition-colors">
             Cancel
           </button>
-          <button
-            onClick={handle}
-            disabled={saving}
-            className="px-4 py-2 text-sm font-medium bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-50 transition-colors inline-flex items-center gap-2"
-          >
+          <button type="submit" disabled={saving}
+            className="px-4 py-2 text-sm font-medium bg-[#0E2C72] text-white rounded-lg hover:bg-[#0a2260] disabled:opacity-50 transition-colors inline-flex items-center gap-2">
             {saving && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
             Save Changes
           </button>
         </div>
-      </div>
+      </form>
     </div>
   );
 }
@@ -609,11 +669,11 @@ export function SalesReps() {
             </div>
             <div className="flex items-center gap-2">
               {loading && (
-                <Loader2 className="w-4 h-4 text-emerald-500 animate-spin mr-1" />
+                <Loader2 className="w-4 h-4 text-[#1a3d8f] animate-spin mr-1" />
               )}
               <button
                 onClick={() => setShowAdd(true)}
-                className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white text-sm font-medium rounded-lg hover:bg-emerald-700 transition-colors shadow-sm"
+                className="inline-flex items-center gap-2 px-4 py-2 bg-[#0E2C72] text-white text-sm font-medium rounded-lg hover:bg-[#0a2260] transition-colors shadow-sm"
               >
                 <Plus className="w-4 h-4" />
                 Add Rep
@@ -634,8 +694,8 @@ export function SalesReps() {
                   </p>
                   <p className="text-2xl font-bold text-neutral-900">{reps.length}</p>
                 </div>
-                <div className="w-8 h-8 bg-emerald-50 rounded-lg flex items-center justify-center shrink-0">
-                  <Users className="w-4 h-4 text-emerald-600" />
+                <div className="w-8 h-8 bg-[#0E2C72]/6 rounded-lg flex items-center justify-center shrink-0">
+                  <Users className="w-4 h-4 text-[#0E2C72]" />
                 </div>
               </div>
             </div>
@@ -698,7 +758,7 @@ export function SalesReps() {
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search by name, email, or referral code…"
-                className="w-full pl-9 pr-3 py-2 text-sm border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400 bg-white transition-colors"
+                className="w-full pl-9 pr-3 py-2 text-sm border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1a3d8f]/30 focus:border-[#2a52a8] bg-white transition-colors"
               />
             </div>
 
@@ -706,7 +766,7 @@ export function SalesReps() {
             <select
               value={tierFilter}
               onChange={(e) => setTierFilter(e.target.value as typeof tierFilter)}
-              className="px-3 py-2 text-sm border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400 bg-white transition-colors"
+              className="px-3 py-2 text-sm border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1a3d8f]/30 focus:border-[#2a52a8] bg-white transition-colors"
             >
               <option value="ALL">All Tiers</option>
               {TIERS.map((t) => (
@@ -720,7 +780,7 @@ export function SalesReps() {
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value as typeof statusFilter)}
-              className="px-3 py-2 text-sm border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400 bg-white transition-colors"
+              className="px-3 py-2 text-sm border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1a3d8f]/30 focus:border-[#2a52a8] bg-white transition-colors"
             >
               <option value="ALL">All Statuses</option>
               <option value="Active">Active</option>
@@ -744,8 +804,8 @@ export function SalesReps() {
                           <span className={`inline-flex px-2 py-0.5 rounded-full text-[11px] font-semibold ${TIER_COLORS[rep.tier] ?? "bg-neutral-100 text-neutral-600"}`}>
                             {TIER_LABELS[rep.tier] ?? rep.tier}
                           </span>
-                          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold ${rep.is_active ? "bg-emerald-50 text-emerald-700" : "bg-neutral-100 text-neutral-500"}`}>
-                            <span className={`w-1.5 h-1.5 rounded-full inline-block ${rep.is_active ? "bg-emerald-500" : "bg-neutral-400"}`} />
+                          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold ${rep.is_active ? "bg-[#0E2C72]/6 text-[#0E2C72]" : "bg-neutral-100 text-neutral-500"}`}>
+                            <span className={`w-1.5 h-1.5 rounded-full inline-block ${rep.is_active ? "bg-[#1a3d8f]" : "bg-neutral-400"}`} />
                             {rep.is_active ? "Active" : "Inactive"}
                           </span>
                         </div>
@@ -845,7 +905,7 @@ export function SalesReps() {
                         >
                           {/* Realtor Name */}
                           <td className="px-5 py-4 whitespace-nowrap">
-                            <div className="font-medium text-sm text-neutral-900 group-hover:text-emerald-700 transition-colors">
+                            <div className="font-medium text-sm text-neutral-900 group-hover:text-[#0a2260] transition-colors">
                               {rep.name}
                             </div>
                             <div className="text-xs text-neutral-400 mt-0.5">{rep.email}</div>
@@ -875,7 +935,7 @@ export function SalesReps() {
                                   title="Copy referral code"
                                 >
                                   {copied === rep.referral_code ? (
-                                    <Check className="w-3.5 h-3.5 text-emerald-600" />
+                                    <Check className="w-3.5 h-3.5 text-[#0E2C72]" />
                                   ) : (
                                     <Copy className="w-3.5 h-3.5 text-neutral-400" />
                                   )}
@@ -911,8 +971,8 @@ export function SalesReps() {
                           {/* Status */}
                           <td className="px-5 py-4 whitespace-nowrap">
                             {rep.is_active ? (
-                              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700">
-                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" />
+                              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-[#0E2C72]/6 text-[#0E2C72]">
+                                <span className="w-1.5 h-1.5 rounded-full bg-[#1a3d8f] inline-block" />
                                 Active
                               </span>
                             ) : (
@@ -965,7 +1025,7 @@ export function SalesReps() {
                             <p className="text-sm text-neutral-500">No sales representatives yet.</p>
                             <button
                               onClick={() => setShowAdd(true)}
-                              className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white text-sm font-medium rounded-lg hover:bg-emerald-700 transition-colors"
+                              className="inline-flex items-center gap-2 px-4 py-2 bg-[#0E2C72] text-white text-sm font-medium rounded-lg hover:bg-[#0a2260] transition-colors"
                             >
                               <Plus className="w-4 h-4" />
                               Add First Rep
@@ -980,7 +1040,7 @@ export function SalesReps() {
                                 setTierFilter("ALL");
                                 setStatusFilter("ALL");
                               }}
-                              className="text-sm text-emerald-600 hover:underline"
+                              className="text-sm text-[#0E2C72] hover:underline"
                             >
                               Clear filters
                             </button>
@@ -998,4 +1058,6 @@ export function SalesReps() {
     </>
   );
 }
+
+
 

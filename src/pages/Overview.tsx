@@ -1,4 +1,4 @@
-import { useState } from "react";
+﻿import { useState } from "react";
 import { Link } from "react-router";
 import { usePageTitle } from "../hooks/usePageTitle";
 import { useWorkspaceRole } from "../hooks/useWorkspaceRole";
@@ -49,8 +49,8 @@ function RoleDashboard({ role }: { role: "SALES_REP" | "CUSTOMER" }) {
       </div>
       <div className="p-6 lg:p-8 flex-1">
         <div className="max-w-2xl mx-auto mt-12 text-center">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-emerald-50 mb-5">
-            <LayoutDashboard className="w-8 h-8 text-emerald-500" />
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-[#0E2C72]/6 mb-5">
+            <LayoutDashboard className="w-8 h-8 text-[#1a3d8f]" />
           </div>
           <h2 className="text-xl font-semibold text-neutral-900 mb-2">
             {isSalesRep ? "Sales Rep Dashboard" : "Customer Dashboard"}
@@ -234,7 +234,7 @@ export function Overview() {
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
                   <h1 className="text-[17px] font-semibold text-neutral-900 tracking-tight">Overview</h1>
-                  {loading && <Loader2 className="w-3.5 h-3.5 text-emerald-500 animate-spin shrink-0" />}
+                  {loading && <Loader2 className="w-3.5 h-3.5 text-[#1a3d8f] animate-spin shrink-0" />}
                 </div>
                 <p className="text-[12px] text-neutral-400 mt-0.5 hidden sm:block">Analytics dashboard</p>
               </div>
@@ -284,8 +284,8 @@ export function Overview() {
             {
               label: `Active Subscriptions`,
               value: safeStats.active_subscriptions,
-              accentBg: "bg-emerald-500",
-              dot: "bg-emerald-500", icon: FileText, iconBg: "bg-emerald-50", iconColor: "text-emerald-600",
+              accentBg: "bg-[#1a3d8f]",
+              dot: "bg-[#1a3d8f]", icon: FileText, iconBg: "bg-[#0E2C72]/6", iconColor: "text-[#0E2C72]",
               note: isFiltered ? "overall" : undefined,
             },
             {
@@ -381,14 +381,14 @@ export function Overview() {
               {/* Net Income */}
               <div className="space-y-1.5">
                 <div className="text-[11.5px] font-medium text-slate-400">Net Income</div>
-                <div className="text-xl sm:text-2xl font-bold text-emerald-400 tracking-tight leading-none">
+                <div className="text-xl sm:text-2xl font-bold text-[#4a6fc0] tracking-tight leading-none">
                   {maskStr(safeStats.net_revenue)}
                 </div>
                 <div className="text-[10.5px] text-slate-500">Total revenue minus commission</div>
               </div>
             </div>
           </div>
-          <div className="h-0.5 bg-gradient-to-r from-emerald-500/0 via-emerald-500/40 to-emerald-500/0" />
+          <div className="h-0.5 bg-gradient-to-r from-[#1a3d8f]/0 via-[#1a3d8f]/40 to-[#1a3d8f]/0" />
         </motion.div>
 
         {/* ── Commission cards – FILTERABLE + HIDEABLE ─────────── */}
@@ -397,8 +397,8 @@ export function Overview() {
             {
               label: "Approved Referral Payments",
               value: String(fmtNum(safeStats.commission_earned) + fmtNum(safeStats.commission_pending)),
-              accentBg: "bg-emerald-500",
-              badge: { text: "Approved", color: "bg-emerald-50 text-emerald-700" },
+              accentBg: "bg-[#1a3d8f]",
+              badge: { text: "Approved", color: "bg-[#0E2C72]/6 text-[#0E2C72]" },
               badgeIcon: TrendingUp,
               footer: "Total from approved payments",
             },
@@ -449,12 +449,11 @@ export function Overview() {
               <Building2 className="w-4 h-4 text-neutral-400" />
               Properties Overview
             </h3>
-            <Link to="/properties" className="text-[11.5px] text-emerald-600 hover:underline font-medium">View all →</Link>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
             {[
               { label: "Total Properties", value: safeStats.total_properties ?? 0, color: "text-neutral-900", accent: "bg-neutral-500" },
-              { label: "Active Subs", value: safeStats.active_subscriptions, color: "text-emerald-700", accent: "bg-emerald-500" },
+              { label: "Active Subs", value: safeStats.active_subscriptions, color: "text-[#0E2C72]", accent: "bg-[#1a3d8f]" },
               { label: "Completed", value: safeStats.completed_subscriptions ?? 0, color: "text-blue-700", accent: "bg-blue-500" },
               { label: "Pending Allocation", value: safeStats.pending_allocation ?? 0, color: "text-amber-700", accent: "bg-amber-500" },
               { label: "Allocated", value: safeStats.allocated ?? 0, color: "text-violet-700", accent: "bg-violet-500" },
@@ -475,12 +474,11 @@ export function Overview() {
               <Users className="w-4 h-4 text-neutral-400" />
               Customer Overview
             </h3>
-            <Link to="/customers" className="text-[11.5px] text-emerald-600 hover:underline font-medium">View all →</Link>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {[
               { label: "Total Customers", value: safeStats.total_customers, color: "text-neutral-900", accent: "bg-neutral-500" },
-              { label: "Active Subscriptions", value: safeStats.active_subscriptions, color: "text-emerald-700", accent: "bg-emerald-500" },
+              { label: "Active Subscriptions", value: safeStats.active_subscriptions, color: "text-[#0E2C72]", accent: "bg-[#1a3d8f]" },
               { label: "Completed Subs", value: safeStats.completed_subscriptions ?? 0, color: "text-blue-700", accent: "bg-blue-500" },
               { label: "Defaulting Subs", value: safeStats.defaulting_subscriptions ?? 0, color: "text-red-700", accent: "bg-red-500" },
             ].map((stat) => (
@@ -538,7 +536,7 @@ export function Overview() {
               <div className="px-5 py-3.5 border-b border-neutral-50 flex items-center justify-between">
                 <h3 className="text-[13px] font-semibold text-neutral-800">{board.title}</h3>
                 {isFiltered && (
-                  <span className="text-[10.5px] text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full font-medium">filtered</span>
+                  <span className="text-[10.5px] text-[#0E2C72] bg-[#0E2C72]/6 px-2 py-0.5 rounded-full font-medium">filtered</span>
                 )}
               </div>
               <div className="p-3 space-y-0.5">
@@ -566,23 +564,23 @@ export function Overview() {
 
         {/* ── Quick Actions ────────────────────────────────────────── */}
         <motion.div variants={item}
-          className="relative overflow-hidden rounded-xl border border-emerald-100 bg-gradient-to-br from-emerald-50 via-white to-emerald-50 p-6 sm:p-8">
+          className="relative overflow-hidden rounded-xl border border-[#0E2C72]/15 bg-gradient-to-br from-[#eef2fb] via-white to-[#eef2fb] p-6 sm:p-8">
           <div className="absolute -top-4 -right-4 opacity-[0.06] pointer-events-none hidden sm:block">
-            <LayoutDashboard className="w-36 h-36 text-emerald-800" />
+            <LayoutDashboard className="w-36 h-36 text-[#0a2260]" />
           </div>
           <div className="relative">
-            <h3 className="text-[15px] font-semibold text-emerald-900 mb-1">Quick Actions</h3>
-            <p className="text-[12.5px] text-emerald-700/70 mb-5 max-w-lg leading-relaxed">
+            <h3 className="text-[15px] font-semibold text-[#071a45] mb-1">Quick Actions</h3>
+            <p className="text-[12.5px] text-[#0E2C72]/70 mb-5 max-w-lg leading-relaxed">
               Get started quickly with your most frequent tasks.
             </p>
             <div className="flex flex-wrap gap-2.5">
               <Link to="/properties/new"
-                className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-all text-[13px] font-medium shadow-sm">
+                className="inline-flex items-center gap-2 px-4 py-2 bg-[#0E2C72] text-white rounded-lg hover:bg-[#0a2260] transition-all text-[13px] font-medium shadow-sm">
                 <Plus className="w-3.5 h-3.5" />
                 Add a Property
               </Link>
               <Link to="/customers"
-                className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-emerald-200 text-emerald-800 rounded-lg hover:bg-emerald-50 transition-all text-[13px] font-medium">
+                className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-[#8aaad8] text-[#0a2260] rounded-lg hover:bg-[#0E2C72]/6 transition-all text-[13px] font-medium">
                 <Users className="w-3.5 h-3.5" />
                 Manage Customers
               </Link>
@@ -603,3 +601,6 @@ export function Overview() {
     </div>
   );
 }
+
+
+

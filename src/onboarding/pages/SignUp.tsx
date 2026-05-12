@@ -1,4 +1,4 @@
-import { useState } from "react";
+﻿import { useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
@@ -95,7 +95,7 @@ export function SignUp() {
             <div key={f.title} style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
               <div style={{ width: 20, height: 20, borderRadius: "50%", background: "rgba(255,255,255,0.12)", border: "1.5px solid rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 1 }}>
                 <svg width="10" height="10" viewBox="0 0 12 12" fill="none">
-                  <path d="M2 6l3 3 5-5" stroke="#6ee7b7" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                  <path d="M2 6l3 3 5-5" stroke="#6b8fd4" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
                 </svg>
               </div>
               <div>
@@ -189,9 +189,9 @@ export function SignUp() {
 
         <p className={s.termsText}>
           By signing up, you agree to our{" "}
-          <a href="https://terratrail.io/terms" target="_blank" rel="noopener noreferrer">Terms of Service</a>{" "}
+          <a href="/terms" target="_blank" rel="noopener noreferrer">Terms of Service</a>{" "}
           and{" "}
-          <a href="https://terratrail.io/privacy" target="_blank" rel="noopener noreferrer">Privacy Policy</a>.
+          <a href="/privacy" target="_blank" rel="noopener noreferrer">Privacy Policy</a>.
         </p>
 
         <div className={s.securityBadge}>
@@ -202,3 +202,5 @@ export function SignUp() {
     </div>
   );
 }
+
+

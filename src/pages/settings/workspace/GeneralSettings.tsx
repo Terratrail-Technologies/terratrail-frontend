@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+﻿import { useState, useEffect, useRef } from "react";
 import { Check, Loader2, Upload, X, Globe, Instagram, Facebook, Twitter, Linkedin, Youtube, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 import { api } from "../../../services/api";
@@ -6,7 +6,7 @@ import { usePageTitle } from "../../../hooks/usePageTitle";
 import { BASE_URL } from "../../../services/api";
 
 const inputCls =
-  "w-full px-4 py-2 border border-neutral-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent bg-white transition-colors";
+  "w-full px-4 py-2 border border-neutral-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#1a3d8f] focus:border-transparent bg-white transition-colors";
 const labelCls = "block text-sm font-semibold text-neutral-700 mb-1.5";
 
 function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) {
@@ -16,7 +16,7 @@ function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean
       role="switch"
       aria-checked={checked}
       onClick={() => onChange(!checked)}
-      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${checked ? "bg-emerald-500" : "bg-neutral-200"}`}
+      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${checked ? "bg-[#1a3d8f]" : "bg-neutral-200"}`}
     >
       <span
         className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform ${checked ? "translate-x-6" : "translate-x-1"}`}
@@ -115,7 +115,7 @@ export function GeneralSettings() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-32">
-        <Loader2 className="w-7 h-7 animate-spin text-emerald-500" />
+        <Loader2 className="w-7 h-7 animate-spin text-[#1a3d8f]" />
       </div>
     );
   }
@@ -231,7 +231,7 @@ export function GeneralSettings() {
                     href={publicUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 text-xs text-emerald-600 hover:text-emerald-700 mt-1.5 font-medium"
+                    className="inline-flex items-center gap-1 text-xs text-[#0E2C72] hover:text-[#0a2260] mt-1.5 font-medium"
                   >
                     <ExternalLink className="w-3 h-3" /> {publicUrl}
                   </a>
@@ -335,7 +335,7 @@ export function GeneralSettings() {
         <button
           onClick={handleSave}
           disabled={saving}
-          className="inline-flex items-center gap-2 px-6 py-2.5 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 disabled:opacity-60 transition-colors text-sm font-semibold shadow-sm shadow-emerald-200"
+          className="inline-flex items-center gap-2 px-6 py-2.5 bg-[#0E2C72] text-white rounded-xl hover:bg-[#0a2260] disabled:opacity-60 transition-colors text-sm font-semibold shadow-sm shadow-[#0E2C72]/20"
         >
           {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
           {saving ? "Saving…" : "Save Changes"}
@@ -344,3 +344,5 @@ export function GeneralSettings() {
     </div>
   );
 }
+
+

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef, createContext, useContext } from "react";
+﻿import { useState, useEffect, useCallback, useRef, createContext, useContext } from "react";
 import { useParams, useNavigate, Link } from "react-router";
 import {
   ArrowLeft, ExternalLink, Pencil, LayoutGrid, Users, CreditCard,
@@ -98,7 +98,7 @@ function imgSrc(url: string | null | undefined): string | undefined {
   return `${BASE_URL.replace("/api/v1", "")}${url}`;
 }
 
-const inputCls = "w-full h-9 px-3 rounded-lg border border-neutral-200 text-[13px] focus:outline-none focus:ring-1 focus:ring-emerald-500/40 focus:border-emerald-400 bg-white";
+const inputCls = "w-full h-9 px-3 rounded-lg border border-neutral-200 text-[13px] focus:outline-none focus:ring-1 focus:ring-[#1a3d8f]/40 focus:border-[#2a52a8] bg-white";
 const labelCls = "text-[12px] font-medium text-neutral-600 block mb-1.5";
 
 // ── Status Badges ─────────────────────────────────────────────────────────────
@@ -107,7 +107,7 @@ function SubStatusBadge({ status, allocated }: { status?: string; allocated?: bo
   const upper = (status ?? "").toUpperCase();
   const isUnallocated = upper === "COMPLETED" && allocated === false;
   const map: Record<string, { cls: string; label: string }> = {
-    ACTIVE:     { cls: "bg-emerald-100 text-emerald-700", label: "Active" },
+    ACTIVE:     { cls: "bg-[#d6e0f5] text-[#0E2C72]", label: "Active" },
     COMPLETED:  isUnallocated
       ? { cls: "bg-violet-100 text-violet-700", label: "Pending Allocation" }
       : { cls: "bg-blue-100 text-blue-700",     label: "Completed" },
@@ -123,7 +123,7 @@ function SubStatusBadge({ status, allocated }: { status?: string; allocated?: bo
 function PayStatusBadge({ status }: { status: string }) {
   const map: Record<string, { cls: string; label: string }> = {
     PENDING:  { cls: "bg-amber-100 text-amber-700",     label: "Pending" },
-    APPROVED: { cls: "bg-emerald-100 text-emerald-700", label: "Approved" },
+    APPROVED: { cls: "bg-[#d6e0f5] text-[#0E2C72]", label: "Approved" },
     REJECTED: { cls: "bg-red-100 text-red-700",          label: "Rejected" },
   };
   const cfg = map[status] ?? map["PENDING"];
@@ -133,7 +133,7 @@ function PayStatusBadge({ status }: { status: string }) {
 function InspectionStatusBadge({ status }: { status: string }) {
   const map: Record<string, { cls: string; label: string }> = {
     PENDING:   { cls: "bg-amber-100 text-amber-700",     label: "Pending" },
-    ATTENDED:  { cls: "bg-emerald-100 text-emerald-700", label: "Attended" },
+    ATTENDED:  { cls: "bg-[#d6e0f5] text-[#0E2C72]", label: "Attended" },
     CANCELLED: { cls: "bg-neutral-100 text-neutral-500", label: "No-Show" },
   };
   const cfg = map[status] ?? map["PENDING"];
@@ -146,8 +146,8 @@ function MetricCard({ label, value, icon: Icon, color, sub }: {
   label: string; value: string | number; icon: React.ElementType;
   color: "emerald" | "blue" | "violet" | "amber" | "red"; sub?: string;
 }) {
-  const c = { emerald: "bg-emerald-50 text-emerald-600", blue: "bg-blue-50 text-blue-600", violet: "bg-violet-50 text-violet-600", amber: "bg-amber-50 text-amber-600", red: "bg-red-50 text-red-600" }[color];
-  const bar = { emerald: "bg-emerald-500", blue: "bg-blue-500", violet: "bg-violet-500", amber: "bg-amber-500", red: "bg-red-500" }[color];
+  const c = { emerald: "bg-[#0E2C72]/6 text-[#0E2C72]", blue: "bg-blue-50 text-blue-600", violet: "bg-violet-50 text-violet-600", amber: "bg-amber-50 text-amber-600", red: "bg-red-50 text-red-600" }[color];
+  const bar = { emerald: "bg-[#1a3d8f]", blue: "bg-blue-500", violet: "bg-violet-500", amber: "bg-amber-500", red: "bg-red-500" }[color];
   return (
     <div className="relative bg-white rounded-xl border border-neutral-100 p-4 flex items-start gap-3 shadow-sm overflow-hidden">
       <div className={`absolute top-0 left-0 right-0 h-0.5 ${bar}`} />
@@ -167,7 +167,7 @@ function MiniProgress({ pct }: { pct: number }) {
   return (
     <div className="flex items-center gap-2">
       <div className="flex-1 h-1.5 bg-neutral-100 rounded-full overflow-hidden">
-        <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${Math.min(100, pct)}%` }} />
+        <div className="h-full bg-[#1a3d8f] rounded-full" style={{ width: `${Math.min(100, pct)}%` }} />
       </div>
       <span className="text-[11px] text-neutral-500 w-8 text-right">{Math.round(pct)}%</span>
     </div>
@@ -296,16 +296,16 @@ function PlanHistoryRow({ plan }: { plan: PricingPlan }) {
           <p className="text-[11px] text-neutral-400">{plan.land_size} SQM · {plan.payment_type === "OUTRIGHT" ? "Outright" : "Installment"}</p>
         </div>
         <div className="flex items-center gap-3 shrink-0">
-          <p className="text-[14px] font-bold text-emerald-700">{fmt(plan.total_price)}</p>
+          <p className="text-[14px] font-bold text-[#0E2C72]">{fmt(plan.total_price)}</p>
           {plan.is_locked && (
             <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold bg-amber-100 text-amber-700">
               Locked
             </span>
           )}
-          <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${plan.is_active ? "bg-emerald-100 text-emerald-700" : "bg-neutral-100 text-neutral-500"}`}>
+          <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${plan.is_active ? "bg-[#d6e0f5] text-[#0E2C72]" : "bg-neutral-100 text-neutral-500"}`}>
             {plan.is_active ? "Active" : "Inactive"}
           </span>
-          <button onClick={toggle} className="flex items-center gap-1 text-[11.5px] text-neutral-400 hover:text-emerald-600 transition-colors">
+          <button onClick={toggle} className="flex items-center gap-1 text-[11.5px] text-neutral-400 hover:text-[#0E2C72] transition-colors">
             {expanded ? <ChevronUp className="size-3.5" /> : <ChevronDown className="size-3.5" />}
             History
           </button>
@@ -324,7 +324,7 @@ function PlanHistoryRow({ plan }: { plan: PricingPlan }) {
                   <span className="text-neutral-400 shrink-0">{fmtDate(h.created_at)}</span>
                   <span className="text-red-500 line-through">{fmt(h.old_price)}</span>
                   <span className="text-neutral-400">→</span>
-                  <span className="text-emerald-700 font-semibold">{fmt(h.new_price)}</span>
+                  <span className="text-[#0E2C72] font-semibold">{fmt(h.new_price)}</span>
                   {h.changed_by_name && <span className="text-neutral-400">by {h.changed_by_name}</span>}
                 </div>
               ))}
@@ -412,7 +412,7 @@ function OverviewTab({ property, subscriptions, payments, commissions }: {
               initial={{ width: 0 }}
               animate={{ width: `${soldPct}%` }}
               transition={{ duration: 0.8, ease: "easeOut" }}
-              className="h-full bg-emerald-500 rounded-full"
+              className="h-full bg-[#1a3d8f] rounded-full"
             />
           </div>
         </div>
@@ -557,8 +557,8 @@ function AddSubscriptionSlideOver({ open, onClose, property, onCreated }: {
       <div className="flex items-center gap-2 mb-6">
         {([1, 2, 3] as const).map((s) => (
           <div key={s} className="flex items-center gap-2">
-            <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold transition-colors ${step >= s ? "bg-emerald-600 text-white" : "bg-neutral-100 text-neutral-400"}`}>{s}</div>
-            {s < 3 && <div className={`h-px w-8 ${step > s ? "bg-emerald-400" : "bg-neutral-200"}`} />}
+            <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold transition-colors ${step >= s ? "bg-[#0E2C72] text-white" : "bg-neutral-100 text-neutral-400"}`}>{s}</div>
+            {s < 3 && <div className={`h-px w-8 ${step > s ? "bg-[#2a52a8]" : "bg-neutral-200"}`} />}
           </div>
         ))}
         <span className="ml-2 text-[12px] text-neutral-500">
@@ -571,17 +571,17 @@ function AddSubscriptionSlideOver({ open, onClose, property, onCreated }: {
         <div className="space-y-4">
           <CustomerSearch onSelect={setCustomer} label="Search by name, phone or email" />
           {customer && (
-            <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3">
-              <p className="text-[13px] font-semibold text-emerald-800">{customer.full_name}</p>
-              <p className="text-[11px] text-emerald-600 mt-0.5">{customer.phone} · {customer.email}</p>
+            <div className="bg-[#0E2C72]/6 border border-[#8aaad8] rounded-lg p-3">
+              <p className="text-[13px] font-semibold text-[#0E2C72]">{customer.full_name}</p>
+              <p className="text-[11px] text-[#0E2C72] mt-0.5">{customer.phone} · {customer.email}</p>
             </div>
           )}
-          <Button className="w-full bg-emerald-600 hover:bg-emerald-700 text-white" disabled={!customer} onClick={() => setStep(2)}>
+          <Button className="w-full bg-[#0E2C72] hover:bg-[#0a2260] text-white" disabled={!customer} onClick={() => setStep(2)}>
             Continue
           </Button>
           <p className="text-center text-[12px] text-neutral-400">
             Customer not found?{" "}
-            <Link to="/customers" className="text-emerald-600 underline underline-offset-2">Add New Customer</Link>
+            <Link to="/customers" className="text-[#0E2C72] underline underline-offset-2">Add New Customer</Link>
           </p>
         </div>
       )}
@@ -596,7 +596,7 @@ function AddSubscriptionSlideOver({ open, onClose, property, onCreated }: {
               const isFull = slots === 0;
               return (
                 <button key={ls} disabled={isFull} onClick={() => setSelectedLS(ls)}
-                  className={`w-full text-left px-4 py-3 rounded-lg border text-[13px] font-medium transition-all ${selectedLS === ls ? "border-emerald-500 bg-emerald-50 text-emerald-800" : isFull ? "border-neutral-100 bg-neutral-50 text-neutral-300 cursor-not-allowed" : "border-neutral-200 hover:border-emerald-300"}`}>
+                  className={`w-full text-left px-4 py-3 rounded-lg border text-[13px] font-medium transition-all ${selectedLS === ls ? "border-[#0E2C72] bg-[#0E2C72]/6 text-[#0E2C72]" : isFull ? "border-neutral-100 bg-neutral-50 text-neutral-300 cursor-not-allowed" : "border-neutral-200 hover:border-[#0E2C72]/40"}`}>
                   <div className="flex items-center justify-between">
                     <span>{ls} SQM</span>
                     {isFull
@@ -609,7 +609,7 @@ function AddSubscriptionSlideOver({ open, onClose, property, onCreated }: {
           </div>
           <div className="flex gap-2">
             <Button variant="outline" className="flex-1" onClick={() => setStep(1)}>Back</Button>
-            <Button className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white" disabled={!selectedLS} onClick={() => setStep(3)}>
+            <Button className="flex-1 bg-[#0E2C72] hover:bg-[#0a2260] text-white" disabled={!selectedLS} onClick={() => setStep(3)}>
               Continue
             </Button>
           </div>
@@ -623,14 +623,14 @@ function AddSubscriptionSlideOver({ open, onClose, property, onCreated }: {
           <div className="space-y-2">
             {plansForSize.map((plan) => (
               <button key={plan.id} onClick={() => setSelectedPlan(plan)}
-                className={`w-full text-left px-4 py-3 rounded-lg border text-[13px] transition-all ${selectedPlan?.id === plan.id ? "border-emerald-500 bg-emerald-50" : "border-neutral-200 hover:border-emerald-300"}`}>
+                className={`w-full text-left px-4 py-3 rounded-lg border text-[13px] transition-all ${selectedPlan?.id === plan.id ? "border-[#0E2C72] bg-[#0E2C72]/6" : "border-neutral-200 hover:border-[#0E2C72]/40"}`}>
                 <div className="flex items-center justify-between mb-1">
                   <span className="font-semibold text-neutral-800">{plan.plan_name}</span>
                   <span className="text-[11px] px-2 py-0.5 rounded-full bg-neutral-100 text-neutral-600">
                     {plan.payment_type === "OUTRIGHT" ? "Outright" : "Installment"}
                   </span>
                 </div>
-                <p className="text-[14px] font-bold text-emerald-700">{fmt(plan.total_price)}</p>
+                <p className="text-[14px] font-bold text-[#0E2C72]">{fmt(plan.total_price)}</p>
                 {plan.payment_type === "INSTALLMENT" && (
                   <p className="text-[11px] text-neutral-500 mt-0.5">
                     {fmt(plan.initial_payment)} initial · {fmt(plan.monthly_installment)}/mo · {plan.duration_months} months
@@ -659,7 +659,7 @@ function AddSubscriptionSlideOver({ open, onClose, property, onCreated }: {
           )}
           <div className="flex gap-2">
             <Button variant="outline" className="flex-1" onClick={() => setStep(2)}>Back</Button>
-            <Button className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white gap-1.5"
+            <Button className="flex-1 bg-[#0E2C72] hover:bg-[#0a2260] text-white gap-1.5"
               disabled={!selectedPlan || saving} onClick={handleCreate}>
               {saving ? <><Loader2 className="size-3.5 animate-spin" />Creating…</> : "Confirm & Create"}
             </Button>
@@ -673,7 +673,7 @@ function AddSubscriptionSlideOver({ open, onClose, property, onCreated }: {
 // ── Subscription Detail Modal ───────────────────────────────────────────────
 
 const instStatusCls: Record<string, string> = {
-  PAID:     "bg-emerald-100 text-emerald-700",
+  PAID:     "bg-[#d6e0f5] text-[#0E2C72]",
   OVERDUE:  "bg-red-100 text-red-700",
   DUE:      "bg-amber-100 text-amber-700",
   UPCOMING: "bg-neutral-100 text-neutral-500",
@@ -732,7 +732,7 @@ function SubscriptionDetailModal({ sub, onClose, onRefresh, isAdmin = false }: {
             <label className={labelCls}>Reason (optional)</label>
             <textarea value={cancelReason} onChange={(e) => setCancelReason(e.target.value)} rows={3}
               placeholder="Add a reason for cancellation…"
-              className="w-full px-3 py-2 rounded-lg border border-neutral-200 text-[13px] focus:outline-none focus:ring-1 focus:ring-emerald-500/40 resize-none" />
+              className="w-full px-3 py-2 rounded-lg border border-neutral-200 text-[13px] focus:outline-none focus:ring-1 focus:ring-[#1a3d8f]/40 resize-none" />
           </div>
           <div className="flex gap-2">
             <Button variant="outline" className="flex-1" onClick={() => setView("detail")}>Back</Button>
@@ -763,14 +763,14 @@ function SubscriptionDetailModal({ sub, onClose, onRefresh, isAdmin = false }: {
           </div>
 
           {sub.plot_number && (
-            <div className="bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2.5">
-              <p className="text-[10.5px] font-semibold text-emerald-600 uppercase tracking-wide">Plot Allocation</p>
-              <p className="text-[13px] font-semibold text-emerald-800 mt-0.5">Plot #{sub.plot_number}</p>
+            <div className="bg-[#0E2C72]/6 border border-[#8aaad8] rounded-lg px-3 py-2.5">
+              <p className="text-[10.5px] font-semibold text-[#0E2C72] uppercase tracking-wide">Plot Allocation</p>
+              <p className="text-[13px] font-semibold text-[#0E2C72] mt-0.5">Plot #{sub.plot_number}</p>
               {sub.allocation_date && (
-                <p className="text-[11px] text-emerald-600 mt-0.5">Allocated on {fmtDate(sub.allocation_date)}</p>
+                <p className="text-[11px] text-[#0E2C72] mt-0.5">Allocated on {fmtDate(sub.allocation_date)}</p>
               )}
               {sub.allocation_notes && (
-                <p className="text-[11px] text-emerald-600 mt-0.5">{sub.allocation_notes}</p>
+                <p className="text-[11px] text-[#0E2C72] mt-0.5">{sub.allocation_notes}</p>
               )}
             </div>
           )}
@@ -891,11 +891,11 @@ function AllocateSlideOver({ sub, onClose, onRefresh }: {
         <div>
           <label className={labelCls}>Notes</label>
           <textarea value={allocNotes} onChange={(e) => setAllocNotes(e.target.value)} rows={2}
-            className="w-full px-3 py-2 rounded-lg border border-neutral-200 text-[13px] focus:outline-none focus:ring-1 focus:ring-emerald-500/40 resize-none" />
+            className="w-full px-3 py-2 rounded-lg border border-neutral-200 text-[13px] focus:outline-none focus:ring-1 focus:ring-[#1a3d8f]/40 resize-none" />
         </div>
         <div>
           <label className={labelCls}>Allocation Letter (optional)</label>
-          <label className="block w-full border-2 border-dashed border-neutral-200 rounded-lg p-4 text-center cursor-pointer hover:border-emerald-400 transition-colors">
+          <label className="block w-full border-2 border-dashed border-neutral-200 rounded-lg p-4 text-center cursor-pointer hover:border-[#2a52a8] transition-colors">
             <Upload className="size-5 mx-auto mb-1 text-neutral-400" />
             <span className="text-[12px] text-neutral-500">
               {allocLetter ? allocLetter.name : "Click to upload image or PDF"}
@@ -906,7 +906,7 @@ function AllocateSlideOver({ sub, onClose, onRefresh }: {
         </div>
         <div className="flex gap-2">
           <Button variant="outline" className="flex-1" onClick={onClose}>Cancel</Button>
-          <Button className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white gap-1.5"
+          <Button className="flex-1 bg-[#0E2C72] hover:bg-[#0a2260] text-white gap-1.5"
             onClick={handleSubmit} disabled={!plotNum.trim() || saving}>
             {saving ? <><Loader2 className="size-3.5 animate-spin" />Allocating…</> : "Confirm Allocation"}
           </Button>
@@ -959,7 +959,7 @@ function SubscriptionsTab({ property, subscriptions, loading, onRefresh, onViewC
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <h2 className="text-[16px] font-semibold text-neutral-800">Subscriptions</h2>
         {isAdmin && (
-          <Button onClick={() => setShowAdd(true)} className="bg-emerald-600 hover:bg-emerald-700 text-white h-8 text-[12px] gap-1.5">
+          <Button onClick={() => setShowAdd(true)} className="bg-[#0E2C72] hover:bg-[#0a2260] text-white h-8 text-[12px] gap-1.5">
             <Plus className="size-3.5" /> Add New Subscription
           </Button>
         )}
@@ -968,7 +968,7 @@ function SubscriptionsTab({ property, subscriptions, loading, onRefresh, onViewC
       <div className="grid grid-cols-3 gap-3">
         <div className="bg-white rounded-xl border border-neutral-100 px-4 py-3 shadow-sm">
           <p className="text-[10.5px] font-semibold text-neutral-400 uppercase tracking-wide">Amount Paid</p>
-          <p className="text-[18px] font-bold text-emerald-700 mt-0.5">{fmt(totalPaid)}</p>
+          <p className="text-[18px] font-bold text-[#0E2C72] mt-0.5">{fmt(totalPaid)}</p>
           <p className="text-[10.5px] text-neutral-400 mt-0.5">Across all subscriptions</p>
         </div>
         <div className="bg-white rounded-xl border border-neutral-100 px-4 py-3 shadow-sm">
@@ -987,7 +987,7 @@ function SubscriptionsTab({ property, subscriptions, loading, onRefresh, onViewC
         <div className="relative flex-1 min-w-48">
           <Search className="absolute left-2.5 top-2.5 size-3.5 text-neutral-400" />
           <input value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} placeholder="Search customer…"
-            className="w-full h-9 pl-8 pr-3 rounded-lg border border-neutral-200 text-[13px] focus:outline-none focus:ring-1 focus:ring-emerald-400 bg-white" />
+            className="w-full h-9 pl-8 pr-3 rounded-lg border border-neutral-200 text-[13px] focus:outline-none focus:ring-1 focus:ring-[#2a52a8] bg-white" />
         </div>
         <select value={filterStatus} onChange={(e) => { setFilterStatus(e.target.value); setPage(1); }}
           className="h-9 px-3 rounded-lg border border-neutral-200 text-[13px] bg-white focus:outline-none">
@@ -1038,7 +1038,7 @@ function SubscriptionsTab({ property, subscriptions, loading, onRefresh, onViewC
                     <td className="px-4 py-3 text-[12px] text-neutral-500 whitespace-nowrap">{s.assigned_rep_name ?? "—"}</td>
                     <td className="px-4 py-3 whitespace-nowrap">{s.land_size ? `${s.land_size} SQM` : "—"}</td>
                     <td className="px-4 py-3 whitespace-nowrap text-[12px] font-semibold text-neutral-700">{fmt(s.total_price)}</td>
-                    <td className="px-4 py-3 whitespace-nowrap text-[12px] text-emerald-700 font-semibold">{fmt(s.amount_paid)}</td>
+                    <td className="px-4 py-3 whitespace-nowrap text-[12px] text-[#0E2C72] font-semibold">{fmt(s.amount_paid)}</td>
                     <td className="px-4 py-3 whitespace-nowrap text-[12px] text-amber-700 font-semibold">{fmt(s.balance)}</td>
                     <td className="px-4 py-3 min-w-[120px]"><MiniProgress pct={s.payment_completion_pct ?? 0} /></td>
                     <td className="px-4 py-3"><SubStatusBadge status={s.status} allocated={!!s.plot_number} /></td>
@@ -1046,7 +1046,7 @@ function SubscriptionsTab({ property, subscriptions, loading, onRefresh, onViewC
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
                         <button onClick={() => setViewSub(s)}
-                          className="text-emerald-600 hover:text-emerald-700 font-medium text-[12px] flex items-center gap-1">
+                          className="text-[#0E2C72] hover:text-[#0a2260] font-medium text-[12px] flex items-center gap-1">
                           <Eye className="size-3.5" /> View
                         </button>
                         {isAdmin && s.status === "COMPLETED" && !s.plot_number && (
@@ -1173,13 +1173,12 @@ function RecordPaymentSlideOver({ open, onClose, property, onRecorded }: {
   const handleSubmit = async () => {
     if (!selectedInst) { toast.error("Select an installment to record payment against."); return; }
     if (!amount || Number(amount) <= 0) { toast.error("Enter a valid amount."); return; }
-    if (!receipt) { toast.error("Receipt upload is required."); return; }
     setSaving(true);
     try {
       const fd = new FormData();
       fd.append("installment_id", selectedInst.id);
       fd.append("amount", amount);
-      fd.append("receipt_file", receipt);
+      if (receipt) fd.append("receipt_file", receipt);
       if (reference) fd.append("notes", reference);
       await api.payments.record(fd);
       toast.success("Payment recorded — pending approval.");
@@ -1210,7 +1209,7 @@ function RecordPaymentSlideOver({ open, onClose, property, onRecorded }: {
             <label className={labelCls}>Subscription</label>
             {custSubs.map((s) => (
               <button key={s.id} onClick={() => { setSelectedSub(s); setInstallments([]); setSelectedInst(null); }}
-                className={`w-full text-left p-3 rounded-lg border mb-2 transition-all ${selectedSub?.id === s.id ? "border-emerald-500 bg-emerald-50" : "border-neutral-200 hover:border-emerald-300"}`}>
+                className={`w-full text-left p-3 rounded-lg border mb-2 transition-all ${selectedSub?.id === s.id ? "border-[#0E2C72] bg-[#0E2C72]/6" : "border-neutral-200 hover:border-[#0E2C72]/40"}`}>
                 <div className="flex items-center justify-between">
                   <span className="text-[13px] font-semibold">{s.land_size} SQM · {s.plan_name}</span>
                   <SubStatusBadge status={s.status} />
@@ -1235,7 +1234,7 @@ function RecordPaymentSlideOver({ open, onClose, property, onRecorded }: {
             <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
               {installments.map((inst) => (
                 <button key={inst.id} onClick={() => { setSelectedInst(inst); setAmount(inst.amount); }}
-                  className={`w-full text-left px-3 py-2 rounded-lg border transition-all ${selectedInst?.id === inst.id ? "border-emerald-500 bg-emerald-50" : "border-neutral-200 hover:border-emerald-300"}`}>
+                  className={`w-full text-left px-3 py-2 rounded-lg border transition-all ${selectedInst?.id === inst.id ? "border-[#0E2C72] bg-[#0E2C72]/6" : "border-neutral-200 hover:border-[#0E2C72]/40"}`}>
                   <div className="flex justify-between items-center">
                     <span className="text-[12.5px] font-semibold text-neutral-800">#{inst.installment_number} · {fmt(inst.amount)}</span>
                     <span className={`text-[11px] ${instStatusCls[inst.status] ?? ""}`}>{inst.status}</span>
@@ -1270,8 +1269,8 @@ function RecordPaymentSlideOver({ open, onClose, property, onRecorded }: {
               <input value={reference} onChange={(e) => setReference(e.target.value)} className={inputCls} placeholder="e.g. TRX1234567" />
             </div>
             <div>
-              <label className={labelCls}>Receipt <span className="text-red-500">*</span></label>
-              <label className="block w-full border-2 border-dashed border-neutral-200 rounded-lg p-4 text-center cursor-pointer hover:border-emerald-400 transition-colors">
+              <label className={labelCls}>Receipt (optional)</label>
+              <label className="block w-full border-2 border-dashed border-neutral-200 rounded-lg p-4 text-center cursor-pointer hover:border-[#2a52a8] transition-colors">
                 <Upload className="size-5 mx-auto mb-1 text-neutral-400" />
                 <span className="text-[12px] text-neutral-500">
                   {receipt ? receipt.name : "Click to upload image or PDF (max 5MB)"}
@@ -1280,8 +1279,8 @@ function RecordPaymentSlideOver({ open, onClose, property, onRecorded }: {
                   onChange={(e) => setReceipt(e.target.files?.[0] ?? null)} />
               </label>
             </div>
-            <Button className="w-full bg-emerald-600 hover:bg-emerald-700 text-white gap-1.5"
-              disabled={!receipt || !amount || saving} onClick={handleSubmit}>
+            <Button className="w-full bg-[#0E2C72] hover:bg-[#0a2260] text-white gap-1.5"
+              disabled={!amount || saving} onClick={handleSubmit}>
               {saving ? <><Loader2 className="size-3.5 animate-spin" />Submitting…</> : "Submit Payment"}
             </Button>
           </>
@@ -1331,7 +1330,7 @@ function PaymentHistoryTab({ payments, loading, onRefresh }: {
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <h2 className="text-[16px] font-semibold text-neutral-800">Payment History</h2>
         {isAdmin && (
-          <Button onClick={() => setShowRecord(true)} className="bg-emerald-600 hover:bg-emerald-700 text-white h-8 text-[12px] gap-1.5">
+          <Button onClick={() => setShowRecord(true)} className="bg-[#0E2C72] hover:bg-[#0a2260] text-white h-8 text-[12px] gap-1.5">
             <Receipt className="size-3.5" /> Record Payment
           </Button>
         )}
@@ -1341,7 +1340,7 @@ function PaymentHistoryTab({ payments, loading, onRefresh }: {
         <div className="relative flex-1 min-w-48">
           <Search className="absolute left-2.5 top-2.5 size-3.5 text-neutral-400" />
           <input value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} placeholder="Search customer or ref…"
-            className="w-full h-9 pl-8 pr-3 rounded-lg border border-neutral-200 text-[13px] focus:outline-none focus:ring-1 focus:ring-emerald-400 bg-white" />
+            className="w-full h-9 pl-8 pr-3 rounded-lg border border-neutral-200 text-[13px] focus:outline-none focus:ring-1 focus:ring-[#2a52a8] bg-white" />
         </div>
         <select value={filterStatus} onChange={(e) => { setFilterStatus(e.target.value); setPage(1); }}
           className="h-9 px-3 rounded-lg border border-neutral-200 text-[13px] bg-white focus:outline-none">
@@ -1374,7 +1373,7 @@ function PaymentHistoryTab({ payments, loading, onRefresh }: {
                       onClick={() => setExpandedId(expandedId === p.id ? null : p.id)}>
                       <td className="px-4 py-3 font-medium text-neutral-800 whitespace-nowrap">{p.customer_name}</td>
                       <td className="px-4 py-3 text-neutral-500">{p.land_size ? `${p.land_size} SQM` : "—"}</td>
-                      <td className="px-4 py-3 font-semibold text-emerald-700 whitespace-nowrap">{fmt(p.amount)}</td>
+                      <td className="px-4 py-3 font-semibold text-[#0E2C72] whitespace-nowrap">{fmt(p.amount)}</td>
                       <td className="px-4 py-3 whitespace-nowrap text-neutral-500 text-[12px]">{fmtDate(p.payment_date)}</td>
                       <td className="px-4 py-3 text-neutral-400 font-mono text-[11px]">{p.transaction_reference || "—"}</td>
                       <td className="px-4 py-3"><PayStatusBadge status={p.status} /></td>
@@ -1383,7 +1382,7 @@ function PaymentHistoryTab({ payments, loading, onRefresh }: {
                         {isAdmin && p.status === "PENDING" && (
                           <div className="flex gap-1">
                             <button onClick={(e) => { e.stopPropagation(); handleApprove(p.id); }}
-                              className="text-[11px] px-2 py-1 rounded bg-emerald-100 text-emerald-700 hover:bg-emerald-200 font-medium">
+                              className="text-[11px] px-2 py-1 rounded bg-[#d6e0f5] text-[#0E2C72] hover:bg-[#8aaad8] font-medium">
                               Approve
                             </button>
                             <button onClick={(e) => { e.stopPropagation(); handleReject(p.id); }}
@@ -1402,7 +1401,7 @@ function PaymentHistoryTab({ payments, loading, onRefresh }: {
                             {p.approved_by_email && <span><span className="font-medium">Approved by:</span> {p.approved_by_email}</span>}
                             {(p.receipt_url || p.receipt_file) && (
                               <a href={imgSrc((p.receipt_url || p.receipt_file) ?? undefined)} target="_blank" rel="noreferrer"
-                                className="flex items-center gap-1 text-emerald-600 hover:underline" onClick={(e) => e.stopPropagation()}>
+                                className="flex items-center gap-1 text-[#0E2C72] hover:underline" onClick={(e) => e.stopPropagation()}>
                                 <Receipt className="size-3" /> View Receipt
                               </a>
                             )}
@@ -1488,8 +1487,8 @@ function LogInspectionSlideOver({ open, onClose, property, onLogged }: {
   return (
     <SlideOver open={open} onClose={onClose} title="Log Site Inspection">
       <div className="space-y-4">
-        <div className="bg-emerald-50 border border-emerald-100 rounded-lg px-3 py-2 text-[12px]">
-          <p className="text-[10.5px] font-semibold text-emerald-600 uppercase tracking-wide">Property</p>
+        <div className="bg-[#0E2C72]/6 border border-[#0E2C72]/15 rounded-lg px-3 py-2 text-[12px]">
+          <p className="text-[10.5px] font-semibold text-[#0E2C72] uppercase tracking-wide">Property</p>
           <p className="font-semibold text-neutral-800">{property.name}</p>
         </div>
         <div><label className={labelCls}>Prospect Name <span className="text-red-500">*</span></label>
@@ -1539,7 +1538,7 @@ function LogInspectionSlideOver({ open, onClose, property, onLogged }: {
         <div><label className={labelCls}>Notes</label>
           <textarea value={form.notes} onChange={(e) => set("notes", e.target.value)} rows={3}
             className={`${inputCls} h-auto py-2`} placeholder="Additional notes…" /></div>
-        <Button className="w-full bg-emerald-600 hover:bg-emerald-700 text-white gap-1.5" disabled={saving} onClick={handleSubmit}>
+        <Button className="w-full bg-[#0E2C72] hover:bg-[#0a2260] text-white gap-1.5" disabled={saving} onClick={handleSubmit}>
           {saving ? <><Loader2 className="size-3.5 animate-spin" />Logging…</> : "Log Inspection"}
         </Button>
       </div>
@@ -1599,15 +1598,15 @@ function SiteInspectionsTab({ property, inspections, loading, onRefresh }: {
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <h2 className="text-[16px] font-semibold text-neutral-800">Site Inspections</h2>
-        <Button onClick={() => setShowLog(true)} className="bg-emerald-600 hover:bg-emerald-700 text-white h-8 text-[12px] gap-1.5">
+        <Button onClick={() => setShowLog(true)} className="bg-[#0E2C72] hover:bg-[#0a2260] text-white h-8 text-[12px] gap-1.5">
           <Plus className="size-3.5" /> Log Inspection
         </Button>
       </div>
 
       {/* Inspection schedule status banner */}
       {inspConfig ? (
-        <div className={`flex items-center gap-3 px-4 py-3 rounded-xl border text-[12.5px] ${inspConfig.is_active !== false ? "bg-emerald-50 border-emerald-100 text-emerald-700" : "bg-neutral-50 border-neutral-200 text-neutral-500"}`}>
-          <div className={`w-2 h-2 rounded-full shrink-0 ${inspConfig.is_active !== false ? "bg-emerald-500" : "bg-neutral-400"}`} />
+        <div className={`flex items-center gap-3 px-4 py-3 rounded-xl border text-[12.5px] ${inspConfig.is_active !== false ? "bg-[#0E2C72]/6 border-[#0E2C72]/15 text-[#0E2C72]" : "bg-neutral-50 border-neutral-200 text-neutral-500"}`}>
+          <div className={`w-2 h-2 rounded-full shrink-0 ${inspConfig.is_active !== false ? "bg-[#1a3d8f]" : "bg-neutral-400"}`} />
           <span className="font-semibold">{inspConfig.is_active !== false ? "Inspections open" : "Inspections closed"}</span>
           {inspConfig.available_days && inspConfig.available_days.length > 0 && (
             <span className="text-[11.5px] opacity-80">· {inspConfig.available_days.join(", ")}</span>
@@ -1627,7 +1626,7 @@ function SiteInspectionsTab({ property, inspections, loading, onRefresh }: {
         <div className="relative flex-1 min-w-48">
           <Search className="absolute left-2.5 top-2.5 size-3.5 text-neutral-400" />
           <input value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} placeholder="Search prospect…"
-            className="w-full h-9 pl-8 pr-3 rounded-lg border border-neutral-200 text-[13px] focus:outline-none focus:ring-1 focus:ring-emerald-400 bg-white" />
+            className="w-full h-9 pl-8 pr-3 rounded-lg border border-neutral-200 text-[13px] focus:outline-none focus:ring-1 focus:ring-[#2a52a8] bg-white" />
         </div>
         <select value={filterStatus} onChange={(e) => { setFilterStatus(e.target.value); setPage(1); }}
           className="h-9 px-3 rounded-lg border border-neutral-200 text-[13px] bg-white focus:outline-none">
@@ -1668,7 +1667,7 @@ function SiteInspectionsTab({ property, inspections, loading, onRefresh }: {
                       {isAdmin && ins.status === "PENDING" && (
                         <div className="flex gap-1 mt-1">
                           <button onClick={() => updateStatus(ins.id, "ATTENDED")}
-                            className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 hover:bg-emerald-200 font-medium">
+                            className="text-[10px] px-1.5 py-0.5 rounded bg-[#d6e0f5] text-[#0E2C72] hover:bg-[#8aaad8] font-medium">
                             Attended
                           </button>
                           <button onClick={() => updateStatus(ins.id, "CANCELLED")}
@@ -1695,7 +1694,7 @@ function SiteInspectionsTab({ property, inspections, loading, onRefresh }: {
                     </td>
                     <td className="px-4 py-3">
                       <button onClick={() => navigate(`/customers?search=${encodeURIComponent(ins.email)}`)}
-                        className="text-emerald-600 hover:text-emerald-700 font-medium text-[12px] flex items-center gap-1 whitespace-nowrap">
+                        className="text-[#0E2C72] hover:text-[#0a2260] font-medium text-[12px] flex items-center gap-1 whitespace-nowrap">
                         <Eye className="size-3.5" /> View
                       </button>
                     </td>
@@ -1736,7 +1735,7 @@ function SiteInspectionsTab({ property, inspections, loading, onRefresh }: {
                       <p className="px-3 py-4 text-[12px] text-neutral-400 text-center">No customers found.</p>
                     ) : customers.slice(0, 30).map((c) => (
                       <button key={c.id} type="button" onClick={() => handleConvert(convertTarget.id, c.id)}
-                        className="w-full flex items-center gap-3 px-3 py-2.5 text-left hover:bg-emerald-50 transition-colors">
+                        className="w-full flex items-center gap-3 px-3 py-2.5 text-left hover:bg-[#0E2C72]/6 transition-colors">
                         <div className="w-7 h-7 rounded-full bg-neutral-100 flex items-center justify-center text-[11px] font-bold text-neutral-500 shrink-0">
                           {c.full_name.charAt(0).toUpperCase()}
                         </div>
@@ -1838,7 +1837,7 @@ function AllocationPropertyTab({ subscriptions, loading, onRefresh }: {
                   <td className="px-4 py-3 text-[12.5px] text-neutral-700 whitespace-nowrap">{s.land_size} SQM</td>
                   <td className="px-4 py-3 whitespace-nowrap">
                     {s.plot_number ? (
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10.5px] font-bold bg-emerald-100 text-emerald-700">
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10.5px] font-bold bg-[#d6e0f5] text-[#0E2C72]">
                         <CheckCircle2 className="size-3" /> Allocated
                       </span>
                     ) : (
@@ -1851,14 +1850,14 @@ function AllocationPropertyTab({ subscriptions, loading, onRefresh }: {
                   <td className="px-4 py-3 whitespace-nowrap">
                     {(s as any).allocation_letter ? (
                       <a href={(s as any).allocation_letter} target="_blank" rel="noopener noreferrer"
-                        className="text-[12px] text-emerald-600 hover:text-emerald-700 font-medium flex items-center gap-1">
+                        className="text-[12px] text-[#0E2C72] hover:text-[#0a2260] font-medium flex items-center gap-1">
                         <Eye className="size-3" /> Download
                       </a>
                     ) : <span className="text-neutral-300 text-[12px]">—</span>}
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap">
                     <button disabled={!!s.plot_number} onClick={() => { setAllocating(s); setPlotNumber(""); }}
-                      className="px-3 py-1.5 rounded-lg bg-emerald-600 text-white text-[11.5px] font-semibold hover:bg-emerald-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
+                      className="px-3 py-1.5 rounded-lg bg-[#0E2C72] text-white text-[11.5px] font-semibold hover:bg-[#0a2260] transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
                       Allocate
                     </button>
                   </td>
@@ -1885,7 +1884,7 @@ function AllocationPropertyTab({ subscriptions, loading, onRefresh }: {
                   <button onClick={() => setAllocating(null)} className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-neutral-100">
                     <X className="w-4 h-4 text-neutral-500" /></button>
                 </div>
-                <div className="px-5 py-3 bg-emerald-50/50 border-b border-emerald-100">
+                <div className="px-5 py-3 bg-[#0E2C72]/6/50 border-b border-[#0E2C72]/15">
                   <p className="text-[12.5px] font-semibold text-neutral-800">{allocating.customer_name}</p>
                   <p className="text-[11.5px] text-neutral-500">{allocating.land_size} SQM · {allocating.plan_name}</p>
                 </div>
@@ -1900,7 +1899,7 @@ function AllocationPropertyTab({ subscriptions, loading, onRefresh }: {
                   </div>
                   <div>
                     <label className={labelCls}>Allocation Letter <span className="text-[11px] text-neutral-400">(PDF — recommended)</span></label>
-                    <label className="block w-full border-2 border-dashed border-neutral-200 rounded-lg p-3 text-center cursor-pointer hover:border-emerald-400 transition-colors">
+                    <label className="block w-full border-2 border-dashed border-neutral-200 rounded-lg p-3 text-center cursor-pointer hover:border-[#2a52a8] transition-colors">
                       <Upload className="size-4 mx-auto mb-1 text-neutral-400" />
                       <span className="text-[11.5px] text-neutral-500">{letter ? letter.name : "Click to upload PDF"}</span>
                       <input type="file" accept=".pdf" className="hidden" onChange={(e) => setLetter(e.target.files?.[0] ?? null)} />
@@ -1909,11 +1908,11 @@ function AllocationPropertyTab({ subscriptions, loading, onRefresh }: {
                   <div>
                     <label className={labelCls}>Notes <span className="text-[11px] text-neutral-400">(optional)</span></label>
                     <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2}
-                      className="w-full px-3 py-2 rounded-lg border border-neutral-200 text-[13px] focus:outline-none focus:ring-1 focus:ring-emerald-500/40 resize-none bg-white" />
+                      className="w-full px-3 py-2 rounded-lg border border-neutral-200 text-[13px] focus:outline-none focus:ring-1 focus:ring-[#1a3d8f]/40 resize-none bg-white" />
                   </div>
                 </div>
                 <div className="px-5 py-4 border-t border-neutral-100 flex gap-2.5">
-                  <Button onClick={handleAllocate} disabled={saving} className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white gap-1.5">
+                  <Button onClick={handleAllocate} disabled={saving} className="flex-1 bg-[#0E2C72] hover:bg-[#0a2260] text-white gap-1.5">
                     {saving ? <><Loader2 className="size-3.5 animate-spin" />Allocating…</> : "Confirm Allocation"}
                   </Button>
                   <Button variant="outline" onClick={() => setAllocating(null)}>Cancel</Button>
@@ -2090,7 +2089,7 @@ export function PropertyDetail() {
               </Button>
             )}
             {isAdmin && (
-              <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white text-[12px] h-8 gap-1.5"
+              <Button size="sm" className="bg-[#0E2C72] hover:bg-[#0a2260] text-white text-[12px] h-8 gap-1.5"
                 onClick={() => navigate(`/properties/${id}/edit`)}>
                 <Pencil className="w-3.5 h-3.5" /> Edit Property
               </Button>
@@ -2125,3 +2124,6 @@ export function PropertyDetail() {
     </PaymentTabCtx.Provider>
   );
 }
+
+
+

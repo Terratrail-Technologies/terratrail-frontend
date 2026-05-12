@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+﻿import { useRef, useState } from "react";
 import { Link } from "react-router";
 import {
   Building2, ArrowRight, CheckCircle2, Star, Shield,
@@ -54,11 +54,11 @@ function Navbar() {
       <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
         {/* Logo */}
         <Link to="/" className="flex items-center gap-2.5">
-          <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-700 shadow-md shadow-emerald-500/30">
+          <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-[#1a3d8f] to-[#0a2260] shadow-md shadow-[#1a3d8f]/30">
             <Building2 className="size-4 text-white" />
           </div>
           <span className={`text-[16px] font-extrabold tracking-tight transition-colors ${scrolled ? "text-neutral-900" : "text-white"}`}>
-            TerraTrail
+            Terratrail
           </span>
         </Link>
 
@@ -66,7 +66,7 @@ function Navbar() {
         <nav className="hidden md:flex items-center gap-6">
           {links.map(({ label, href }) => (
             <a key={label} href={href}
-              className={`text-[13.5px] font-medium transition-colors ${scrolled ? "text-neutral-600 hover:text-emerald-600" : "text-white/80 hover:text-white"}`}>
+              className={`text-[13.5px] font-medium transition-colors ${scrolled ? "text-neutral-600 hover:text-[#0E2C72]" : "text-white/80 hover:text-white"}`}>
               {label}
             </a>
           ))}
@@ -74,11 +74,11 @@ function Navbar() {
 
         <div className="hidden md:flex items-center gap-3">
           <Link to="/auth/sign-in"
-            className={`text-[13px] font-semibold transition-colors ${scrolled ? "text-neutral-700 hover:text-emerald-600" : "text-white/90 hover:text-white"}`}>
+            className={`text-[13px] font-semibold transition-colors ${scrolled ? "text-neutral-700 hover:text-[#0E2C72]" : "text-white/90 hover:text-white"}`}>
             Sign In
           </Link>
           <Link to="/auth/sign-up"
-            className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-[13px] font-bold rounded-xl transition-colors shadow-sm">
+            className="px-4 py-2 bg-[#0E2C72] hover:bg-[#0a2260] text-white text-[13px] font-bold rounded-xl transition-colors shadow-sm">
             Get Started Free
           </Link>
         </div>
@@ -98,13 +98,13 @@ function Navbar() {
             <div className="px-4 py-4 space-y-1">
               {links.map(({ label, href }) => (
                 <a key={label} href={href} onClick={() => setOpen(false)}
-                  className="block px-3 py-2.5 text-[13.5px] font-medium text-neutral-700 hover:bg-neutral-50 hover:text-emerald-600 rounded-lg transition-colors">
+                  className="block px-3 py-2.5 text-[13.5px] font-medium text-neutral-700 hover:bg-neutral-50 hover:text-[#0E2C72] rounded-lg transition-colors">
                   {label}
                 </a>
               ))}
               <div className="pt-3 flex flex-col gap-2 border-t border-neutral-100">
                 <Link to="/auth/sign-in" className="px-3 py-2.5 text-[13.5px] font-semibold text-neutral-700 hover:bg-neutral-50 rounded-lg text-center transition-colors">Sign In</Link>
-                <Link to="/auth/sign-up" className="px-3 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-[13.5px] font-bold rounded-xl text-center transition-colors">Get Started Free</Link>
+                <Link to="/auth/sign-up" className="px-3 py-2.5 bg-[#0E2C72] hover:bg-[#0a2260] text-white text-[13.5px] font-bold rounded-xl text-center transition-colors">Get Started Free</Link>
               </div>
             </div>
           </motion.div>
@@ -129,11 +129,11 @@ function Hero() {
         <div className="absolute inset-0" style={{ backgroundImage: "radial-gradient(circle, rgba(255,255,255,0.03) 1px, transparent 1px)", backgroundSize: "40px 40px" }} />
         <motion.div style={{ y }} className="absolute inset-0">
           <motion.div animate={{ rotate: 360 }} transition={{ duration: 60, repeat: Infinity, ease: "linear" }}
-            className="absolute top-20 right-[15%] w-64 h-64 border border-emerald-500/10 rounded-full" />
+            className="absolute top-20 right-[15%] w-64 h-64 border border-[#0E2C72]/10 rounded-full" />
           <motion.div animate={{ rotate: -360 }} transition={{ duration: 45, repeat: Infinity, ease: "linear" }}
-            className="absolute top-40 right-[15%] w-40 h-40 border border-emerald-400/10 rounded-full" />
+            className="absolute top-40 right-[15%] w-40 h-40 border border-[#2a52a8]/10 rounded-full" />
           <motion.div animate={{ y: [0, -20, 0] }} transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
-            className="absolute top-[20%] right-[12%] w-16 h-16 bg-emerald-500/20 rounded-2xl rotate-12 blur-sm" />
+            className="absolute top-[20%] right-[12%] w-16 h-16 bg-[#1a3d8f]/20 rounded-2xl rotate-12 blur-sm" />
           <motion.div animate={{ y: [0, 15, 0] }} transition={{ duration: 8, repeat: Infinity, ease: "easeInOut", delay: 2 }}
             className="absolute bottom-[30%] left-[8%] w-12 h-12 bg-teal-400/20 rounded-xl rotate-45 blur-sm" />
         </motion.div>
@@ -143,7 +143,7 @@ function Hero() {
         <div className="max-w-3xl mx-auto text-center">
           {/* Badge */}
           <motion.div initial={{ opacity: 0, y: -16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}
-            className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[12px] font-bold tracking-wide mb-6">
+            className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#0E2C72]/10 border border-[#0E2C72]/20 text-[#6b8fd4] text-[12px] font-bold tracking-wide mb-6">
             <Zap className="size-3" fill="currentColor" />
             The #1 Real Estate Management Platform in Nigeria
           </motion.div>
@@ -153,20 +153,20 @@ function Hero() {
             className="text-[44px] sm:text-[60px] lg:text-[72px] font-black text-white leading-[1.05] tracking-tight mb-6">
             Manage Your
             <br />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-teal-300 to-emerald-300">
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#2a52a8] via-teal-300 to-[#6b8fd4]">
               Real Estate Empire
             </span>
           </motion.h1>
 
           <motion.p initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.2 }}
             className="text-[16px] sm:text-[18px] text-white/60 leading-relaxed mb-10 max-w-xl mx-auto">
-            TerraTrail gives real estate companies a complete platform — property listings, customer management, payment tracking, and team collaboration in one place.
+            Terratrail gives real estate companies a complete platform — property listings, customer management, payment tracking, and team collaboration in one place.
           </motion.p>
 
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.3 }}
             className="flex flex-col sm:flex-row items-center justify-center gap-3">
             <Link to="/auth/sign-up"
-              className="flex items-center gap-2 px-7 py-3.5 bg-emerald-500 hover:bg-emerald-400 active:scale-[0.98] text-white text-[15px] font-bold rounded-2xl transition-all shadow-lg shadow-emerald-500/30">
+              className="flex items-center gap-2 px-7 py-3.5 bg-[#1a3d8f] hover:bg-[#2a52a8] active:scale-[0.98] text-white text-[15px] font-bold rounded-2xl transition-all shadow-lg shadow-[#1a3d8f]/30">
               Start for Free
               <ArrowRight className="size-4" />
             </Link>
@@ -185,7 +185,7 @@ function Hero() {
               { icon: Zap, label: "Setup in minutes" },
             ].map(({ icon: Icon, label }) => (
               <div key={label} className="flex items-center gap-1.5 text-white/40 text-[12px] font-medium">
-                <Icon className="size-3.5 text-emerald-400" />
+                <Icon className="size-3.5 text-[#6b8fd4]" />
                 {label}
               </div>
             ))}
@@ -205,7 +205,7 @@ function Hero() {
 // ── Features ──────────────────────────────────────────────────────────────────
 const FEATURES = [
   {
-    icon: Building2, color: "bg-emerald-100 text-emerald-700",
+    icon: Building2, color: "bg-[#d6e0f5] text-[#0E2C72]",
     title: "Property Management",
     desc: "List, publish, and manage all your properties with rich details — images, documents, pricing plans, and amenities.",
   },
@@ -256,12 +256,12 @@ function Features() {
     <section id="features" className="py-24 bg-white">
       <div className="max-w-6xl mx-auto px-4 sm:px-6">
         <Reveal className="text-center mb-16">
-          <span className="text-[11px] font-bold uppercase tracking-widest text-emerald-600 mb-3 block">Everything You Need</span>
+          <span className="text-[11px] font-bold uppercase tracking-widest text-[#0E2C72] mb-3 block">Everything You Need</span>
           <h2 className="text-[36px] sm:text-[44px] font-black text-neutral-900 leading-tight tracking-tight mb-4">
             Built for Real Estate<br />Professionals
           </h2>
           <p className="text-[15px] text-neutral-500 max-w-lg mx-auto leading-relaxed">
-            From your first property listing to managing hundreds of active subscriptions — TerraTrail scales with you.
+            From your first property listing to managing hundreds of active subscriptions — Terratrail scales with you.
           </p>
         </Reveal>
 
@@ -269,8 +269,8 @@ function Features() {
           className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
           {FEATURES.map(({ icon: Icon, color, title, desc }) => (
             <motion.div key={title} variants={fadeUp}
-              className="group p-6 rounded-2xl border border-neutral-100 hover:border-emerald-200 hover:shadow-lg hover:shadow-emerald-50 transition-all duration-300 bg-white relative overflow-hidden">
-              <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-emerald-500 to-teal-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+              className="group p-6 rounded-2xl border border-neutral-100 hover:border-[#8aaad8] hover:shadow-lg hover:shadow-[#eef2fb] transition-all duration-300 bg-white relative overflow-hidden">
+              <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-[#1a3d8f] to-teal-400 opacity-0 group-hover:opacity-100 transition-opacity" />
               <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-4 ${color}`}>
                 <Icon className="size-5" />
               </div>
@@ -297,7 +297,7 @@ function HowItWorks() {
     <section id="how" className="py-24 bg-neutral-50">
       <div className="max-w-5xl mx-auto px-4 sm:px-6">
         <Reveal className="text-center mb-16">
-          <span className="text-[11px] font-bold uppercase tracking-widest text-emerald-600 mb-3 block">Simple to Start</span>
+          <span className="text-[11px] font-bold uppercase tracking-widest text-[#0E2C72] mb-3 block">Simple to Start</span>
           <h2 className="text-[36px] sm:text-[44px] font-black text-neutral-900 leading-tight tracking-tight mb-4">
             Up and Running in Minutes
           </h2>
@@ -308,7 +308,7 @@ function HowItWorks() {
             <Reveal key={n} delay={i * 0.1}>
               <div className="bg-white rounded-2xl p-6 border border-neutral-100 hover:shadow-md transition-shadow relative overflow-hidden">
                 <div className="absolute top-4 right-4 text-[48px] font-black text-neutral-50 select-none leading-none">{n}</div>
-                <div className="w-8 h-8 rounded-xl bg-emerald-600 flex items-center justify-center mb-4">
+                <div className="w-8 h-8 rounded-xl bg-[#0E2C72] flex items-center justify-center mb-4">
                   <span className="text-white text-[12px] font-black">{n}</span>
                 </div>
                 <h3 className="font-bold text-neutral-900 text-[16px] mb-2">{title}</h3>
@@ -339,7 +339,7 @@ function Stats() {
           {stats.map(({ value, label }) => (
             <motion.div key={label} variants={fadeUp}>
               <p className="text-[36px] sm:text-[42px] font-black text-white mb-1">{value}</p>
-              <p className="text-[12px] text-emerald-300 font-semibold uppercase tracking-wide">{label}</p>
+              <p className="text-[12px] text-[#6b8fd4] font-semibold uppercase tracking-wide">{label}</p>
             </motion.div>
           ))}
         </motion.div>
@@ -375,7 +375,7 @@ function Pricing() {
     <section id="pricing" className="py-24 bg-white">
       <div className="max-w-5xl mx-auto px-4 sm:px-6">
         <Reveal className="text-center mb-16">
-          <span className="text-[11px] font-bold uppercase tracking-widest text-emerald-600 mb-3 block">Simple Pricing</span>
+          <span className="text-[11px] font-bold uppercase tracking-widest text-[#0E2C72] mb-3 block">Simple Pricing</span>
           <h2 className="text-[36px] sm:text-[44px] font-black text-neutral-900 leading-tight tracking-tight mb-4">
             Plans That Grow With You
           </h2>
@@ -386,7 +386,7 @@ function Pricing() {
           className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {PLANS.map(({ name, price, period, desc, features, cta, highlight }) => (
             <motion.div key={name} variants={fadeUp}
-              className={`relative rounded-2xl p-7 border ${highlight ? "border-emerald-500 shadow-xl shadow-emerald-100 bg-gradient-to-b from-emerald-600 to-emerald-700" : "border-neutral-100 bg-white hover:shadow-md"} transition-all`}>
+              className={`relative rounded-2xl p-7 border ${highlight ? "border-[#0E2C72] shadow-xl shadow-[#0E2C72]/10 bg-gradient-to-b from-[#0E2C72] to-[#0a2260]" : "border-neutral-100 bg-white hover:shadow-md"} transition-all`}>
               {highlight && (
                 <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-0.5 bg-amber-400 text-neutral-900 text-[10px] font-black uppercase tracking-wide rounded-full">
                   Most Popular
@@ -394,22 +394,22 @@ function Pricing() {
               )}
               <div className="mb-5">
                 <h3 className={`font-bold text-[17px] mb-0.5 ${highlight ? "text-white" : "text-neutral-900"}`}>{name}</h3>
-                <p className={`text-[12px] mb-4 ${highlight ? "text-emerald-200" : "text-neutral-500"}`}>{desc}</p>
+                <p className={`text-[12px] mb-4 ${highlight ? "text-[#8aaad8]" : "text-neutral-500"}`}>{desc}</p>
                 <div className="flex items-baseline gap-1">
                   <span className={`text-[36px] font-black ${highlight ? "text-white" : "text-neutral-900"}`}>{price}</span>
-                  <span className={`text-[13px] ${highlight ? "text-emerald-300" : "text-neutral-400"}`}>{period}</span>
+                  <span className={`text-[13px] ${highlight ? "text-[#6b8fd4]" : "text-neutral-400"}`}>{period}</span>
                 </div>
               </div>
               <ul className="space-y-2.5 mb-7">
                 {features.map((f) => (
-                  <li key={f} className={`flex items-start gap-2 text-[13px] ${highlight ? "text-emerald-100" : "text-neutral-600"}`}>
-                    <CheckCircle2 className={`size-4 shrink-0 mt-0.5 ${highlight ? "text-emerald-300" : "text-emerald-500"}`} />
+                  <li key={f} className={`flex items-start gap-2 text-[13px] ${highlight ? "text-[#d6e0f5]" : "text-neutral-600"}`}>
+                    <CheckCircle2 className={`size-4 shrink-0 mt-0.5 ${highlight ? "text-[#6b8fd4]" : "text-[#1a3d8f]"}`} />
                     {f}
                   </li>
                 ))}
               </ul>
               <Link to="/auth/sign-up"
-                className={`block w-full py-3 rounded-xl text-[14px] font-bold text-center transition-all ${highlight ? "bg-white text-emerald-700 hover:bg-emerald-50" : "bg-emerald-600 hover:bg-emerald-700 text-white"}`}>
+                className={`block w-full py-3 rounded-xl text-[14px] font-bold text-center transition-all ${highlight ? "bg-white text-[#0E2C72] hover:bg-[#0E2C72]/6" : "bg-[#0E2C72] hover:bg-[#0a2260] text-white"}`}>
                 {cta}
               </Link>
             </motion.div>
@@ -435,16 +435,16 @@ function CTA() {
                 <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/10 backdrop-blur-sm">
                   <Building2 className="size-5 text-white" />
                 </div>
-                <span className="text-white/60 text-[13px] font-semibold">TerraTrail</span>
+                <span className="text-white/60 text-[13px] font-semibold">Terratrail</span>
               </div>
               <h2 className="text-[30px] sm:text-[40px] font-black text-white leading-tight mb-4">
                 Ready to transform your real estate business?
               </h2>
-              <p className="text-[15px] text-emerald-200 mb-8 max-w-md mx-auto leading-relaxed">
-                Join hundreds of companies already using TerraTrail to manage properties, customers, and payments.
+              <p className="text-[15px] text-[#8aaad8] mb-8 max-w-md mx-auto leading-relaxed">
+                Join hundreds of companies already using Terratrail to manage properties, customers, and payments.
               </p>
               <Link to="/auth/sign-up"
-                className="inline-flex items-center gap-2 px-8 py-3.5 bg-white text-emerald-700 text-[15px] font-black rounded-2xl hover:bg-emerald-50 active:scale-[0.98] transition-all shadow-xl">
+                className="inline-flex items-center gap-2 px-8 py-3.5 bg-white text-[#0E2C72] text-[15px] font-black rounded-2xl hover:bg-[#0E2C72]/6 active:scale-[0.98] transition-all shadow-xl">
                 Get Started — It's Free
                 <ArrowRight className="size-4" />
               </Link>
@@ -463,12 +463,12 @@ function Footer() {
       <div className="max-w-6xl mx-auto px-4 sm:px-6">
         <div className="flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="flex items-center gap-2.5">
-            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-700">
+            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-[#1a3d8f] to-[#0a2260]">
               <Building2 className="size-4 text-white" />
             </div>
-            <span className="text-[15px] font-extrabold text-white">TerraTrail</span>
+            <span className="text-[15px] font-extrabold text-white">Terratrail</span>
           </div>
-          <p className="text-[12px] text-white/30">© {new Date().getFullYear()} TerraTrail. All rights reserved.</p>
+          <p className="text-[12px] text-white/30">© {new Date().getFullYear()} Terratrail. All rights reserved.</p>
           <div className="flex items-center gap-5 text-[12px] text-white/40">
             <a href="#" className="hover:text-white/70 transition-colors">Privacy</a>
             <a href="#" className="hover:text-white/70 transition-colors">Terms</a>
@@ -495,3 +495,7 @@ export default function LandingPage() {
     </div>
   );
 }
+
+
+
+

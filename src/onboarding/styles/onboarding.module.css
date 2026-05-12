@@ -1,13 +1,13 @@
-/* ============================================================
-   TerraTrail Onboarding – Fully Isolated CSS Module
-   Font: "Kamerik 105 Cyrillic" → system-ui fallback
+﻿/* ============================================================
+   Terratrail Onboarding â€“ Fully Isolated CSS Module
+   Font: "Kamerik 105 Cyrillic" â†’ system-ui fallback
    Zero Tailwind / zero shared-theme dependency
    ============================================================ */
 
 /* Font is loaded globally via src/styles/fonts.css */
 
 
-/* ─── Page shell ─────────────────────────────────────────────── */
+/* â”€â”€â”€ Page shell â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .page {
   min-height: 100vh;
   width: 100%;
@@ -19,12 +19,12 @@
   font-family: "Kamerik 105 Cyrillic", "Inter", "Segoe UI", system-ui, sans-serif;
 }
 
-/* ─── Background: dark glass-building ────────────────────────── */
+/* â”€â”€â”€ Background: dark glass-building â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .bg {
   position: fixed;
   inset: 0;
   z-index: 0;
-  /* Multi-layer gradient mimics a lit glass-and-steel façade */
+  /* Multi-layer gradient mimics a lit glass-and-steel faÃ§ade */
   background:
     /* top-left warm reflection */
     radial-gradient(ellipse 55% 45% at 18% 12%, rgba(42, 58, 130, 0.55) 0%, transparent 65%),
@@ -64,7 +64,7 @@
     );
 }
 
-/* ─── Scroll container ───────────────────────────────────────── */
+/* â”€â”€â”€ Scroll container â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .scrollArea {
   position: relative;
   z-index: 2;
@@ -76,7 +76,7 @@
   flex: 1;
 }
 
-/* ─── Card ───────────────────────────────────────────────────── */
+/* â”€â”€â”€ Card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .card {
   background: #ffffff;
   border-radius: 10px;
@@ -89,7 +89,7 @@
     0 0 0 1px rgba(255, 255, 255, 0.06);
 }
 
-/* ─── Logo ───────────────────────────────────────────────────── */
+/* â”€â”€â”€ Logo â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .logoWrap {
   display: flex;
   align-items: center;
@@ -101,7 +101,7 @@
   width: 32px;
   height: 32px;
   border-radius: 7px;
-  background: linear-gradient(135deg, #1c2268 0%, #2a35c0 100%);
+  background: linear-gradient(135deg, #0E2C72 0%, #2a35c0 100%);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -117,7 +117,7 @@
   font-family: inherit;
 }
 
-/* ─── Typography ─────────────────────────────────────────────── */
+/* â”€â”€â”€ Typography â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .heading {
   font-size: 20px;
   font-weight: 700;
@@ -137,7 +137,7 @@
   font-family: inherit;
 }
 
-/* ─── Form ───────────────────────────────────────────────────── */
+/* â”€â”€â”€ Form â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .form {
   display: flex;
   flex-direction: column;
@@ -193,7 +193,7 @@
 }
 
 .input:focus {
-  border-color: #1c2268;
+  border-color: #0E2C72;
   box-shadow: 0 0 0 3px rgba(28, 34, 104, 0.1);
   background: #ffffff;
 }
@@ -222,11 +222,11 @@
 .otpSingle:focus {
   outline: none;
   background: #fff;
-  border-color: #1c2268;
+  border-color: #0E2C72;
   box-shadow: 0 0 0 4px rgba(28, 34, 104, 0.08);
 }
 
-/* ─── Password field ─────────────────────────────────────────── */
+/* â”€â”€â”€ Password field â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .passwordWrap {
   position: relative;
 }
@@ -253,7 +253,7 @@
 
 .eyeBtn:hover { color: #475569; }
 
-/* ─── Error message ──────────────────────────────────────────── */
+/* â”€â”€â”€ Error message â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .errorMsg {
   font-size: 11px;
   color: #ef4444;
@@ -261,7 +261,7 @@
   font-family: inherit;
 }
 
-/* ─── Remember me + Forgot row ───────────────────────────────── */
+/* â”€â”€â”€ Remember me + Forgot row â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .rememberRow {
   display: flex;
   align-items: center;
@@ -301,8 +301,8 @@
 }
 
 .checkbox:checked {
-  background: #1c2268;
-  border-color: #1c2268;
+  background: #0E2C72;
+  border-color: #0E2C72;
 }
 
 .checkbox:checked::after {
@@ -320,7 +320,7 @@
 
 .forgotLink {
   font-size: 12.5px;
-  color: #1c2268;
+  color: #0E2C72;
   text-decoration: none;
   font-weight: 600;
   cursor: pointer;
@@ -333,11 +333,11 @@
 
 .forgotLink:hover { color: #2a35c0; text-decoration: underline; }
 
-/* ─── Primary button ─────────────────────────────────────────── */
+/* â”€â”€â”€ Primary button â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .btn {
   width: 100%;
   height: 44px;
-  background: #1c2268;
+  background: #0E2C72;
   color: #ffffff;
   border: none;
   border-radius: 6px;
@@ -351,7 +351,7 @@
 }
 
 .btn:hover:not(:disabled) {
-  background: #242d82;
+  background: #1a3d8f;
   box-shadow: 0 4px 16px rgba(28, 34, 104, 0.35);
 }
 
@@ -366,7 +366,7 @@
   gap: 8px;
 }
 
-/* ─── Spinner ────────────────────────────────────────────────── */
+/* â”€â”€â”€ Spinner â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .spinner {
   width: 15px;
   height: 15px;
@@ -379,7 +379,7 @@
 
 @keyframes spin { to { transform: rotate(360deg); } }
 
-/* ─── Divider "Or" ───────────────────────────────────────────── */
+/* â”€â”€â”€ Divider "Or" â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .divider {
   display: flex;
   align-items: center;
@@ -400,7 +400,7 @@
   background: #e2e8f0;
 }
 
-/* ─── Google button ──────────────────────────────────────────── */
+/* â”€â”€â”€ Google button â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .googleBtn {
   width: 100%;
   height: 42px;
@@ -424,7 +424,7 @@
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
 }
 
-/* ─── Footer ─────────────────────────────────────────────────── */
+/* â”€â”€â”€ Footer â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .footer {
   margin-top: 18px;
   text-align: center;
@@ -434,7 +434,7 @@
 }
 
 .footerLink {
-  color: #1c2268;
+  color: #0E2C72;
   font-weight: 600;
   cursor: pointer;
   background: none;
@@ -448,7 +448,7 @@
 
 .footerLink:hover { color: #2a35c0; text-decoration: underline; }
 
-/* ─── Terms + security badge (sign-up) ───────────────────────── */
+/* â”€â”€â”€ Terms + security badge (sign-up) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .termsText {
   font-size: 11px;
   color: #94a3b8;
@@ -459,7 +459,7 @@
 }
 
 .termsText a {
-  color: #1c2268;
+  color: #0E2C72;
   text-decoration: underline;
   cursor: pointer;
 }
@@ -475,7 +475,7 @@
   font-family: inherit;
 }
 
-/* ─── OTP single input ───────────────────────────────────────── */
+/* â”€â”€â”€ OTP single input â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .otpSingle {
   width: 100%;
   height: 44px;
@@ -501,7 +501,7 @@
 }
 
 .otpSingle:focus {
-  border-color: #1c2268;
+  border-color: #0E2C72;
   box-shadow: 0 0 0 3px rgba(28, 34, 104, 0.1);
   background: #ffffff;
 }
@@ -514,7 +514,7 @@
   font-family: inherit;
 }
 
-/* ─── Back link ──────────────────────────────────────────────── */
+/* â”€â”€â”€ Back link â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .backLink {
   display: inline-flex;
   align-items: center;
@@ -530,9 +530,9 @@
   transition: color 0.15s;
 }
 
-.backLink:hover { color: #1c2268; }
+.backLink:hover { color: #0E2C72; }
 
-/* ─── Marketing block (below card) ───────────────────────────── */
+/* â”€â”€â”€ Marketing block (below card) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .marketing {
   position: relative;
   z-index: 2;
@@ -561,7 +561,7 @@
   font-family: inherit;
 }
 
-/* ─── Responsive ─────────────────────────────────────────────── */
+/* â”€â”€â”€ Responsive â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 @media (max-width: 480px) {
   .scrollArea { padding: 16px 12px 0; }
 
@@ -587,7 +587,7 @@
   .heading { font-size: 17px; }
 }
 
-/* ─── Stepper (workspace setup) ─────────────────────────────── */
+/* â”€â”€â”€ Stepper (workspace setup) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .stepper {
   display: flex;
   align-items: center;
@@ -621,15 +621,15 @@
 }
 
 .stepDotActive {
-  border-color: #1c2268;
-  background: #1c2268;
+  border-color: #0E2C72;
+  background: #0E2C72;
   color: #fff;
   box-shadow: 0 0 0 4px rgba(28,34,104,0.12);
 }
 
 .stepDotDone {
-  border-color: #1c2268;
-  background: #1c2268;
+  border-color: #0E2C72;
+  background: #0E2C72;
   color: #fff;
 }
 
@@ -641,13 +641,13 @@
   transition: background 0.3s;
 }
 
-.stepLineDone { background: #1c2268; }
+.stepLineDone { background: #0E2C72; }
 
 .stepLabel {
   display: none;
 }
 
-/* ─── Workspace icon hero ────────────────────────────────────── */
+/* â”€â”€â”€ Workspace icon hero â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .wsHero {
   display: flex;
   align-items: center;
@@ -655,12 +655,12 @@
   width: 52px;
   height: 52px;
   border-radius: 14px;
-  background: linear-gradient(135deg, #1c2268 0%, #2a35c0 100%);
+  background: linear-gradient(135deg, #0E2C72 0%, #2a35c0 100%);
   box-shadow: 0 4px 16px rgba(28,34,104,0.3);
   margin-bottom: 16px;
 }
 
-/* ─── Slug preview ───────────────────────────────────────────── */
+/* â”€â”€â”€ Slug preview â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .slugPreview {
   display: flex;
   align-items: center;
@@ -691,13 +691,13 @@
 .slugValue {
   padding: 0 10px;
   font-size: 13px;
-  color: #1c2268;
+  color: #0E2C72;
   font-weight: 600;
   font-family: "Courier New", monospace;
   letter-spacing: -0.2px;
 }
 
-/* ─── Textarea ───────────────────────────────────────────────── */
+/* â”€â”€â”€ Textarea â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .textarea {
   width: 100%;
   padding: 10px 12px;
@@ -718,12 +718,12 @@
 
 .textarea::placeholder { color: #94a3b8; font-size: 13px; }
 .textarea:focus {
-  border-color: #1c2268;
+  border-color: #0E2C72;
   box-shadow: 0 0 0 3px rgba(28,34,104,0.1);
   background: #fff;
 }
 
-/* ─── Toggle switch ─────────────────────────────────────────── */
+/* â”€â”€â”€ Toggle switch â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .toggleRow {
   display: flex;
   align-items: flex-start;
@@ -777,7 +777,7 @@
   transition: background 0.2s;
 }
 
-.toggle input:checked + .toggleTrack { background: #1c2268; }
+.toggle input:checked + .toggleTrack { background: #0E2C72; }
 
 .toggleTrack::after {
   content: "";
@@ -794,7 +794,7 @@
 
 .toggle input:checked + .toggleTrack::after { transform: translateX(16px); }
 
-/* ─── Skip / secondary button ────────────────────────────────── */
+/* â”€â”€â”€ Skip / secondary button â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .btnSecondary {
   width: 100%;
   height: 44px;
@@ -815,7 +815,7 @@
   color: #374151;
 }
 
-/* ─── Billing Toggle ─────────────────────────────────────────── */
+/* â”€â”€â”€ Billing Toggle â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .billingToggle {
   display: flex;
   align-items: center;
@@ -838,9 +838,9 @@
 }
 
 .billingBtnActive {
-  background: #1c2268;
+  background: #0E2C72;
   color: #fff;
-  border-color: #1c2268;
+  border-color: #0E2C72;
 }
 
 .discountBadge {
@@ -853,7 +853,7 @@
   font-weight: 700;
 }
 
-/* ─── Plan grid ──────────────────────────────────────────────── */
+/* â”€â”€â”€ Plan grid â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .planScrollArea {
   overflow-x: auto;
   margin: 0 -4px;
@@ -888,7 +888,7 @@
 }
 
 .planCardActive {
-  border-color: #1c2268 !important;
+  border-color: #0E2C72 !important;
   box-shadow: 0 0 0 3px rgba(28,34,104,0.1), 0 2px 12px rgba(28,34,104,0.12) !important;
   transform: translateY(-1px);
 }
@@ -898,7 +898,7 @@
   font-size: 9px;
   font-weight: 700;
   color: #fff;
-  background: #1c2268;
+  background: #0E2C72;
   border-radius: 4px;
   padding: 2px 6px;
   letter-spacing: 0.5px;
@@ -919,7 +919,7 @@
 .planPrice {
   font-size: 13px;
   font-weight: 600;
-  color: #1c2268;
+  color: #0E2C72;
   font-family: inherit;
   display: block;
   margin-bottom: 6px;
@@ -946,7 +946,7 @@
   width: 18px;
   height: 18px;
   border-radius: 50%;
-  background: #1c2268;
+  background: #0E2C72;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -973,13 +973,13 @@
   width: 4px;
   height: 4px;
   border-radius: 50%;
-  background: #1c2268;
+  background: #0E2C72;
   flex-shrink: 0;
   margin-top: 4px;
 }
 
 .enterpriseCard {
-  background: linear-gradient(135deg, #0c1730 0%, #1c2268 100%);
+  background: linear-gradient(135deg, #0c1730 0%, #0E2C72 100%);
   border-color: #2a35c0;
 }
 
@@ -1008,7 +1008,7 @@
 
 .planContactBtn:hover { background: rgba(255,255,255,0.25); }
 
-/* ─── Info hint box ──────────────────────────────────────────── */
+/* â”€â”€â”€ Info hint box â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .infoBox {
   background: #eff6ff;
   border: 1px solid #bfdbfe;
@@ -1028,7 +1028,7 @@
   max-width: 700px !important;
 }
 
-/* ─── Responsive plan grid (SelectPlan) ──────────────────────── */
+/* â”€â”€â”€ Responsive plan grid (SelectPlan) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .planGrid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -1069,13 +1069,13 @@
 }
 
 .planCardNewActive {
-  border-color: #1c2268 !important;
+  border-color: #0E2C72 !important;
   box-shadow: 0 0 0 3px rgba(28, 34, 104, 0.1), 0 2px 12px rgba(28, 34, 104, 0.12) !important;
   transform: translateY(-1px);
 }
 
 .planCardEnterprise {
-  background: linear-gradient(135deg, #0c1730 0%, #1c2268 100%);
+  background: linear-gradient(135deg, #0c1730 0%, #0E2C72 100%);
   border-color: #2a35c0 !important;
   cursor: default;
 }
@@ -1097,7 +1097,7 @@
   font-family: inherit;
 }
 
-/* ─── Sign-up split panel ────────────────────────────────────── */
+/* â”€â”€â”€ Sign-up split panel â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .cardSignup {
   max-width: 860px !important;
   padding: 0 !important;
@@ -1111,7 +1111,7 @@
 }
 
 .signupLeft {
-  background: linear-gradient(175deg, #0c1730 0%, #1c2268 60%, #0a1528 100%);
+  background: linear-gradient(175deg, #0c1730 0%, #0E2C72 60%, #0a1528 100%);
   padding: 36px 28px 32px;
   display: flex;
   flex-direction: column;
@@ -1135,3 +1135,4 @@
     padding: 24px 20px 20px;
   }
 }
+

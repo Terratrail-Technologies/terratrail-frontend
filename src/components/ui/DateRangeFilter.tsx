@@ -1,4 +1,4 @@
-/**
+﻿/**
  * DateRangeFilter
  * Preset pills + Custom date-range picker.
  * Fully self-contained; zero external state required beyond the callbacks.
@@ -66,10 +66,10 @@ export function DateRangeFilter({ preset, customRange, onPresetChange }: Props) 
                 "inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11.5px] font-medium transition-all duration-150 border",
                 p === "custom"
                   ? isActive
-                    ? "bg-emerald-600 text-white border-emerald-600 shadow-sm"
-                    : "bg-white text-neutral-600 border-neutral-200 hover:border-emerald-300 hover:text-emerald-700"
+                    ? "bg-[#0E2C72] text-white border-[#0E2C72] shadow-sm"
+                    : "bg-white text-neutral-600 border-neutral-200 hover:border-[#0E2C72]/40 hover:text-[#0a2260]"
                   : isActive
-                  ? "bg-emerald-600 text-white border-emerald-600 shadow-sm"
+                  ? "bg-[#0E2C72] text-white border-[#0E2C72] shadow-sm"
                   : "bg-white text-neutral-500 border-neutral-200 hover:bg-neutral-50 hover:text-neutral-800"
               )}
             >
@@ -101,7 +101,7 @@ export function DateRangeFilter({ preset, customRange, onPresetChange }: Props) 
               value={from}
               max={to || undefined}
               onChange={(e) => setFrom(e.target.value)}
-              className="h-8 px-2.5 rounded-lg border border-neutral-200 text-[12.5px] text-neutral-800 bg-neutral-50 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400 transition-all"
+              className="h-8 px-2.5 rounded-lg border border-neutral-200 text-[12.5px] text-neutral-800 bg-neutral-50 focus:outline-none focus:ring-2 focus:ring-[#1a3d8f]/20 focus:border-[#2a52a8] transition-all"
             />
           </div>
           <div className="flex flex-col gap-1">
@@ -111,7 +111,7 @@ export function DateRangeFilter({ preset, customRange, onPresetChange }: Props) 
               value={to}
               min={from || undefined}
               onChange={(e) => setTo(e.target.value)}
-              className="h-8 px-2.5 rounded-lg border border-neutral-200 text-[12.5px] text-neutral-800 bg-neutral-50 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400 transition-all"
+              className="h-8 px-2.5 rounded-lg border border-neutral-200 text-[12.5px] text-neutral-800 bg-neutral-50 focus:outline-none focus:ring-2 focus:ring-[#1a3d8f]/20 focus:border-[#2a52a8] transition-all"
             />
           </div>
           <div className="flex gap-1.5 pb-px">
@@ -119,7 +119,7 @@ export function DateRangeFilter({ preset, customRange, onPresetChange }: Props) 
               type="button"
               onClick={applyCustom}
               disabled={!from || !to}
-              className="h-8 px-3 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed text-white text-[12px] font-medium rounded-lg transition-colors"
+              className="h-8 px-3 bg-[#0E2C72] hover:bg-[#0a2260] disabled:opacity-40 disabled:cursor-not-allowed text-white text-[12px] font-medium rounded-lg transition-colors"
             >
               Apply
             </button>
@@ -136,3 +136,5 @@ export function DateRangeFilter({ preset, customRange, onPresetChange }: Props) 
     </div>
   );
 }
+
+

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+﻿import { useState, useEffect } from "react";
 import { Check, Loader2, Building2 } from "lucide-react";
 import { toast } from "sonner";
 import { api, type User } from "../../services/api";
@@ -6,10 +6,10 @@ import { useCurrentUser } from "../../hooks/useCurrentUser";
 import { usePageTitle } from "../../hooks/usePageTitle";
 
 const inputCls =
-  "w-full px-4 py-2 border border-neutral-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent disabled:bg-neutral-50 disabled:text-neutral-400 disabled:cursor-not-allowed";
+  "w-full px-4 py-2 border border-neutral-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-[#1a3d8f] focus:border-transparent disabled:bg-neutral-50 disabled:text-neutral-400 disabled:cursor-not-allowed";
 const labelCls = "block text-sm font-medium text-neutral-700 mb-1.5";
 const selectCls =
-  "w-full px-4 py-2 border border-neutral-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent bg-white";
+  "w-full px-4 py-2 border border-neutral-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-[#1a3d8f] focus:border-transparent bg-white";
 
 export function AccountSettings() {
   usePageTitle("Account Settings");
@@ -71,7 +71,7 @@ export function AccountSettings() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-32">
-        <Loader2 className="w-7 h-7 animate-spin text-emerald-500" />
+        <Loader2 className="w-7 h-7 animate-spin text-[#1a3d8f]" />
       </div>
     );
   }
@@ -94,7 +94,7 @@ export function AccountSettings() {
           <div className="bg-white rounded-lg border border-neutral-200 p-6">
             <h3 className="font-medium text-neutral-900 mb-4">Your Avatar</h3>
             <div className="flex items-center gap-4">
-              <div className="w-16 h-16 bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-full flex items-center justify-center text-white text-xl font-semibold select-none">
+              <div className="w-16 h-16 bg-gradient-to-br from-[#2a52a8] to-[#0E2C72] rounded-full flex items-center justify-center text-white text-xl font-semibold select-none">
                 {initials}
               </div>
               <div className="text-sm text-neutral-500">Avatar auto-generated from your name.</div>
@@ -105,7 +105,7 @@ export function AccountSettings() {
           <div className="bg-white rounded-lg border border-neutral-200 p-6">
             <div className="flex items-center justify-between mb-6">
               <h3 className="font-medium text-neutral-900">Personal Information</h3>
-              <span className={`text-xs font-semibold px-2 py-1 rounded-full ${pct >= 80 ? "bg-emerald-50 text-emerald-700" : pct >= 40 ? "bg-amber-50 text-amber-700" : "bg-neutral-100 text-neutral-500"}`}>
+              <span className={`text-xs font-semibold px-2 py-1 rounded-full ${pct >= 80 ? "bg-[#0E2C72]/6 text-[#0E2C72]" : pct >= 40 ? "bg-amber-50 text-amber-700" : "bg-neutral-100 text-neutral-500"}`}>
                 {pct}% complete
               </span>
             </div>
@@ -185,7 +185,7 @@ export function AccountSettings() {
               <button
                 onClick={handleSave}
                 disabled={saving}
-                className="inline-flex items-center gap-2 px-6 py-2 bg-emerald-600 text-white rounded-md hover:bg-emerald-700 disabled:opacity-60 transition-colors text-sm font-medium"
+                className="inline-flex items-center gap-2 px-6 py-2 bg-[#0E2C72] text-white rounded-md hover:bg-[#0a2260] disabled:opacity-60 transition-colors text-sm font-medium"
               >
                 {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
                 {saving ? "Saving…" : "Save Changes"}
@@ -218,7 +218,7 @@ export function AccountSettings() {
               <button
                 onClick={handleSave}
                 disabled={saving}
-                className="inline-flex items-center gap-2 px-6 py-2 bg-emerald-600 text-white rounded-md hover:bg-emerald-700 disabled:opacity-60 transition-colors text-sm font-medium"
+                className="inline-flex items-center gap-2 px-6 py-2 bg-[#0E2C72] text-white rounded-md hover:bg-[#0a2260] disabled:opacity-60 transition-colors text-sm font-medium"
               >
                 {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
                 {saving ? "Saving…" : "Save Bank Details"}
@@ -243,7 +243,7 @@ export function AccountSettings() {
               <button
                 onClick={handleSave}
                 disabled={saving || !form.password}
-                className="inline-flex items-center gap-2 px-5 py-2 bg-emerald-600 text-white rounded-md hover:bg-emerald-700 disabled:opacity-60 transition-colors text-sm font-medium"
+                className="inline-flex items-center gap-2 px-5 py-2 bg-[#0E2C72] text-white rounded-md hover:bg-[#0a2260] disabled:opacity-60 transition-colors text-sm font-medium"
               >
                 {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
                 Update Password
@@ -255,3 +255,5 @@ export function AccountSettings() {
     </div>
   );
 }
+
+

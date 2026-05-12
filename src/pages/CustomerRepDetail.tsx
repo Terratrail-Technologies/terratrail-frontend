@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+﻿import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate, Link } from "react-router";
 import {
   ArrowLeft, Users, Building2, TrendingUp, DollarSign,
@@ -92,7 +92,7 @@ const fmtDate = (d: string) =>
 
 function SubStatusBadge({ status }: { status: string }) {
   const map: Record<string, { cls: string; icon: React.ElementType; label: string }> = {
-    ACTIVE:     { cls: "bg-emerald-100 text-emerald-700", icon: CheckCircle, label: "Active" },
+    ACTIVE:     { cls: "bg-[#d6e0f5] text-[#0E2C72]", icon: CheckCircle, label: "Active" },
     COMPLETED:  { cls: "bg-blue-100 text-blue-700",     icon: CheckCircle,  label: "Completed" },
     DEFAULTING: { cls: "bg-red-100 text-red-700",       icon: AlertCircle,  label: "Defaulting" },
     CANCELLED:  { cls: "bg-neutral-100 text-neutral-500", icon: XCircle,    label: "Cancelled" },
@@ -116,7 +116,7 @@ function StatCard({
   color: "emerald" | "blue" | "violet" | "amber" | "red"; sub?: string;
 }) {
   const c = {
-    emerald: "bg-emerald-50 text-emerald-600",
+    emerald: "bg-[#0E2C72]/6 text-[#0E2C72]",
     blue:    "bg-blue-50 text-blue-600",
     violet:  "bg-violet-50 text-violet-600",
     amber:   "bg-amber-50 text-amber-600",
@@ -215,7 +215,7 @@ function OverviewTab({
             ].map(({ label, value }) => (
               <div key={label} className="flex items-center justify-between py-2.5 border-b border-neutral-50 last:border-0">
                 <span className="text-[13px] text-neutral-700">{label}</span>
-                <span className={`text-[12px] font-bold px-2.5 py-0.5 rounded-full ${value ? "bg-emerald-100 text-emerald-700" : "bg-neutral-100 text-neutral-500"}`}>
+                <span className={`text-[12px] font-bold px-2.5 py-0.5 rounded-full ${value ? "bg-[#d6e0f5] text-[#0E2C72]" : "bg-neutral-100 text-neutral-500"}`}>
                   {value ? "Yes" : "No"}
                 </span>
               </div>
@@ -282,7 +282,7 @@ function PropertiesTab({ customers }: { customers: CustomerItem[] }) {
               </div>
               <div className="col-span-2 pt-2 border-t border-neutral-50 flex justify-between items-center">
                 <p className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wider">Total Revenue</p>
-                <p className="text-[13px] font-bold text-emerald-700">{fmt(p._revenue)}</p>
+                <p className="text-[13px] font-bold text-[#0E2C72]">{fmt(p._revenue)}</p>
               </div>
             </div>
           </div>
@@ -324,7 +324,7 @@ function PropertiesTab({ customers }: { customers: CustomerItem[] }) {
                   </td>
                   <td className="px-4 py-3 text-center font-semibold text-neutral-700">{p.customers_count}</td>
                   <td className="px-4 py-3 text-center font-semibold text-neutral-700">{p.active_subs}</td>
-                  <td className="px-4 py-3 text-right font-semibold text-emerald-700">{fmt(p._revenue)}</td>
+                  <td className="px-4 py-3 text-right font-semibold text-[#0E2C72]">{fmt(p._revenue)}</td>
                   <td className="px-4 py-3 text-right font-semibold text-red-600">{fmt(p._outstanding ?? 0)}</td>
                 </tr>
               ))}
@@ -358,13 +358,13 @@ function CustomersTab({ customers }: { customers: CustomerItem[] }) {
           <input
             value={search} onChange={(e) => setSearch(e.target.value)}
             placeholder="Search customers..."
-            className="w-full pl-9 pr-4 py-2 text-[13px] border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white"
+            className="w-full pl-9 pr-4 py-2 text-[13px] border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1a3d8f] bg-white"
           />
         </div>
         <div className="flex gap-1 flex-wrap">
           {["ALL", "ACTIVE", "DEFAULTING", "COMPLETED", "CANCELLED"].map((s) => (
             <button key={s} onClick={() => setStatusFilter(s)}
-              className={`px-3 py-1.5 text-[11px] font-semibold rounded-lg transition-colors ${statusFilter === s ? "bg-emerald-600 text-white" : "bg-white border border-neutral-200 text-neutral-600 hover:border-emerald-300"}`}>
+              className={`px-3 py-1.5 text-[11px] font-semibold rounded-lg transition-colors ${statusFilter === s ? "bg-[#0E2C72] text-white" : "bg-white border border-neutral-200 text-neutral-600 hover:border-[#0E2C72]/40"}`}>
               {s === "ALL" ? "All" : s.charAt(0) + s.slice(1).toLowerCase()}
             </button>
           ))}
@@ -398,7 +398,7 @@ function CustomersTab({ customers }: { customers: CustomerItem[] }) {
               </div>
               <div className="flex justify-between items-center pt-3 border-t border-neutral-50">
                 <div className="text-[11px] text-neutral-500">Next Due: {sub?.next_due_date ? fmtDate(sub.next_due_date) : "—"}</div>
-                <button className="p-1.5 rounded-lg bg-neutral-50 text-emerald-600">
+                <button className="p-1.5 rounded-lg bg-neutral-50 text-[#0E2C72]">
                   <Eye className="size-4" />
                 </button>
               </div>
@@ -455,7 +455,7 @@ function CustomersTab({ customers }: { customers: CustomerItem[] }) {
                     <td className="px-4 py-3 text-right font-semibold text-neutral-800">
                       {sub ? fmt(parseFloat(sub.locked_price || "0")) : "—"}
                     </td>
-                    <td className="px-4 py-3 text-right font-semibold text-emerald-700">
+                    <td className="px-4 py-3 text-right font-semibold text-[#0E2C72]">
                       {sub ? fmt(parseFloat(sub.amount_paid || "0")) : "—"}
                     </td>
                     <td className="px-4 py-3 text-right font-semibold text-red-600">
@@ -513,7 +513,7 @@ function ActivityTab({ repUserId, repName }: { repUserId: string; repName: strin
   const categoryColors: Record<string, string> = {
     Workspace: "bg-blue-100 text-blue-700",
     Billing:   "bg-violet-100 text-violet-700",
-    Customer:  "bg-emerald-100 text-emerald-700",
+    Customer:  "bg-[#d6e0f5] text-[#0E2C72]",
     Payment:   "bg-amber-100 text-amber-700",
   };
 
@@ -547,8 +547,8 @@ function ActivityTab({ repUserId, repName }: { repUserId: string; repName: strin
     <div className="space-y-2">
       {items.map((item) => (
         <div key={item.id} className="bg-white rounded-xl border border-neutral-100 p-4 flex items-start gap-3 shadow-sm">
-          <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center shrink-0">
-            <Activity className="size-3.5 text-emerald-600" />
+          <div className="w-8 h-8 rounded-full bg-[#d6e0f5] flex items-center justify-center shrink-0">
+            <Activity className="size-3.5 text-[#0E2C72]" />
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-[13px] text-neutral-800">{item.action_text}</p>
@@ -586,7 +586,7 @@ function ProfileTab({ rep }: { rep: RepMember }) {
         {fields.map(({ label, value }) => (
           <div key={label} className="px-5 py-3.5 flex items-center justify-between">
             <span className="text-[12px] font-semibold text-neutral-500">{label}</span>
-            <span className={`text-[13px] font-medium text-right ${label === "Status" ? (rep.is_active ? "text-emerald-700 font-bold" : "text-neutral-500") : "text-neutral-800"}`}>
+            <span className={`text-[13px] font-medium text-right ${label === "Status" ? (rep.is_active ? "text-[#0E2C72] font-bold" : "text-neutral-500") : "text-neutral-800"}`}>
               {value}
             </span>
           </div>
@@ -669,7 +669,7 @@ export function CustomerRepDetail() {
       <div className="flex flex-col items-center justify-center h-64 gap-3">
         <AlertCircle className="size-8 text-red-400" />
         <p className="text-[14px] font-semibold text-neutral-700">Rep not found</p>
-        <Link to="/customer-reps" className="text-[13px] text-emerald-600 hover:underline flex items-center gap-1">
+        <Link to="/customer-reps" className="text-[13px] text-[#0E2C72] hover:underline flex items-center gap-1">
           <ArrowLeft className="size-3.5" /> Back to list
         </Link>
       </div>
@@ -687,13 +687,13 @@ export function CustomerRepDetail() {
         </Link>
         <div className="flex flex-col sm:flex-row items-start justify-between gap-4">
           <div className="flex items-center gap-4">
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center text-[18px] font-bold text-white shrink-0">
+            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#2a52a8] to-[#0E2C72] flex items-center justify-center text-[18px] font-bold text-white shrink-0">
               {initials}
             </div>
             <div>
               <div className="flex items-center gap-2">
                 <h1 className="text-[20px] font-bold text-neutral-900">{rep.user_name}</h1>
-                <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full ${rep.is_active ? "bg-emerald-100 text-emerald-700" : "bg-neutral-100 text-neutral-500"}`}>
+                <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full ${rep.is_active ? "bg-[#d6e0f5] text-[#0E2C72]" : "bg-neutral-100 text-neutral-500"}`}>
                   {rep.is_active ? "Active" : "Inactive"}
                 </span>
               </div>
@@ -719,7 +719,7 @@ export function CustomerRepDetail() {
             onClick={() => setTab(key)}
             className={`flex items-center gap-1.5 px-4 py-2.5 text-[13px] font-semibold border-b-2 whitespace-nowrap transition-colors ${
               tab === key
-                ? "border-emerald-600 text-emerald-700"
+                ? "border-[#0E2C72] text-[#0E2C72]"
                 : "border-transparent text-neutral-500 hover:text-neutral-800"
             }`}
           >
@@ -740,3 +740,5 @@ export function CustomerRepDetail() {
     </div>
   );
 }
+
+

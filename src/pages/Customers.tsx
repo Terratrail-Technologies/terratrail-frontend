@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, Fragment } from "react";
+﻿import { useState, useEffect, useCallback, Fragment } from "react";
 import { useNavigate } from "react-router";
 import { usePolling } from "../hooks/usePolling";
 import { usePageTitle } from "../hooks/usePageTitle";
@@ -8,7 +8,6 @@ import {
   Filter,
   Plus,
   Eye,
-  Pencil,
   Users as UsersIcon,
   Loader2,
   X,
@@ -18,6 +17,8 @@ import {
   AlertTriangle,
   ChevronDown,
   ChevronUp,
+  Building2,
+  CalendarPlus,
 } from "lucide-react";
 import { Skeleton } from "../components/ui/skeleton";
 import { api } from "../services/api";
@@ -40,7 +41,7 @@ const item = {
 
 // ─── Avatar helpers ────────────────────────────────────────────────────────────
 const avatarColors = [
-  ["bg-emerald-100", "text-emerald-700"],
+  ["bg-[#d6e0f5]", "text-[#0E2C72]"],
   ["bg-blue-100",    "text-blue-700"],
   ["bg-violet-100",  "text-violet-700"],
   ["bg-amber-100",   "text-amber-700"],
@@ -54,7 +55,7 @@ const avatarColor = (name: string) =>
 type SubStatus = "ACTIVE" | "COMPLETED" | "DEFAULTING" | "CANCELLED";
 
 const STATUS_CONFIG: Record<SubStatus, { label: string; cls: string; dot?: string; icon?: React.ReactNode }> = {
-  ACTIVE:     { label: "Active",     cls: "bg-emerald-50 text-emerald-700 border-emerald-100", dot: "bg-emerald-500" },
+  ACTIVE:     { label: "Active",     cls: "bg-[#0E2C72]/6 text-[#0E2C72] border-[#0E2C72]/15", dot: "bg-[#1a3d8f]" },
   COMPLETED:  { label: "Completed",  cls: "bg-blue-50 text-blue-700 border-blue-100" },
   DEFAULTING: { label: "Defaulting", cls: "bg-red-50 text-red-600 border-red-100" },
   CANCELLED:  { label: "Cancelled",  cls: "bg-neutral-100 text-neutral-500 border-neutral-200" },
@@ -93,7 +94,6 @@ interface AddCustomerModalProps {
   onCreated: () => void;
 }
 
-interface PropertyOption { id: string; name: string; pricing_plans: { id: string; plan_name: string; land_size: string; total_price: string; payment_type: string; is_active: boolean }[] }
 
 const REFERRAL_SOURCES = [
   { value: "WALK_IN",      label: "Walk-in" },
@@ -111,43 +111,14 @@ function AddCustomerModal({ onClose, onCreated }: AddCustomerModalProps) {
     full_name: "", email: "", phone: "", address: "",
     next_of_kin_name: "", next_of_kin_phone: "", next_of_kin_relationship: "",
     referral_source: "WALK_IN", referral_code: "",
-    property_id: "", pricing_plan_id: "",
   });
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [properties, setProperties] = useState<PropertyOption[]>([]);
-  const [loadingPlans, setLoadingPlans] = useState(false);
-
-  useEffect(() => {
-    api.properties.list().then((list: any[]) => {
-      setProperties(
-        list
-          .filter((p) => p.status === "PUBLISHED" || p.status === "published")
-          .map((p) => ({ id: p.id, name: p.name, pricing_plans: [] }))
-      );
-    }).catch(() => {});
-  }, []);
-
-  // Fetch full property details (with pricing_plans) when property is selected
-  useEffect(() => {
-    if (!form.property_id) return;
-    setLoadingPlans(true);
-    api.properties.get(form.property_id).then((detail: any) => {
-      setProperties((prev) =>
-        prev.map((p) => p.id === form.property_id ? { ...p, pricing_plans: detail.pricing_plans ?? [] } : p)
-      );
-    }).catch(() => {}).finally(() => setLoadingPlans(false));
-  }, [form.property_id]);
-
-  const selectedProperty = properties.find((p) => p.id === form.property_id);
-  const activePlans = selectedProperty?.pricing_plans.filter((pl) => pl.is_active) ?? [];
 
   const set = (field: string, value: string) => {
     setForm((f) => ({ ...f, [field]: value }));
     setErrors((e) => { const n = { ...e }; delete n[field]; return n; });
   };
-
-  const fmt = (v: string) => v ? `₦${Number(v).toLocaleString("en-NG")}` : "";
 
   const validate = () => {
     const e: Record<string, string> = {};
@@ -174,8 +145,6 @@ function AddCustomerModal({ onClose, onCreated }: AddCustomerModalProps) {
       if (form.next_of_kin_relationship.trim()) payload.next_of_kin_relationship = form.next_of_kin_relationship.trim();
       if (form.referral_source.trim())         payload.referral_source = form.referral_source.trim();
       if (form.referral_code.trim())           payload.referral_code = form.referral_code.trim();
-      if (form.property_id)                    payload.property_id = form.property_id;
-      if (form.pricing_plan_id)                payload.pricing_plan_id = form.pricing_plan_id;
 
       await api.customers.create(payload);
       toast.success(`Customer "${form.full_name}" added successfully.`);
@@ -189,7 +158,7 @@ function AddCustomerModal({ onClose, onCreated }: AddCustomerModalProps) {
   };
 
   const inputCls = (hasError?: boolean) =>
-    `w-full px-3 py-2 border rounded-lg text-[13px] focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400 transition-colors ${
+    `w-full px-3 py-2 border rounded-lg text-[13px] focus:outline-none focus:ring-2 focus:ring-[#1a3d8f]/30 focus:border-[#2a52a8] transition-colors ${
       hasError ? "border-red-400 bg-red-50" : "border-neutral-300 bg-white"
     }`;
 
@@ -214,7 +183,7 @@ function AddCustomerModal({ onClose, onCreated }: AddCustomerModalProps) {
           {/* ── Section 1: Personal Information ── */}
           <div className="space-y-3">
             <div className="flex items-center gap-2">
-              <div className="w-5 h-5 rounded-full bg-emerald-600 text-white text-[10px] font-bold flex items-center justify-center shrink-0">1</div>
+              <div className="w-5 h-5 rounded-full bg-[#0E2C72] text-white text-[10px] font-bold flex items-center justify-center shrink-0">1</div>
               <p className="text-[12px] font-bold text-neutral-700 uppercase tracking-wider">Personal Information</p>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pl-7">
@@ -249,7 +218,7 @@ function AddCustomerModal({ onClose, onCreated }: AddCustomerModalProps) {
           {/* ── Section 2: Next of Kin ── */}
           <div className="space-y-3">
             <div className="flex items-center gap-2">
-              <div className="w-5 h-5 rounded-full bg-emerald-600 text-white text-[10px] font-bold flex items-center justify-center shrink-0">2</div>
+              <div className="w-5 h-5 rounded-full bg-[#0E2C72] text-white text-[10px] font-bold flex items-center justify-center shrink-0">2</div>
               <p className="text-[12px] font-bold text-neutral-700 uppercase tracking-wider">Next of Kin <span className="normal-case text-neutral-400 font-normal text-[11px]">(optional)</span></p>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pl-7">
@@ -279,7 +248,7 @@ function AddCustomerModal({ onClose, onCreated }: AddCustomerModalProps) {
           {/* ── Section 3: Referral Information ── */}
           <div className="space-y-3">
             <div className="flex items-center gap-2">
-              <div className="w-5 h-5 rounded-full bg-emerald-600 text-white text-[10px] font-bold flex items-center justify-center shrink-0">3</div>
+              <div className="w-5 h-5 rounded-full bg-[#0E2C72] text-white text-[10px] font-bold flex items-center justify-center shrink-0">3</div>
               <p className="text-[12px] font-bold text-neutral-700 uppercase tracking-wider">Referral Information</p>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pl-7">
@@ -298,59 +267,6 @@ function AddCustomerModal({ onClose, onCreated }: AddCustomerModalProps) {
             </div>
           </div>
 
-          {/* ── Property Subscription (optional) ── */}
-          {properties.length > 0 && (
-            <>
-              <div className="border-t border-neutral-100" />
-              <div className="space-y-3">
-                <div className="flex items-center gap-2">
-                  <div className="w-5 h-5 rounded-full bg-neutral-300 text-white text-[10px] font-bold flex items-center justify-center shrink-0">4</div>
-                  <p className="text-[12px] font-bold text-neutral-700 uppercase tracking-wider">Property Subscription <span className="normal-case text-neutral-400 font-normal text-[11px]">(optional)</span></p>
-                </div>
-                <div className="pl-7 space-y-3">
-                  <div>
-                    <label className={lbl}>Select Property</label>
-                    <select value={form.property_id}
-                      onChange={(e) => { set("property_id", e.target.value); set("pricing_plan_id", ""); }}
-                      className={inputCls()}>
-                      <option value="">— None —</option>
-                      {properties.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-                    </select>
-                  </div>
-                  {form.property_id && loadingPlans && (
-                    <p className="text-[12px] text-neutral-400 flex items-center gap-1.5"><Loader2 className="w-3.5 h-3.5 animate-spin" /> Loading plans…</p>
-                  )}
-                  {form.property_id && !loadingPlans && activePlans.length > 0 && (
-                    <div>
-                      <label className={lbl}>Select Plan / Land Size</label>
-                      <div className="space-y-1.5">
-                        {activePlans.map((plan) => (
-                          <label key={plan.id}
-                            className={`flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg border cursor-pointer transition-colors ${
-                              form.pricing_plan_id === plan.id
-                                ? "border-emerald-400 bg-emerald-50/50"
-                                : "border-neutral-200 hover:border-emerald-200"
-                            }`}>
-                            <div className="flex items-center gap-2.5">
-                              <input type="radio" name="pricing_plan" value={plan.id}
-                                checked={form.pricing_plan_id === plan.id}
-                                onChange={(e) => set("pricing_plan_id", e.target.value)}
-                                className="accent-emerald-600" />
-                              <div>
-                                <p className="text-[13px] font-semibold text-neutral-900">{plan.plan_name}</p>
-                                <p className="text-[11px] text-neutral-400">{plan.land_size} sqm · {plan.payment_type === "INSTALLMENT" ? "Installment" : "Outright"}</p>
-                              </div>
-                            </div>
-                            <span className="text-[13px] font-bold text-emerald-700 shrink-0">{fmt(plan.total_price)}</span>
-                          </label>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </>
-          )}
         </div>
 
         {/* Actions */}
@@ -360,11 +276,297 @@ function AddCustomerModal({ onClose, onCreated }: AddCustomerModalProps) {
             Cancel
           </button>
           <button onClick={handleSubmit} disabled={saving}
-            className="flex-1 px-4 py-2.5 bg-emerald-600 text-white rounded-lg text-[13px] font-medium hover:bg-emerald-700 disabled:opacity-60 transition-colors flex items-center justify-center gap-2">
+            className="flex-1 px-4 py-2.5 bg-[#0E2C72] text-white rounded-lg text-[13px] font-medium hover:bg-[#0a2260] disabled:opacity-60 transition-colors flex items-center justify-center gap-2">
             {saving ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Saving…</> : "Add Customer"}
           </button>
         </div>
       </div>
+    </div>
+  );
+}
+
+// ─── Add Subscription Modal ───────────────────────────────────────────────────
+interface AddSubscriptionModalProps {
+  customerId: string;
+  customerName: string;
+  onClose: () => void;
+  onCreated: () => void;
+}
+
+function AddSubscriptionModal({ customerId, customerName, onClose, onCreated }: AddSubscriptionModalProps) {
+  const [properties, setProperties]           = useState<any[]>([]);
+  const [loadingProps, setLoadingProps]       = useState(true);
+  const [selectedPropertyId, setSelectedPropertyId] = useState("");
+  const [pricingPlans, setPricingPlans]       = useState<any[]>([]);
+  const [loadingPlans, setLoadingPlans]       = useState(false);
+  const [selectedPlanId, setSelectedPlanId]   = useState("");
+  const [notes, setNotes]                     = useState("");
+  const [saving, setSaving]                   = useState(false);
+  const [error, setError]                     = useState("");
+
+  useEffect(() => {
+    api.properties.list()
+      .then((data: any[]) => setProperties(data))
+      .catch(() => {})
+      .finally(() => setLoadingProps(false));
+  }, []);
+
+  const handlePropertyChange = async (propId: string) => {
+    setSelectedPropertyId(propId);
+    setSelectedPlanId("");
+    setPricingPlans([]);
+    if (!propId) return;
+    setLoadingPlans(true);
+    try {
+      const prop = await api.properties.get(propId);
+      setPricingPlans(prop.pricing_plans ?? []);
+    } catch { /* silent */ }
+    finally { setLoadingPlans(false); }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    if (!selectedPropertyId) { setError("Please select a property."); return; }
+    if (!selectedPlanId) { setError("Please select a pricing plan."); return; }
+    setSaving(true);
+    try {
+      await api.subscriptions.create({
+        customer_id: customerId,
+        property_id: selectedPropertyId,
+        pricing_plan_id: selectedPlanId,
+        notes,
+      });
+      toast.success(`Subscription added for ${customerName}.`);
+      onCreated();
+      onClose();
+    } catch (err: any) {
+      setError(err.message ?? "Failed to create subscription.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const selectCls = "w-full px-3 py-2 border border-neutral-300 rounded-lg text-[13px] focus:outline-none focus:ring-2 focus:ring-[#1a3d8f]/30 focus:border-[#2a52a8] bg-white transition-colors disabled:opacity-50";
+  const lbl = "block text-[12px] font-medium text-neutral-700 mb-1.5";
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <form onSubmit={handleSubmit} className="bg-white rounded-xl max-w-md w-full shadow-xl">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-100">
+          <div>
+            <h3 className="text-[15px] font-semibold text-neutral-900">Add Subscription</h3>
+            <p className="text-[12px] text-neutral-400 mt-0.5">For: <span className="font-medium text-neutral-700">{customerName}</span></p>
+          </div>
+          <button type="button" onClick={onClose} className="p-1.5 hover:bg-neutral-100 rounded-lg transition-colors">
+            <X className="w-4 h-4 text-neutral-500" />
+          </button>
+        </div>
+        <div className="p-6 space-y-4">
+          {error && (
+            <div className="flex items-start gap-2 p-3 rounded-lg bg-red-50 border border-red-100 text-red-700 text-[12px]">
+              <AlertCircle className="w-3.5 h-3.5 shrink-0 mt-0.5" />{error}
+            </div>
+          )}
+          <div>
+            <label className={lbl}>Property <span className="text-red-500">*</span></label>
+            {loadingProps ? (
+              <div className="h-9 bg-neutral-100 rounded-lg animate-pulse" />
+            ) : (
+              <select value={selectedPropertyId} onChange={(e) => handlePropertyChange(e.target.value)} className={selectCls}>
+                <option value="">Select a property…</option>
+                {properties.map((p) => (
+                  <option key={p.id} value={p.id}>{p.name}</option>
+                ))}
+              </select>
+            )}
+          </div>
+          <div>
+            <label className={lbl}>Pricing Plan <span className="text-red-500">*</span></label>
+            {loadingPlans ? (
+              <div className="h-9 bg-neutral-100 rounded-lg animate-pulse" />
+            ) : (
+              <select value={selectedPlanId} onChange={(e) => setSelectedPlanId(e.target.value)}
+                className={selectCls} disabled={!selectedPropertyId}>
+                <option value="">{selectedPropertyId ? "Select a plan…" : "Select a property first"}</option>
+                {pricingPlans.filter((p) => p.is_active !== false).map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.plan_name}
+                    {p.land_size ? ` — ${p.land_size} SQM` : ""}
+                    {p.payment_type ? ` · ${p.payment_type}` : ""}
+                    {p.total_price ? ` · ₦${Number(p.total_price).toLocaleString("en-NG")}` : ""}
+                  </option>
+                ))}
+              </select>
+            )}
+          </div>
+          <div>
+            <label className={lbl}>Notes <span className="text-neutral-400 text-[11px] font-normal">(optional)</span></label>
+            <textarea value={notes} onChange={(e) => setNotes(e.target.value)}
+              rows={3} placeholder="Any notes about this subscription…"
+              className="w-full px-3 py-2 border border-neutral-300 rounded-lg text-[13px] focus:outline-none focus:ring-2 focus:ring-[#1a3d8f]/30 focus:border-[#2a52a8] resize-none transition-colors" />
+          </div>
+        </div>
+        <div className="flex gap-2.5 px-6 pb-6 pt-4 border-t border-neutral-100">
+          <button type="button" onClick={onClose}
+            className="flex-1 px-4 py-2.5 border border-neutral-200 text-neutral-700 rounded-lg text-[13px] font-medium hover:bg-neutral-50 transition-colors">
+            Cancel
+          </button>
+          <button type="submit" disabled={saving || loadingProps}
+            className="flex-1 px-4 py-2.5 bg-[#0E2C72] text-white rounded-lg text-[13px] font-medium hover:bg-[#0a2260] disabled:opacity-60 transition-colors flex items-center justify-center gap-2">
+            {saving ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Saving…</> : "Add Subscription"}
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+}
+
+// ─── Log Inspection Modal ─────────────────────────────────────────────────────
+interface LogInspectionModalProps {
+  customer: { id: string; full_name?: string; name?: string; email?: string; phone?: string };
+  onClose: () => void;
+  onCreated: () => void;
+}
+
+function LogInspectionModal({ customer, onClose, onCreated }: LogInspectionModalProps) {
+  const customerName = customer.full_name ?? customer.name ?? "";
+  const [form, setForm] = useState({
+    name: customerName,
+    email: customer.email ?? "",
+    phone: customer.phone ?? "",
+    property_name: "",
+    inspection_date: "",
+    inspection_time: "",
+    inspection_type: "PHYSICAL",
+    category: "RESIDENTIAL",
+    persons: "1",
+    notes: "",
+  });
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+
+  const set = (field: string, value: string) => setForm((f) => ({ ...f, [field]: value }));
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    if (!form.name.trim()) { setError("Name is required."); return; }
+    if (!form.inspection_date) { setError("Inspection date is required."); return; }
+    setSaving(true);
+    try {
+      const payload: any = {
+        name: form.name.trim(),
+        email: form.email.trim(),
+        phone: form.phone.trim(),
+        inspection_date: form.inspection_date,
+        inspection_type: form.inspection_type,
+        category: form.category,
+        persons: parseInt(form.persons) || 1,
+      };
+      if (form.inspection_time) payload.inspection_time = form.inspection_time;
+      if (form.property_name.trim()) payload.property_name = form.property_name.trim();
+      if (form.notes.trim()) payload.notes = form.notes.trim();
+
+      await api.siteInspections.create(payload);
+      toast.success(`Inspection logged for ${customerName}.`);
+      onCreated();
+      onClose();
+    } catch (err: any) {
+      setError(err.message ?? "Failed to log inspection.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const inputCls = "w-full px-3 py-2 border border-neutral-300 rounded-lg text-[13px] focus:outline-none focus:ring-2 focus:ring-[#1a3d8f]/30 focus:border-[#2a52a8] bg-white transition-colors";
+  const lbl = "block text-[12px] font-medium text-neutral-700 mb-1.5";
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
+      <form onSubmit={handleSubmit} className="bg-white rounded-xl max-w-lg w-full shadow-xl my-auto">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-100">
+          <div>
+            <h3 className="text-[15px] font-semibold text-neutral-900">Log Site Inspection</h3>
+            <p className="text-[12px] text-neutral-400 mt-0.5">For: <span className="font-medium text-neutral-700">{customerName}</span></p>
+          </div>
+          <button type="button" onClick={onClose} className="p-1.5 hover:bg-neutral-100 rounded-lg transition-colors">
+            <X className="w-4 h-4 text-neutral-500" />
+          </button>
+        </div>
+        <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
+          {error && (
+            <div className="flex items-start gap-2 p-3 rounded-lg bg-red-50 border border-red-100 text-red-700 text-[12px]">
+              <AlertCircle className="w-3.5 h-3.5 shrink-0 mt-0.5" />{error}
+            </div>
+          )}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="sm:col-span-2">
+              <label className={lbl}>Full Name <span className="text-red-500">*</span></label>
+              <input value={form.name} onChange={(e) => set("name", e.target.value)} className={inputCls} placeholder="Customer name" />
+            </div>
+            <div>
+              <label className={lbl}>Email</label>
+              <input type="email" value={form.email} onChange={(e) => set("email", e.target.value)} className={inputCls} placeholder="customer@email.com" />
+            </div>
+            <div>
+              <label className={lbl}>Phone</label>
+              <input type="tel" value={form.phone} onChange={(e) => set("phone", e.target.value)} className={inputCls} placeholder="08012345678" />
+            </div>
+          </div>
+          <div>
+            <label className={lbl}>Property Name <span className="text-neutral-400 text-[11px] font-normal">(optional)</span></label>
+            <input value={form.property_name} onChange={(e) => set("property_name", e.target.value)} className={inputCls} placeholder="e.g. Green Valley Estate" />
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className={lbl}>Inspection Date <span className="text-red-500">*</span></label>
+              <input type="date" value={form.inspection_date} onChange={(e) => set("inspection_date", e.target.value)} className={inputCls} />
+            </div>
+            <div>
+              <label className={lbl}>Time <span className="text-neutral-400 text-[11px] font-normal">(optional)</span></label>
+              <input type="time" value={form.inspection_time} onChange={(e) => set("inspection_time", e.target.value)} className={inputCls} />
+            </div>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div>
+              <label className={lbl}>Type</label>
+              <select value={form.inspection_type} onChange={(e) => set("inspection_type", e.target.value)} className={inputCls}>
+                <option value="PHYSICAL">Physical</option>
+                <option value="VIRTUAL">Virtual</option>
+              </select>
+            </div>
+            <div>
+              <label className={lbl}>Category</label>
+              <select value={form.category} onChange={(e) => set("category", e.target.value)} className={inputCls}>
+                <option value="RESIDENTIAL">Residential</option>
+                <option value="COMMERCIAL">Commercial</option>
+                <option value="FARM_LAND">Farm Land</option>
+              </select>
+            </div>
+            <div>
+              <label className={lbl}>Persons</label>
+              <input type="number" min="1" value={form.persons} onChange={(e) => set("persons", e.target.value)} className={inputCls} />
+            </div>
+          </div>
+          <div>
+            <label className={lbl}>Notes <span className="text-neutral-400 text-[11px] font-normal">(optional)</span></label>
+            <textarea value={form.notes} onChange={(e) => set("notes", e.target.value)}
+              rows={2} placeholder="Any notes about this inspection…"
+              className="w-full px-3 py-2 border border-neutral-300 rounded-lg text-[13px] focus:outline-none focus:ring-2 focus:ring-[#1a3d8f]/30 focus:border-[#2a52a8] resize-none transition-colors" />
+          </div>
+        </div>
+        <div className="flex gap-2.5 px-6 pb-6 pt-4 border-t border-neutral-100">
+          <button type="button" onClick={onClose}
+            className="flex-1 px-4 py-2.5 border border-neutral-200 text-neutral-700 rounded-lg text-[13px] font-medium hover:bg-neutral-50 transition-colors">
+            Cancel
+          </button>
+          <button type="submit" disabled={saving}
+            className="flex-1 px-4 py-2.5 bg-[#0E2C72] text-white rounded-lg text-[13px] font-medium hover:bg-[#0a2260] disabled:opacity-60 transition-colors flex items-center justify-center gap-2">
+            {saving ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Saving…</> : "Log Inspection"}
+          </button>
+        </div>
+      </form>
     </div>
   );
 }
@@ -426,6 +628,8 @@ export function Customers() {
   const [salesRepFilter, setSalesRepFilter]   = useState("ALL");
   const [custRepFilter, setCustRepFilter]     = useState("ALL");
   const [showAdd, setShowAdd]     = useState(false);
+  const [addSubTarget, setAddSubTarget]   = useState<{ id: string; name: string } | null>(null);
+  const [logInspTarget, setLogInspTarget] = useState<any | null>(null);
   const [expandedIds, setExpandedIds]     = useState<Set<string>>(new Set());
   const [subCache, setSubCache]           = useState<Record<string, any[]>>({});
   const [loadingExpand, setLoadingExpand] = useState<Set<string>>(new Set());
@@ -546,12 +750,12 @@ export function Customers() {
               </p>
             </div>
             {loading && !isInitialLoad && (
-              <Loader2 className="w-3.5 h-3.5 text-emerald-500 animate-spin" />
+              <Loader2 className="w-3.5 h-3.5 text-[#1a3d8f] animate-spin" />
             )}
           </div>
           <Button
             onClick={() => setShowAdd(true)}
-            className="h-8 gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-[12px] font-medium rounded-lg px-3 shadow-sm"
+            className="h-8 gap-1.5 bg-[#0E2C72] hover:bg-[#0a2260] text-white text-[12px] font-medium rounded-lg px-3 shadow-sm"
           >
             <Plus className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">Add Customer</span>
@@ -584,9 +788,9 @@ export function Customers() {
             sub="Currently active plans"
             loading={isInitialLoad}
             icon={CheckCircle2}
-            accentBg="bg-emerald-500"
-            iconBg="bg-emerald-50"
-            iconColor="text-emerald-600"
+            accentBg="bg-[#1a3d8f]"
+            iconBg="bg-[#0E2C72]/6"
+            iconColor="text-[#0E2C72]"
           />
           <SummaryCard
             label="Completed Subscriptions"
@@ -609,6 +813,95 @@ export function Customers() {
             iconColor="text-red-600"
           />
         </motion.div>
+
+        {/* ── Search + filter bar (always visible once customers are loaded) ── */}
+        {!isInitialLoad && customers.length > 0 && (
+          <motion.div
+            variants={item}
+            className="flex flex-col sm:flex-row items-start sm:items-center gap-2.5 flex-wrap"
+          >
+            {/* Search */}
+            <div className="relative w-full sm:w-80">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-neutral-400" />
+              <Input
+                placeholder="Search by name, email, phone…"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="h-9 pl-9 text-[13px] bg-white border-neutral-200 focus-visible:ring-1 focus-visible:ring-[#1a3d8f]/30 focus-visible:border-[#2a52a8] rounded-lg"
+              />
+            </div>
+
+            {/* Status filter pills */}
+            <div className="flex items-center gap-1.5 overflow-x-auto">
+              <Filter className="w-3.5 h-3.5 text-neutral-400 shrink-0" />
+              <div className="flex items-center gap-1">
+                {STATUS_FILTERS.map((sf) => (
+                  <button
+                    key={sf.value}
+                    onClick={() => setStatusFilter(sf.value)}
+                    className={`px-2.5 py-1 rounded-full text-[11.5px] font-medium transition-colors border whitespace-nowrap ${
+                      statusFilter === sf.value
+                        ? "bg-[#0E2C72] text-white border-[#0E2C72]"
+                        : "bg-white text-neutral-500 border-neutral-200 hover:bg-neutral-50"
+                    }`}
+                  >
+                    {sf.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Additional dropdown filters */}
+            <div className="flex items-center gap-2 flex-wrap">
+              {propertyOptions.length > 0 && (
+                <select
+                  value={propertyFilter}
+                  onChange={(e) => setPropertyFilter(e.target.value)}
+                  className="h-9 px-2.5 border border-neutral-200 bg-white rounded-lg text-[12px] text-neutral-700 focus:outline-none focus:ring-1 focus:ring-[#1a3d8f]/30"
+                >
+                  <option value="ALL">All Properties</option>
+                  {propertyOptions.map((p) => <option key={p} value={p}>{p}</option>)}
+                </select>
+              )}
+              {landSizeOptions.length > 0 && (
+                <select
+                  value={landSizeFilter}
+                  onChange={(e) => setLandSizeFilter(e.target.value)}
+                  className="h-9 px-2.5 border border-neutral-200 bg-white rounded-lg text-[12px] text-neutral-700 focus:outline-none focus:ring-1 focus:ring-[#1a3d8f]/30"
+                >
+                  <option value="ALL">All Land Sizes</option>
+                  {landSizeOptions.map((ls) => <option key={ls} value={ls}>{ls} sqm</option>)}
+                </select>
+              )}
+              {salesRepOptions.length > 0 && (
+                <select
+                  value={salesRepFilter}
+                  onChange={(e) => setSalesRepFilter(e.target.value)}
+                  className="h-9 px-2.5 border border-neutral-200 bg-white rounded-lg text-[12px] text-neutral-700 focus:outline-none focus:ring-1 focus:ring-[#1a3d8f]/30"
+                >
+                  <option value="ALL">All Sales Reps</option>
+                  {salesRepOptions.map((r) => <option key={r} value={r}>{r}</option>)}
+                </select>
+              )}
+              {custRepOptions.length > 0 && (
+                <select
+                  value={custRepFilter}
+                  onChange={(e) => setCustRepFilter(e.target.value)}
+                  className="h-9 px-2.5 border border-neutral-200 bg-white rounded-lg text-[12px] text-neutral-700 focus:outline-none focus:ring-1 focus:ring-[#1a3d8f]/30"
+                >
+                  <option value="ALL">All Customer Reps</option>
+                  {custRepOptions.map((r) => <option key={r} value={r}>{r}</option>)}
+                </select>
+              )}
+              {hasFilters && (
+                <button onClick={clearFilters}
+                  className="h-9 px-2.5 flex items-center gap-1 border border-neutral-200 bg-white rounded-lg text-[12px] text-neutral-500 hover:text-red-600 hover:border-red-200 hover:bg-red-50 transition-colors">
+                  <X className="w-3 h-3" /> Clear
+                </button>
+              )}
+            </div>
+          </motion.div>
+        )}
 
         {isInitialLoad ? (
           /* ── Loading skeleton ─────────────────────────────────────────── */
@@ -668,7 +961,7 @@ export function Customers() {
               action={
                 <Button
                   onClick={() => hasFilters ? clearFilters() : setShowAdd(true)}
-                  className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white"
+                  className="gap-2 bg-[#0E2C72] hover:bg-[#0a2260] text-white"
                 >
                   <Plus className="w-4 h-4" />
                   {hasFilters ? "Clear Filters" : "Add New Customer"}
@@ -678,93 +971,6 @@ export function Customers() {
           </motion.div>
         ) : (
           <>
-            {/* ── Search + filter bar ──────────────────────────────────── */}
-            <motion.div
-              variants={item}
-              className="flex flex-col sm:flex-row items-start sm:items-center gap-2.5 flex-wrap"
-            >
-              {/* Search */}
-              <div className="relative w-full sm:w-80">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-neutral-400" />
-                <Input
-                  placeholder="Search by name, email, phone…"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  className="h-9 pl-9 text-[13px] bg-white border-neutral-200 focus-visible:ring-1 focus-visible:ring-emerald-500/30 focus-visible:border-emerald-400 rounded-lg"
-                />
-              </div>
-
-              {/* Status filter pills */}
-              <div className="flex items-center gap-1.5 overflow-x-auto">
-                <Filter className="w-3.5 h-3.5 text-neutral-400 shrink-0" />
-                <div className="flex items-center gap-1">
-                  {STATUS_FILTERS.map((sf) => (
-                    <button
-                      key={sf.value}
-                      onClick={() => setStatusFilter(sf.value)}
-                      className={`px-2.5 py-1 rounded-full text-[11.5px] font-medium transition-colors border whitespace-nowrap ${
-                        statusFilter === sf.value
-                          ? "bg-emerald-600 text-white border-emerald-600"
-                          : "bg-white text-neutral-500 border-neutral-200 hover:bg-neutral-50"
-                      }`}
-                    >
-                      {sf.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Additional dropdown filters */}
-              <div className="flex items-center gap-2 flex-wrap">
-                {propertyOptions.length > 0 && (
-                  <select
-                    value={propertyFilter}
-                    onChange={(e) => setPropertyFilter(e.target.value)}
-                    className="h-9 px-2.5 border border-neutral-200 bg-white rounded-lg text-[12px] text-neutral-700 focus:outline-none focus:ring-1 focus:ring-emerald-500/30"
-                  >
-                    <option value="ALL">All Properties</option>
-                    {propertyOptions.map((p) => <option key={p} value={p}>{p}</option>)}
-                  </select>
-                )}
-                {landSizeOptions.length > 0 && (
-                  <select
-                    value={landSizeFilter}
-                    onChange={(e) => setLandSizeFilter(e.target.value)}
-                    className="h-9 px-2.5 border border-neutral-200 bg-white rounded-lg text-[12px] text-neutral-700 focus:outline-none focus:ring-1 focus:ring-emerald-500/30"
-                  >
-                    <option value="ALL">All Land Sizes</option>
-                    {landSizeOptions.map((ls) => <option key={ls} value={ls}>{ls} sqm</option>)}
-                  </select>
-                )}
-                {salesRepOptions.length > 0 && (
-                  <select
-                    value={salesRepFilter}
-                    onChange={(e) => setSalesRepFilter(e.target.value)}
-                    className="h-9 px-2.5 border border-neutral-200 bg-white rounded-lg text-[12px] text-neutral-700 focus:outline-none focus:ring-1 focus:ring-emerald-500/30"
-                  >
-                    <option value="ALL">All Sales Reps</option>
-                    {salesRepOptions.map((r) => <option key={r} value={r}>{r}</option>)}
-                  </select>
-                )}
-                {custRepOptions.length > 0 && (
-                  <select
-                    value={custRepFilter}
-                    onChange={(e) => setCustRepFilter(e.target.value)}
-                    className="h-9 px-2.5 border border-neutral-200 bg-white rounded-lg text-[12px] text-neutral-700 focus:outline-none focus:ring-1 focus:ring-emerald-500/30"
-                  >
-                    <option value="ALL">All Customer Reps</option>
-                    {custRepOptions.map((r) => <option key={r} value={r}>{r}</option>)}
-                  </select>
-                )}
-                {hasFilters && (
-                  <button onClick={clearFilters}
-                    className="h-9 px-2.5 flex items-center gap-1 border border-neutral-200 bg-white rounded-lg text-[12px] text-neutral-500 hover:text-red-600 hover:border-red-200 hover:bg-red-50 transition-colors">
-                    <X className="w-3 h-3" /> Clear
-                  </button>
-                )}
-              </div>
-            </motion.div>
-
             {/* ── Mobile card list (< md) ──────────────────────────────── */}
             <motion.div variants={item} className="md:hidden space-y-3">
               {filtered.map((customer) => {
@@ -816,7 +1022,7 @@ export function Customers() {
                         {ps.amount_paid != null && (
                           <div>
                             <span className="text-[10px] font-semibold uppercase tracking-wider text-neutral-400">Paid</span>
-                            <div className="text-emerald-700 font-semibold">{fmt(ps.amount_paid)}</div>
+                            <div className="text-[#0E2C72] font-semibold">{fmt(ps.amount_paid)}</div>
                           </div>
                         )}
                         {ps.balance != null && (
@@ -837,10 +1043,16 @@ export function Customers() {
                         <Eye className="w-3.5 h-3.5" /> View
                       </button>
                       <button
-                        onClick={() => navigate(`/customers/${customer.id}`)}
-                        className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg border border-blue-100 bg-blue-50/50 text-[12px] font-medium text-blue-700 hover:bg-blue-100 transition-colors"
+                        onClick={() => setAddSubTarget({ id: customer.id, name })}
+                        className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg border border-[#0E2C72]/15 bg-[#0E2C72]/6/50 text-[12px] font-medium text-[#0E2C72] hover:bg-[#d6e0f5] transition-colors"
                       >
-                        <Pencil className="w-3.5 h-3.5" /> Edit
+                        <Building2 className="w-3.5 h-3.5" /> Subscribe
+                      </button>
+                      <button
+                        onClick={() => setLogInspTarget(customer)}
+                        className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg border border-violet-100 bg-violet-50/50 text-[12px] font-medium text-violet-700 hover:bg-violet-100 transition-colors"
+                      >
+                        <CalendarPlus className="w-3.5 h-3.5" /> Inspect
                       </button>
                     </div>
                   </div>
@@ -909,7 +1121,7 @@ export function Customers() {
                                   {totalSubs}
                                 </span>
                                 {(customer.active_subscriptions ?? 0) > 0 && (
-                                  <span className="w-2 h-2 rounded-full bg-emerald-400 shrink-0" title={`${customer.active_subscriptions} Active`} />
+                                  <span className="w-2 h-2 rounded-full bg-[#2a52a8] shrink-0" title={`${customer.active_subscriptions} Active`} />
                                 )}
                                 {(customer.defaulting_subscriptions ?? 0) > 0 && (
                                   <span className="w-2 h-2 rounded-full bg-red-400 shrink-0" title={`${customer.defaulting_subscriptions} Defaulting`} />
@@ -920,7 +1132,7 @@ export function Customers() {
                               </div>
                             </td>
                             <td className="px-5 py-3.5 whitespace-nowrap hidden lg:table-cell">
-                              <span className="text-[12.5px] font-medium text-emerald-700">
+                              <span className="text-[12.5px] font-medium text-[#0E2C72]">
                                 {fmt(customer.total_paid ?? customer.primary_subscription?.amount_paid)}
                               </span>
                             </td>
@@ -944,15 +1156,29 @@ export function Customers() {
                                 <button
                                   onClick={() => navigate(`/customers/${customer.id}`)}
                                   title="View profile"
-                                  className="h-7 w-7 flex items-center justify-center rounded-lg text-neutral-400 hover:text-emerald-700 hover:bg-emerald-50 transition-colors"
+                                  className="h-7 w-7 flex items-center justify-center rounded-lg text-neutral-400 hover:text-[#0a2260] hover:bg-[#0E2C72]/6 transition-colors"
                                 >
                                   <Eye className="w-3.5 h-3.5" />
+                                </button>
+                                <button
+                                  onClick={() => setAddSubTarget({ id: customer.id, name })}
+                                  title="Add subscription"
+                                  className="h-7 w-7 flex items-center justify-center rounded-lg text-neutral-400 hover:text-blue-700 hover:bg-blue-50 transition-colors"
+                                >
+                                  <Building2 className="w-3.5 h-3.5" />
+                                </button>
+                                <button
+                                  onClick={() => setLogInspTarget(customer)}
+                                  title="Log inspection"
+                                  className="h-7 w-7 flex items-center justify-center rounded-lg text-neutral-400 hover:text-violet-700 hover:bg-violet-50 transition-colors"
+                                >
+                                  <CalendarPlus className="w-3.5 h-3.5" />
                                 </button>
                                 {totalSubs > 0 && (
                                   <button
                                     onClick={() => toggleExpand(customer.id)}
                                     title={isExpanded ? "Collapse subscriptions" : "Expand subscriptions"}
-                                    className="h-7 w-7 flex items-center justify-center rounded-lg text-neutral-400 hover:text-emerald-700 hover:bg-emerald-50 transition-colors"
+                                    className="h-7 w-7 flex items-center justify-center rounded-lg text-neutral-400 hover:text-[#0a2260] hover:bg-[#0E2C72]/6 transition-colors"
                                   >
                                     {isLoadingThisExpand
                                       ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -991,7 +1217,7 @@ export function Customers() {
                                       className={`bg-neutral-50/40 hover:bg-neutral-50/80 transition-colors ${idx === subs.length - 1 ? "border-b border-neutral-100" : "border-b border-neutral-50/70"}`}
                                     >
                                       <td colSpan={7} className="py-0">
-                                        <div className="flex items-center gap-5 pl-16 pr-5 py-2.5 border-l-2 border-emerald-200/60">
+                                        <div className="flex items-center gap-5 pl-16 pr-5 py-2.5 border-l-2 border-[#8aaad8]/60">
                                           <div className="flex-1 min-w-0">
                                             <p className="text-[12.5px] font-semibold text-neutral-800 truncate">{sub.property_name || "—"}</p>
                                             <p className="text-[11px] text-neutral-400">
@@ -1006,7 +1232,7 @@ export function Customers() {
                                             </div>
                                             <div className="text-right">
                                               <p className="text-[10px] text-neutral-400 uppercase tracking-wide font-semibold">Paid</p>
-                                              <p className="text-[12px] font-medium text-emerald-700">{fmt(sub.amount_paid)}</p>
+                                              <p className="text-[12px] font-medium text-[#0E2C72]">{fmt(sub.amount_paid)}</p>
                                             </div>
                                             <div className="text-right">
                                               <p className="text-[10px] text-neutral-400 uppercase tracking-wide font-semibold">Balance</p>
@@ -1026,7 +1252,7 @@ export function Customers() {
                                             )}
                                             <button
                                               onClick={() => navigate(`/customers/${customer.id}`)}
-                                              className="text-[12px] text-emerald-600 hover:text-emerald-800 font-medium transition-colors whitespace-nowrap"
+                                              className="text-[12px] text-[#0E2C72] hover:text-[#0a2260] font-medium transition-colors whitespace-nowrap"
                                             >
                                               View →
                                             </button>
@@ -1062,6 +1288,27 @@ export function Customers() {
           onCreated={fetchCustomers}
         />
       )}
+
+      {/* ── Add Subscription Modal ──────────────────────────────────────────── */}
+      {addSubTarget && (
+        <AddSubscriptionModal
+          customerId={addSubTarget.id}
+          customerName={addSubTarget.name}
+          onClose={() => setAddSubTarget(null)}
+          onCreated={fetchCustomers}
+        />
+      )}
+
+      {/* ── Log Inspection Modal ────────────────────────────────────────────── */}
+      {logInspTarget && (
+        <LogInspectionModal
+          customer={logInspTarget}
+          onClose={() => setLogInspTarget(null)}
+          onCreated={() => {}}
+        />
+      )}
     </div>
   );
 }
+
+

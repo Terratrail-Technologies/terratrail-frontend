@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+﻿import { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { usePolling } from "../hooks/usePolling";
 import { usePageTitle } from "../hooks/usePageTitle";
@@ -122,7 +122,7 @@ function PropertyMenu({
                   <button
                     onClick={handlePublishToggle}
                     className={`w-full flex items-center gap-2.5 px-3.5 py-2 text-[12.5px] font-medium transition-colors ${
-                      isPublished ? "text-amber-600 hover:bg-amber-50" : "text-emerald-600 hover:bg-emerald-50"
+                      isPublished ? "text-amber-600 hover:bg-amber-50" : "text-[#0E2C72] hover:bg-[#0E2C72]/6"
                     }`}
                   >
                     {isPublished
@@ -169,10 +169,10 @@ function PropertyCard({ property, onRefresh }: { property: any; onRefresh: () =>
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
           />
         ) : (
-          <div className="w-full h-full bg-gradient-to-br from-neutral-50 to-emerald-50 flex items-center justify-center">
+          <div className="w-full h-full bg-gradient-to-br from-neutral-50 to-[#eef2fb] flex items-center justify-center">
             <div className="flex flex-col items-center gap-1.5">
               <div className="w-14 h-14 bg-white rounded-2xl flex items-center justify-center shadow-sm border border-white/60">
-                <BuildingIcon className="w-7 h-7 text-emerald-500/60" />
+                <BuildingIcon className="w-7 h-7 text-[#1a3d8f]/60" />
               </div>
               <span className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wider">No cover image</span>
             </div>
@@ -183,7 +183,7 @@ function PropertyCard({ property, onRefresh }: { property: any; onRefresh: () =>
         <div className="absolute top-3 left-3">
           <Badge
             className={isPublished
-              ? "bg-emerald-500/90 text-white border-0 shadow-sm backdrop-blur-sm text-[10.5px] gap-1 px-2 py-0.5"
+              ? "bg-[#1a3d8f]/90 text-white border-0 shadow-sm backdrop-blur-sm text-[10.5px] gap-1 px-2 py-0.5"
               : "bg-neutral-800/70 text-white border-0 shadow-sm backdrop-blur-sm text-[10.5px] gap-1 px-2 py-0.5"}
           >
             {isPublished
@@ -198,18 +198,18 @@ function PropertyCard({ property, onRefresh }: { property: any; onRefresh: () =>
         </div>
 
         {/* Dark overlay on hover */}
-        <div className="absolute inset-0 bg-emerald-600/0 group-hover:bg-emerald-600/[0.03] transition-colors pointer-events-none" />
+        <div className="absolute inset-0 bg-[#0E2C72]/0 group-hover:bg-[#0E2C72]/[0.03] transition-colors pointer-events-none" />
       </div>
 
       {/* Info */}
       <div className="p-5 flex-1 flex flex-col">
         <div className="flex items-start justify-between mb-3 gap-3">
           <div className="min-w-0">
-            <h3 className="text-[14px] font-semibold text-neutral-900 group-hover:text-emerald-600 transition-colors truncate tracking-tight">
+            <h3 className="text-[14px] font-semibold text-neutral-900 group-hover:text-[#0E2C72] transition-colors truncate tracking-tight">
               {property.name}
             </h3>
             {typeLabel && (
-              <span className="text-[11px] font-medium text-emerald-700 bg-emerald-50 inline-flex px-2 py-0.5 rounded-md mt-1.5">
+              <span className="text-[11px] font-medium text-[#0E2C72] bg-[#0E2C72]/6 inline-flex px-2 py-0.5 rounded-md mt-1.5">
                 {typeLabel}
               </span>
             )}
@@ -252,7 +252,7 @@ function PropertyCard({ property, onRefresh }: { property: any; onRefresh: () =>
               <div className="text-[9.5px] font-semibold uppercase tracking-wider text-neutral-400 mb-0.5">
                 {s.label}
               </div>
-              <div className={`text-[12.5px] font-bold ${s.highlight ? "text-emerald-600" : "text-neutral-800"}`}>
+              <div className={`text-[12.5px] font-bold ${s.highlight ? "text-[#0E2C72]" : "text-neutral-800"}`}>
                 {s.value}
               </div>
             </div>
@@ -292,8 +292,8 @@ function PropertyRow({ property, onRefresh }: { property: any; onRefresh: () => 
             <img src={property.featured_image} alt={property.name}
               className="h-10 w-16 object-cover rounded-lg border border-neutral-100 shrink-0" />
           ) : (
-            <div className="h-10 w-16 rounded-lg bg-emerald-50 border border-neutral-100 flex items-center justify-center shrink-0">
-              <BuildingIcon className="w-4 h-4 text-emerald-400" />
+            <div className="h-10 w-16 rounded-lg bg-[#0E2C72]/6 border border-neutral-100 flex items-center justify-center shrink-0">
+              <BuildingIcon className="w-4 h-4 text-[#4a6fc0]" />
             </div>
           )}
         </button>
@@ -301,7 +301,7 @@ function PropertyRow({ property, onRefresh }: { property: any; onRefresh: () => 
       {/* Property Name */}
       <td className="px-4 py-3 whitespace-nowrap">
         <button onClick={() => navigate(`/properties/${property.id}`)} className="text-left">
-          <div className="text-[13px] font-semibold text-neutral-900 group-hover:text-emerald-600 transition-colors max-w-[180px] truncate">
+          <div className="text-[13px] font-semibold text-neutral-900 group-hover:text-[#0E2C72] transition-colors max-w-[180px] truncate">
             {property.name}
           </div>
         </button>
@@ -309,7 +309,7 @@ function PropertyRow({ property, onRefresh }: { property: any; onRefresh: () => 
       {/* Property Type */}
       <td className="px-4 py-3 whitespace-nowrap hidden lg:table-cell">
         {typeLabel
-          ? <span className="text-[11px] font-medium text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md">{typeLabel}</span>
+          ? <span className="text-[11px] font-medium text-[#0E2C72] bg-[#0E2C72]/6 px-2 py-0.5 rounded-md">{typeLabel}</span>
           : <span className="text-neutral-400">—</span>}
       </td>
       {/* Location */}
@@ -336,7 +336,7 @@ function PropertyRow({ property, onRefresh }: { property: any; onRefresh: () => 
         {totalUnits}
       </td>
       {/* Units Available */}
-      <td className="px-4 py-3 whitespace-nowrap hidden lg:table-cell text-[12.5px] font-medium text-emerald-600 text-center">
+      <td className="px-4 py-3 whitespace-nowrap hidden lg:table-cell text-[12.5px] font-medium text-[#0E2C72] text-center">
         {unitsAvail}
       </td>
       {/* Units Sold */}
@@ -350,7 +350,7 @@ function PropertyRow({ property, onRefresh }: { property: any; onRefresh: () => 
       {/* Status */}
       <td className="px-4 py-3 whitespace-nowrap">
         <Badge className={isPublished
-          ? "bg-emerald-50 text-emerald-700 border border-emerald-100 text-[10.5px] gap-1"
+          ? "bg-[#0E2C72]/6 text-[#0E2C72] border border-[#0E2C72]/15 text-[10.5px] gap-1"
           : "bg-neutral-100 text-neutral-500 border border-neutral-200 text-[10.5px] gap-1"}>
           {isPublished ? <CheckCircle2 className="w-2.5 h-2.5" /> : <Clock className="w-2.5 h-2.5" />}
           {isPublished ? "Published" : "Draft"}
@@ -474,11 +474,11 @@ export function Properties() {
               </p>
             </div>
             {loading && properties.length > 0 && (
-              <Loader2 className="w-3.5 h-3.5 text-emerald-500 animate-spin" />
+              <Loader2 className="w-3.5 h-3.5 text-[#1a3d8f] animate-spin" />
             )}
           </div>
           <Button asChild
-            className="h-8 gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-[12px] font-medium rounded-lg px-3 shadow-sm">
+            className="h-8 gap-1.5 bg-[#0E2C72] hover:bg-[#0a2260] text-white text-[12px] font-medium rounded-lg px-3 shadow-sm">
             <Link to="/properties/new">
               <Plus className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">Add Property</span>
@@ -550,9 +550,9 @@ export function Properties() {
                 value={totalUnitsAvailable}
                 sub="Across all properties"
                 icon={Package}
-                accentBg="bg-emerald-500"
-                iconBg="bg-emerald-50"
-                iconColor="text-emerald-600"
+                accentBg="bg-[#1a3d8f]"
+                iconBg="bg-[#0E2C72]/6"
+                iconColor="text-[#0E2C72]"
                 loading={false}
               />
               <StatCard
@@ -586,7 +586,7 @@ export function Properties() {
                   placeholder="Search by name, location…"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  className="h-9 pl-9 text-[13px] bg-white border-neutral-200 focus-visible:ring-1 focus-visible:ring-emerald-500/30 focus-visible:border-emerald-400 rounded-lg"
+                  className="h-9 pl-9 text-[13px] bg-white border-neutral-200 focus-visible:ring-1 focus-visible:ring-[#1a3d8f]/30 focus-visible:border-[#2a52a8] rounded-lg"
                 />
               </div>
 
@@ -612,7 +612,7 @@ export function Properties() {
                 <select
                   value={typeFilter}
                   onChange={(e) => setTypeFilter(e.target.value)}
-                  className="h-9 px-2.5 border border-neutral-200 bg-white rounded-lg text-[12px] text-neutral-700 focus:outline-none focus:ring-1 focus:ring-emerald-500/30 self-start sm:self-auto"
+                  className="h-9 px-2.5 border border-neutral-200 bg-white rounded-lg text-[12px] text-neutral-700 focus:outline-none focus:ring-1 focus:ring-[#1a3d8f]/30 self-start sm:self-auto"
                 >
                   <option value="ALL">All Types</option>
                   {typeOptions.map((t) => (
@@ -654,7 +654,7 @@ export function Properties() {
                   ? "Try adjusting your search or filter."
                   : "Get started by adding your first property."}
                 action={
-                  <Button asChild className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white">
+                  <Button asChild className="gap-2 bg-[#0E2C72] hover:bg-[#0a2260] text-white">
                     <Link to="/properties/new">
                       <Plus className="w-4 h-4" />
                       Add Your First Property
@@ -716,3 +716,6 @@ export function Properties() {
     </div>
   );
 }
+
+
+

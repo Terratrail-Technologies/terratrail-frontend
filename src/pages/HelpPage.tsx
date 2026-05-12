@@ -1,4 +1,4 @@
-import { ExternalLink, MessageCircle, Mail, BookOpen, FileText, Video, ChevronRight } from "lucide-react";
+﻿import { ExternalLink, MessageCircle, Mail, BookOpen, FileText, Video, ChevronRight } from "lucide-react";
 import { usePageTitle } from "../hooks/usePageTitle";
 
 const FAQ = [
@@ -39,7 +39,7 @@ const FAQ = [
 const RESOURCES = [
   { icon: BookOpen,  label: "Getting Started Guide",    href: "#", desc: "Step-by-step guide for new workspaces" },
   { icon: Video,     label: "Video Tutorials",          href: "#", desc: "Watch how-to videos for key features" },
-  { icon: FileText,  label: "API Documentation",        href: "#", desc: "Integrate TerraTrail with your systems" },
+  { icon: FileText,  label: "API Documentation",        href: "#", desc: "Integrate Terratrail with your systems" },
   { icon: FileText,  label: "Changelog",                href: "#", desc: "What's new in each release" },
 ];
 
@@ -59,13 +59,13 @@ export function HelpPage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <a
             href="mailto:support@terratrail.io"
-            className="flex items-center gap-4 bg-white border border-neutral-200 rounded-xl p-5 hover:border-emerald-300 hover:shadow-sm transition-all group"
+            className="flex items-center gap-4 bg-white border border-neutral-200 rounded-xl p-5 hover:border-[#0E2C72]/40 hover:shadow-sm transition-all group"
           >
-            <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center shrink-0">
-              <Mail className="w-5 h-5 text-emerald-600" />
+            <div className="w-10 h-10 rounded-xl bg-[#0E2C72]/6 flex items-center justify-center shrink-0">
+              <Mail className="w-5 h-5 text-[#0E2C72]" />
             </div>
             <div>
-              <p className="text-sm font-semibold text-neutral-900 group-hover:text-emerald-700 transition-colors">Email Support</p>
+              <p className="text-sm font-semibold text-neutral-900 group-hover:text-[#0a2260] transition-colors">Email Support</p>
               <p className="text-xs text-neutral-500 mt-0.5">support@terratrail.io · Reply within 24h</p>
             </div>
             <ExternalLink className="w-3.5 h-3.5 text-neutral-300 ml-auto shrink-0" />
@@ -75,7 +75,7 @@ export function HelpPage() {
             href="https://wa.me/2349000000000"
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-4 bg-white border border-neutral-200 rounded-xl p-5 hover:border-emerald-300 hover:shadow-sm transition-all group"
+            className="flex items-center gap-4 bg-white border border-neutral-200 rounded-xl p-5 hover:border-[#0E2C72]/40 hover:shadow-sm transition-all group"
           >
             <div className="w-10 h-10 rounded-xl bg-green-50 flex items-center justify-center shrink-0">
               <MessageCircle className="w-5 h-5 text-green-600" />
@@ -116,7 +116,7 @@ export function HelpPage() {
             {FAQ.map((item, i) => (
               <details key={i} className="group px-5 py-4">
                 <summary className="flex items-center justify-between cursor-pointer list-none">
-                  <span className="text-sm font-medium text-neutral-800 group-open:text-emerald-700 pr-4">{item.q}</span>
+                  <span className="text-sm font-medium text-neutral-800 group-open:text-[#0E2C72] pr-4">{item.q}</span>
                   <ChevronRight className="w-4 h-4 text-neutral-400 shrink-0 transition-transform group-open:rotate-90" />
                 </summary>
                 <p className="text-sm text-neutral-600 leading-relaxed mt-3">{item.a}</p>
@@ -126,9 +126,10 @@ export function HelpPage() {
         </div>
 
         <p className="text-xs text-neutral-400 text-center pb-4">
-          TerraTrail &mdash; Real Estate Management Platform &mdash; Version 1.0
+          Terratrail &mdash; Real Estate Management Platform &mdash; Version 1.0
         </p>
       </div>
     </div>
   );
 }
+

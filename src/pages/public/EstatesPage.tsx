@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+﻿import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router";
 import {
   Building2, MapPin, Search, ChevronLeft, ChevronRight, X,
@@ -127,7 +127,7 @@ function InspectionModal({ property, workspaceSlug, onClose }: { property: Prope
     }
   };
 
-  const inputCls = "w-full px-3 py-2.5 text-[13px] border border-neutral-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400 transition-all";
+  const inputCls = "w-full px-3 py-2.5 text-[13px] border border-neutral-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#1a3d8f]/30 focus:border-[#2a52a8] transition-all";
 
   return (
     <motion.div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-sm"
@@ -153,12 +153,12 @@ function InspectionModal({ property, workspaceSlug, onClose }: { property: Prope
         {sent ? (
           <div className="p-8 text-center">
             <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: "spring", stiffness: 400, damping: 20 }}
-              className="w-16 h-16 rounded-full bg-emerald-100 flex items-center justify-center mx-auto mb-4">
-              <CheckCircle2 className="size-8 text-emerald-600" />
+              className="w-16 h-16 rounded-full bg-[#d6e0f5] flex items-center justify-center mx-auto mb-4">
+              <CheckCircle2 className="size-8 text-[#0E2C72]" />
             </motion.div>
             <h4 className="text-[16px] font-bold text-neutral-900 mb-2">Request Submitted!</h4>
             <p className="text-[13px] text-neutral-500 leading-relaxed">Our team will reach out within 24 hours to confirm your inspection details.</p>
-            <button onClick={onClose} className="mt-6 px-6 py-2.5 bg-emerald-600 text-white text-[13px] font-semibold rounded-xl hover:bg-emerald-700 transition-colors">
+            <button onClick={onClose} className="mt-6 px-6 py-2.5 bg-[#0E2C72] text-white text-[13px] font-semibold rounded-xl hover:bg-[#0a2260] transition-colors">
               Done
             </button>
           </div>
@@ -166,9 +166,9 @@ function InspectionModal({ property, workspaceSlug, onClose }: { property: Prope
           <form onSubmit={handleSubmit} className="p-5 space-y-3.5">
             {/* Meeting point info */}
             {config?.meeting_point && (
-              <div className="flex items-start gap-2 px-3 py-2.5 bg-emerald-50 rounded-xl border border-emerald-100">
-                <MapPin className="size-3.5 text-emerald-600 mt-0.5 shrink-0" />
-                <p className="text-[12px] text-emerald-800 font-medium">{config.meeting_point}</p>
+              <div className="flex items-start gap-2 px-3 py-2.5 bg-[#0E2C72]/6 rounded-xl border border-[#0E2C72]/15">
+                <MapPin className="size-3.5 text-[#0E2C72] mt-0.5 shrink-0" />
+                <p className="text-[12px] text-[#0E2C72] font-medium">{config.meeting_point}</p>
               </div>
             )}
 
@@ -192,7 +192,7 @@ function InspectionModal({ property, workspaceSlug, onClose }: { property: Prope
 
             {/* Available days banner */}
             {availableDays.length > 0 && (
-              <div className="flex items-center gap-2 px-3 py-2 bg-emerald-50 rounded-xl border border-emerald-100 text-[12px] text-emerald-800">
+              <div className="flex items-center gap-2 px-3 py-2 bg-[#0E2C72]/6 rounded-xl border border-[#0E2C72]/15 text-[12px] text-[#0E2C72]">
                 <span className="font-semibold">Available:</span>
                 {availableDays.map(d => d.slice(0,3)).join(", ")}
               </div>
@@ -227,8 +227,8 @@ function InspectionModal({ property, workspaceSlug, onClose }: { property: Prope
                       onClick={() => set("timeSlot", slot)}
                       className={`px-3 py-1.5 rounded-xl text-[12.5px] font-semibold border transition-all ${
                         form.timeSlot === slot
-                          ? "bg-emerald-600 text-white border-emerald-600 shadow-sm"
-                          : "bg-white text-neutral-700 border-neutral-200 hover:border-emerald-300 hover:text-emerald-700"
+                          ? "bg-[#0E2C72] text-white border-[#0E2C72] shadow-sm"
+                          : "bg-white text-neutral-700 border-neutral-200 hover:border-[#0E2C72]/40 hover:text-[#0a2260]"
                       }`}>
                       {slot}
                     </button>
@@ -263,7 +263,7 @@ function InspectionModal({ property, workspaceSlug, onClose }: { property: Prope
                 placeholder="Any specific questions or requirements..." />
             </div>
             <button type="submit" disabled={loading || !dateAllowed}
-              className="w-full py-3 bg-emerald-600 text-white text-[14px] font-bold rounded-xl hover:bg-emerald-700 active:scale-[0.98] transition-all disabled:opacity-60 flex items-center justify-center gap-2">
+              className="w-full py-3 bg-[#0E2C72] text-white text-[14px] font-bold rounded-xl hover:bg-[#0a2260] active:scale-[0.98] transition-all disabled:opacity-60 flex items-center justify-center gap-2">
               {loading ? <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" /> : null}
               {loading ? "Submitting…" : "Submit Request"}
             </button>
@@ -280,7 +280,7 @@ function ImageGallery({ images }: { images: string[] }) {
   const prev = () => setIdx((i) => (i - 1 + images.length) % images.length);
   const next = () => setIdx((i) => (i + 1) % images.length);
   if (!images.length) return (
-    <div className="aspect-[4/3] rounded-2xl bg-gradient-to-br from-neutral-100 to-emerald-50 flex items-center justify-center">
+    <div className="aspect-[4/3] rounded-2xl bg-gradient-to-br from-neutral-100 to-[#eef2fb] flex items-center justify-center">
       <Building2 className="size-16 text-neutral-300" />
     </div>
   );
@@ -315,7 +315,7 @@ function ImageGallery({ images }: { images: string[] }) {
         <div className="flex gap-1.5 overflow-x-auto pb-1">
           {images.map((img, i) => (
             <button key={i} onClick={() => setIdx(i)}
-              className={`shrink-0 w-14 h-14 rounded-xl overflow-hidden border-2 transition-all ${i === idx ? "border-emerald-500" : "border-transparent opacity-60 hover:opacity-100"}`}>
+              className={`shrink-0 w-14 h-14 rounded-xl overflow-hidden border-2 transition-all ${i === idx ? "border-[#0E2C72]" : "border-transparent opacity-60 hover:opacity-100"}`}>
               <img src={imgSrc(img)} alt="" className="w-full h-full object-cover" />
             </button>
           ))}
@@ -343,7 +343,7 @@ function PropertyDetail({ property, workspaceSlug, onBack }: { property: Propert
       </AnimatePresence>
 
       <motion.button onClick={onBack} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }}
-        className="flex items-center gap-1.5 text-[13px] font-semibold text-neutral-500 hover:text-emerald-600 mb-6 transition-colors group">
+        className="flex items-center gap-1.5 text-[13px] font-semibold text-neutral-500 hover:text-[#0E2C72] mb-6 transition-colors group">
         <ChevronLeft className="size-4 group-hover:-translate-x-0.5 transition-transform" />
         Back to listings
       </motion.button>
@@ -359,7 +359,7 @@ function PropertyDetail({ property, workspaceSlug, onBack }: { property: Propert
           className="space-y-5">
           <div>
             <div className="flex items-center gap-2 mb-2 flex-wrap">
-              <span className="px-3 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-[11px] font-bold uppercase tracking-wide">
+              <span className="px-3 py-0.5 rounded-full bg-[#d6e0f5] text-[#0E2C72] text-[11px] font-bold uppercase tracking-wide">
                 {typeLabel(property.property_type)}
               </span>
               {property.available_units > 0 && (
@@ -371,7 +371,7 @@ function PropertyDetail({ property, workspaceSlug, onBack }: { property: Propert
             <h1 className="text-[24px] sm:text-[28px] font-extrabold text-neutral-900 leading-tight">{property.name}</h1>
             {loc && (
               <p className="flex items-center gap-1.5 text-[13px] text-neutral-500 mt-1.5">
-                <MapPin className="size-3.5 shrink-0 text-emerald-500" />
+                <MapPin className="size-3.5 shrink-0 text-[#1a3d8f]" />
                 {[loc.address, loc.city, loc.state].filter(Boolean).join(", ")}
               </p>
             )}
@@ -379,8 +379,8 @@ function PropertyDetail({ property, workspaceSlug, onBack }: { property: Propert
 
           {/* Quick stats */}
           <div className="grid grid-cols-2 gap-3">
-            <div className="bg-emerald-50 rounded-xl p-3.5 border border-emerald-100">
-              <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider mb-0.5">Total Area</p>
+            <div className="bg-[#0E2C72]/6 rounded-xl p-3.5 border border-[#0E2C72]/15">
+              <p className="text-[10px] font-bold text-[#0E2C72] uppercase tracking-wider mb-0.5">Total Area</p>
               <p className="text-[18px] font-extrabold text-neutral-900">{Number(property.total_sqms).toLocaleString()} <span className="text-[13px] font-semibold text-neutral-500">sqm</span></p>
             </div>
             <div className="bg-blue-50 rounded-xl p-3.5 border border-blue-100">
@@ -400,7 +400,7 @@ function PropertyDetail({ property, workspaceSlug, onBack }: { property: Propert
               <h3 className="text-[11px] font-bold text-neutral-500 uppercase tracking-widest mb-2.5">Pricing Options</h3>
               <div className="space-y-2">
                 {activePlans.map((plan) => (
-                  <div key={plan.id} className="flex items-center justify-between px-4 py-3 rounded-xl bg-white border border-neutral-100 shadow-sm hover:border-emerald-200 transition-colors">
+                  <div key={plan.id} className="flex items-center justify-between px-4 py-3 rounded-xl bg-white border border-neutral-100 shadow-sm hover:border-[#8aaad8] transition-colors">
                     <div>
                       <p className="text-[13px] font-bold text-neutral-900">{plan.plan_name}</p>
                       <p className="text-[11px] text-neutral-400 mt-0.5">
@@ -408,7 +408,7 @@ function PropertyDetail({ property, workspaceSlug, onBack }: { property: Propert
                       </p>
                     </div>
                     <div className="text-right">
-                      <p className="text-[15px] font-extrabold text-emerald-700">{fmt(plan.total_price)}</p>
+                      <p className="text-[15px] font-extrabold text-[#0E2C72]">{fmt(plan.total_price)}</p>
                       {plan.payment_type === "INSTALLMENT" && (
                         <p className="text-[11px] text-neutral-400">{fmt(plan.initial_payment)} initial</p>
                       )}
@@ -425,7 +425,7 @@ function PropertyDetail({ property, workspaceSlug, onBack }: { property: Propert
               <h3 className="text-[11px] font-bold text-neutral-500 uppercase tracking-widest mb-2.5">Amenities</h3>
               <div className="flex flex-wrap gap-1.5">
                 {property.amenities.map((a) => (
-                  <span key={a.id} className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold ${a.status === "COMPLETED" ? "bg-emerald-50 text-emerald-700 border border-emerald-100" : "bg-neutral-50 text-neutral-500 border border-neutral-100"}`}>
+                  <span key={a.id} className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold ${a.status === "COMPLETED" ? "bg-[#0E2C72]/6 text-[#0E2C72] border border-[#0E2C72]/15" : "bg-neutral-50 text-neutral-500 border border-neutral-100"}`}>
                     {a.status === "COMPLETED" && <CheckCircle2 className="size-3" />}
                     {a.name}
                   </span>
@@ -438,25 +438,25 @@ function PropertyDetail({ property, workspaceSlug, onBack }: { property: Propert
           {loc?.latitude && loc?.longitude && (
             <a href={`https://www.google.com/maps?q=${loc.latitude},${loc.longitude}`}
               target="_blank" rel="noopener noreferrer"
-              className="flex items-center gap-2.5 px-4 py-3 rounded-xl border border-neutral-200 bg-neutral-50 hover:bg-emerald-50 hover:border-emerald-200 transition-colors group">
-              <MapPin className="size-4 text-emerald-600 shrink-0" />
+              className="flex items-center gap-2.5 px-4 py-3 rounded-xl border border-neutral-200 bg-neutral-50 hover:bg-[#0E2C72]/6 hover:border-[#8aaad8] transition-colors group">
+              <MapPin className="size-4 text-[#0E2C72] shrink-0" />
               <div>
-                <p className="text-[12.5px] font-semibold text-neutral-800 group-hover:text-emerald-700 transition-colors">View on Google Maps</p>
+                <p className="text-[12.5px] font-semibold text-neutral-800 group-hover:text-[#0a2260] transition-colors">View on Google Maps</p>
                 <p className="text-[11px] text-neutral-400">{Number(loc.latitude).toFixed(5)}, {Number(loc.longitude).toFixed(5)}</p>
               </div>
-              <ExternalLink className="size-3.5 ml-auto text-neutral-300 group-hover:text-emerald-400 transition-colors" />
+              <ExternalLink className="size-3.5 ml-auto text-neutral-300 group-hover:text-[#4a6fc0] transition-colors" />
             </a>
           )}
 
           {/* CTA */}
           <div className="flex flex-col sm:flex-row gap-3">
             <button onClick={() => navigate(`/estates/${workspaceSlug}/${property.id}`)}
-              className="flex-1 py-3.5 bg-emerald-600 hover:bg-emerald-700 active:scale-[0.98] text-white text-[15px] font-bold rounded-xl transition-all shadow-sm shadow-emerald-600/20 flex items-center justify-center gap-2">
+              className="flex-1 py-3.5 bg-[#0E2C72] hover:bg-[#0a2260] active:scale-[0.98] text-white text-[15px] font-bold rounded-xl transition-all shadow-sm shadow-[#0E2C72]/20 flex items-center justify-center gap-2">
               Buy Property
               <ArrowRight className="size-4" />
             </button>
             <button onClick={() => setShowInspection(true)}
-              className="flex-1 py-3.5 border-2 border-emerald-600 text-emerald-700 hover:bg-emerald-50 active:scale-[0.98] text-[15px] font-bold rounded-xl transition-all flex items-center justify-center gap-2">
+              className="flex-1 py-3.5 border-2 border-[#0E2C72] text-[#0E2C72] hover:bg-[#0E2C72]/6 active:scale-[0.98] text-[15px] font-bold rounded-xl transition-all flex items-center justify-center gap-2">
               Book Inspection
             </button>
           </div>
@@ -474,20 +474,20 @@ function PropertyCard({ property, onClick }: { property: Property; onClick: () =
 
   return (
     <motion.button variants={fadeUp} onClick={onClick}
-      className="group text-left w-full bg-white rounded-2xl border border-neutral-100 overflow-hidden shadow-sm hover:shadow-xl hover:shadow-neutral-200/60 hover:-translate-y-1 hover:border-emerald-200/70 transition-all duration-300">
+      className="group text-left w-full bg-white rounded-2xl border border-neutral-100 overflow-hidden shadow-sm hover:shadow-xl hover:shadow-neutral-200/60 hover:-translate-y-1 hover:border-[#8aaad8]/70 transition-all duration-300">
       {/* Image */}
       <div className="aspect-[16/10] bg-neutral-100 overflow-hidden relative">
         {property.featured_image ? (
           <img src={imgSrc(property.featured_image)} alt={property.name}
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
         ) : (
-          <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-emerald-50 to-neutral-100">
-            <Building2 className="size-12 text-emerald-300" />
+          <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-[#eef2fb] to-neutral-100">
+            <Building2 className="size-12 text-[#6b8fd4]" />
           </div>
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
         <div className="absolute top-3 left-3">
-          <span className="px-2.5 py-0.5 rounded-full bg-emerald-600 text-white text-[10px] font-bold uppercase tracking-wide shadow-sm">
+          <span className="px-2.5 py-0.5 rounded-full bg-[#0E2C72] text-white text-[10px] font-bold uppercase tracking-wide shadow-sm">
             {typeLabel(property.property_type)}
           </span>
         </div>
@@ -502,19 +502,19 @@ function PropertyCard({ property, onClick }: { property: Property; onClick: () =
 
       {/* Body */}
       <div className="p-4">
-        <h3 className="text-[14px] font-bold text-neutral-900 truncate group-hover:text-emerald-700 transition-colors mb-1">
+        <h3 className="text-[14px] font-bold text-neutral-900 truncate group-hover:text-[#0a2260] transition-colors mb-1">
           {property.name}
         </h3>
         {loc && (
           <p className="flex items-center gap-1 text-[12px] text-neutral-500 mb-3">
-            <MapPin className="size-3 shrink-0 text-emerald-500" />
+            <MapPin className="size-3 shrink-0 text-[#1a3d8f]" />
             <span className="truncate">{[loc.city, loc.state].filter(Boolean).join(", ")}</span>
           </p>
         )}
         <div className="flex items-end justify-between pt-3 border-t border-neutral-50">
           <div>
             <p className="text-[10px] text-neutral-400 font-semibold uppercase tracking-wide mb-0.5">Starting from</p>
-            <p className="text-[16px] font-extrabold text-emerald-700">{min ? fmt(min) : "Contact us"}</p>
+            <p className="text-[16px] font-extrabold text-[#0E2C72]">{min ? fmt(min) : "Contact us"}</p>
           </div>
           <div className="text-right">
             <p className="text-[11px] text-neutral-500">{Number(property.total_sqms).toLocaleString()} sqm</p>
@@ -537,8 +537,8 @@ function Hero({ search, setSearch, propertyCount }: { search: string; setSearch:
     <div ref={ref} className="relative overflow-hidden bg-gradient-to-br from-[#0a3d2e] via-[#0f5c3a] to-[#1a7a4a] min-h-[480px] flex items-center">
       {/* Animated background shapes */}
       <motion.div style={{ y }} className="absolute inset-0 pointer-events-none">
-        <div className="absolute top-[-20%] right-[-10%] w-[600px] h-[600px] bg-emerald-400/10 rounded-full blur-3xl" />
-        <div className="absolute bottom-[-20%] left-[-10%] w-[400px] h-[400px] bg-emerald-300/10 rounded-full blur-3xl" />
+        <div className="absolute top-[-20%] right-[-10%] w-[600px] h-[600px] bg-[#2a52a8]/10 rounded-full blur-3xl" />
+        <div className="absolute bottom-[-20%] left-[-10%] w-[400px] h-[400px] bg-[#4a6fc0]/10 rounded-full blur-3xl" />
         <motion.div animate={{ rotate: 360 }} transition={{ duration: 40, repeat: Infinity, ease: "linear" }}
           className="absolute top-10 right-20 w-32 h-32 border border-white/5 rounded-full" />
         <motion.div animate={{ rotate: -360 }} transition={{ duration: 30, repeat: Infinity, ease: "linear" }}
@@ -558,7 +558,7 @@ function Hero({ search, setSearch, propertyCount }: { search: string; setSearch:
           className="text-[36px] sm:text-[52px] font-black text-white leading-[1.1] tracking-tight mb-4">
           Find Your Perfect
           <br />
-          <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-300 to-teal-300">Dream Property</span>
+          <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#6b8fd4] to-teal-300">Dream Property</span>
         </motion.h1>
 
         <motion.p initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.2 }}
@@ -573,7 +573,7 @@ function Hero({ search, setSearch, propertyCount }: { search: string; setSearch:
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 size-4 text-neutral-400" />
           <input value={search} onChange={(e) => setSearch(e.target.value)}
             placeholder="Search by name or location…"
-            className="w-full pl-11 pr-4 py-4 rounded-2xl text-[14px] text-neutral-900 bg-white shadow-2xl shadow-black/20 focus:outline-none focus:ring-2 focus:ring-emerald-400 placeholder:text-neutral-400" />
+            className="w-full pl-11 pr-4 py-4 rounded-2xl text-[14px] text-neutral-900 bg-white shadow-2xl shadow-black/20 focus:outline-none focus:ring-2 focus:ring-[#2a52a8] placeholder:text-neutral-400" />
         </motion.div>
 
         {/* Trust signals */}
@@ -585,7 +585,7 @@ function Hero({ search, setSearch, propertyCount }: { search: string; setSearch:
             { icon: Users, label: "Trusted by Many" },
           ].map(({ icon: Icon, label }) => (
             <div key={label} className="flex items-center gap-1.5 text-white/60 text-[12px]">
-              <Icon className="size-3.5 text-emerald-400" />
+              <Icon className="size-3.5 text-[#4a6fc0]" />
               {label}
             </div>
           ))}
@@ -645,7 +645,7 @@ export default function EstatesPage() {
           <div className="flex items-center gap-2 mb-6 flex-wrap">
             {types.map((t) => (
               <button key={t} onClick={() => setTypeFilter(t)}
-                className={`px-4 py-1.5 rounded-full text-[12px] font-semibold transition-all ${typeFilter === t ? "bg-emerald-600 text-white shadow-sm shadow-emerald-600/20" : "bg-white border border-neutral-200 text-neutral-600 hover:border-emerald-300 hover:text-emerald-600"}`}>
+                className={`px-4 py-1.5 rounded-full text-[12px] font-semibold transition-all ${typeFilter === t ? "bg-[#0E2C72] text-white shadow-sm shadow-[#0E2C72]/20" : "bg-white border border-neutral-200 text-neutral-600 hover:border-[#0E2C72]/40 hover:text-[#0E2C72]"}`}>
                 {t === "ALL" ? "All Types" : typeLabel(t)}
               </button>
             ))}
@@ -697,9 +697,9 @@ export default function EstatesPage() {
         {/* Stats band */}
         {!loading && properties.length > 0 && (
           <FadeIn delay={0.2}>
-            <div className="mt-16 bg-gradient-to-br from-emerald-700 to-emerald-900 rounded-3xl p-8 text-white text-center">
+            <div className="mt-16 bg-gradient-to-br from-[#0c2870] to-[#071a45] rounded-3xl p-8 text-white text-center">
               <h2 className="text-[20px] font-bold mb-2">Ready to invest in your future?</h2>
-              <p className="text-emerald-200 text-[14px] mb-6">Browse our verified properties with flexible payment options.</p>
+              <p className="text-[#8aaad8] text-[14px] mb-6">Browse our verified properties with flexible payment options.</p>
               <div className="grid grid-cols-3 gap-4 max-w-xs mx-auto">
                 {[
                   { value: properties.length, label: "Properties" },
@@ -708,7 +708,7 @@ export default function EstatesPage() {
                 ].map(({ value, label }) => (
                   <div key={label}>
                     <p className="text-[24px] font-black">{value}</p>
-                    <p className="text-[11px] text-emerald-300 font-semibold uppercase tracking-wide">{label}</p>
+                    <p className="text-[11px] text-[#6b8fd4] font-semibold uppercase tracking-wide">{label}</p>
                   </div>
                 ))}
               </div>
@@ -735,17 +735,17 @@ function TopBar({ workspaceSlug: _workspaceSlug }: { workspaceSlug: string }) {
     <header className={`sticky top-0 z-30 transition-all duration-200 ${scrolled ? "bg-white/95 backdrop-blur-md shadow-sm border-b border-neutral-100" : "bg-transparent"}`}>
       <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
         <div className="flex items-center gap-2.5">
-          <div className="flex h-8 w-8 items-center justify-center rounded-xl overflow-hidden bg-emerald-600 shadow-sm shadow-emerald-600/30">
-            <img src="/logo.png" alt="TerraTrail" className="w-full h-full object-cover" />
+          <div className="flex h-8 w-8 items-center justify-center rounded-xl overflow-hidden bg-[#0E2C72] shadow-sm shadow-[#0E2C72]/30">
+            <img src="/logo.png" alt="Terratrail" className="w-full h-full object-cover" />
           </div>
-          <span className={`text-[15px] font-extrabold tracking-tight transition-colors ${scrolled ? "text-neutral-900" : "text-white"}`}>TerraTrail</span>
+          <span className={`text-[15px] font-extrabold tracking-tight transition-colors ${scrolled ? "text-neutral-900" : "text-white"}`}>Terratrail</span>
         </div>
         <div className={`flex items-center gap-4 text-[12px] font-medium transition-colors ${scrolled ? "text-neutral-600" : "text-white/80"}`}>
-          <a href="tel:+234" className="hidden sm:flex items-center gap-1.5 hover:text-emerald-600 transition-colors">
+          <a href="tel:+234" className="hidden sm:flex items-center gap-1.5 hover:text-[#0E2C72] transition-colors">
             <Phone className="size-3.5" />
             Contact Us
           </a>
-          <a href="mailto:hello@terratrail.io" className="hidden sm:flex items-center gap-1.5 hover:text-emerald-600 transition-colors">
+          <a href="mailto:hello@terratrail.io" className="hidden sm:flex items-center gap-1.5 hover:text-[#0E2C72] transition-colors">
             <Mail className="size-3.5" />
             Email
           </a>
@@ -761,19 +761,24 @@ function Footer() {
     <footer className="border-t border-neutral-100 bg-white mt-12 py-8">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-3">
         <div className="flex items-center gap-2">
-          <div className="flex h-6 w-6 items-center justify-center rounded-lg overflow-hidden bg-emerald-600">
-            <img src="/logo.png" alt="TerraTrail" className="w-full h-full object-cover" />
+          <div className="flex h-6 w-6 items-center justify-center rounded-lg overflow-hidden bg-[#0E2C72]">
+            <img src="/logo.png" alt="Terratrail" className="w-full h-full object-cover" />
           </div>
-          <span className="text-[13px] font-bold text-neutral-800">TerraTrail</span>
+          <span className="text-[13px] font-bold text-neutral-800">Terratrail</span>
         </div>
         <p className="text-[12px] text-neutral-400">
-          Powered by <span className="font-semibold text-emerald-600">TerraTrail</span> · Premium Real Estate Platform
+          Powered by <span className="font-semibold text-[#0E2C72]">Terratrail</span> · Premium Real Estate Platform
         </p>
         <div className="flex items-center gap-1 text-[11px] text-neutral-400">
-          <TrendingUp className="size-3 text-emerald-500" />
+          <TrendingUp className="size-3 text-[#1a3d8f]" />
           Secure & Verified
         </div>
       </div>
     </footer>
   );
 }
+
+
+
+
+

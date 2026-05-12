@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+﻿import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router";
 import {
   ArrowLeft, Users, TrendingUp, DollarSign,
@@ -37,6 +37,10 @@ interface SalesRep {
   completed_subscriptions?: number;
   defaulting_subscriptions?: number;
   cancelled_subscriptions?: number;
+  address?: string;
+  bank_name?: string;
+  bank_account_number?: string;
+  bank_account_name?: string;
   created_at: string;
   added_by?: string;
 }
@@ -141,13 +145,13 @@ function MarkPaidModal({
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               placeholder="e.g. Paid via bank transfer, ref: TXN123"
-              className="w-full px-3 py-2 rounded-lg border border-neutral-200 text-[13px] resize-none focus:outline-none focus:ring-1 focus:ring-emerald-500/40 focus:border-emerald-400"
+              className="w-full px-3 py-2 rounded-lg border border-neutral-200 text-[13px] resize-none focus:outline-none focus:ring-1 focus:ring-[#1a3d8f]/40 focus:border-[#2a52a8]"
             />
           </div>
         </div>
         <div className="flex items-center justify-end gap-2.5 p-5 border-t border-neutral-100">
           <Button variant="outline" onClick={onClose} className="text-[13px] h-9">Cancel</Button>
-          <Button onClick={handleSubmit} disabled={saving} className="bg-emerald-600 hover:bg-emerald-700 text-white text-[13px] h-9">
+          <Button onClick={handleSubmit} disabled={saving} className="bg-[#0E2C72] hover:bg-[#0a2260] text-white text-[13px] h-9">
             {saving ? <><Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />Saving…</> : "Confirm Payment"}
           </Button>
         </div>
@@ -171,19 +175,27 @@ function EditRepModal({
     email: rep.email ?? "",
     phone: rep.phone ?? "",
     tier: rep.tier ?? "STARTER",
+    address: rep.address ?? "",
+    bank_name: rep.bank_name ?? "",
+    bank_account_number: rep.bank_account_number ?? "",
+    bank_account_name: rep.bank_account_name ?? "",
   });
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+
+  const inputCls = "w-full h-9 px-3 rounded-lg border border-neutral-200 text-[13px] focus:outline-none focus:ring-1 focus:ring-[#1a3d8f]/40 focus:border-[#2a52a8]";
 
   const handleSubmit = async () => {
-    if (!form.name.trim()) { toast.error("Name is required."); return; }
+    if (!form.name.trim()) { setError("Name is required."); return; }
+    setError("");
     setSaving(true);
     try {
       await api.salesReps.update(rep.id, form);
       toast.success("Rep updated.");
       onSaved();
       onClose();
-    } catch {
-      toast.error("Failed to update rep.");
+    } catch (e: any) {
+      setError(e?.message ?? "Failed to update rep.");
     } finally {
       setSaving(false);
     }
@@ -195,15 +207,18 @@ function EditRepModal({
         initial={{ opacity: 0, scale: 0.96 }}
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0, scale: 0.96 }}
-        className="bg-white rounded-2xl shadow-2xl w-full max-w-md border border-neutral-100"
+        className="bg-white rounded-2xl shadow-2xl w-full max-w-md border border-neutral-100 max-h-[90vh] flex flex-col"
       >
-        <div className="flex items-center justify-between p-5 border-b border-neutral-100">
+        <div className="flex items-center justify-between p-5 border-b border-neutral-100 shrink-0">
           <h2 className="font-semibold text-neutral-900">Edit Realtor</h2>
           <button onClick={onClose} className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-neutral-100 transition-colors">
             <X className="w-4 h-4 text-neutral-500" />
           </button>
         </div>
-        <div className="p-5 space-y-4">
+        <div className="p-5 space-y-4 overflow-y-auto flex-1">
+          {error && (
+            <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-[12.5px] text-red-700">{error}</div>
+          )}
           {(["name", "email", "phone"] as const).map((field) => (
             <div key={field}>
               <label className="text-[12px] font-medium text-neutral-600 block mb-1.5 capitalize">{field}</label>
@@ -211,7 +226,7 @@ function EditRepModal({
                 type={field === "email" ? "email" : field === "phone" ? "tel" : "text"}
                 value={form[field]}
                 onChange={(e) => setForm((f) => ({ ...f, [field]: e.target.value }))}
-                className="w-full h-9 px-3 rounded-lg border border-neutral-200 text-[13px] focus:outline-none focus:ring-1 focus:ring-emerald-500/40 focus:border-emerald-400"
+                className={inputCls}
               />
             </div>
           ))}
@@ -220,15 +235,43 @@ function EditRepModal({
             <select
               value={form.tier}
               onChange={(e) => setForm((f) => ({ ...f, tier: e.target.value as Tier }))}
-              className="w-full h-9 px-3 rounded-lg border border-neutral-200 text-[13px] focus:outline-none focus:ring-1 focus:ring-emerald-500/40 focus:border-emerald-400"
+              className={inputCls}
             >
               {TIERS.map((t) => <option key={t} value={t}>{TIER_LABELS[t]}</option>)}
             </select>
           </div>
+
+          <div className="border-t border-neutral-100 pt-4">
+            <p className="text-[11px] font-semibold text-neutral-400 uppercase tracking-wider mb-3">Account Details</p>
+            <div className="space-y-3">
+              <div>
+                <label className="text-[12px] font-medium text-neutral-600 block mb-1.5">Address</label>
+                <input value={form.address} onChange={(e) => setForm((f) => ({ ...f, address: e.target.value }))}
+                  placeholder="e.g. 12 Victoria Island, Lagos" className={inputCls} />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-[12px] font-medium text-neutral-600 block mb-1.5">Bank Name</label>
+                  <input value={form.bank_name} onChange={(e) => setForm((f) => ({ ...f, bank_name: e.target.value }))}
+                    placeholder="e.g. GTBank" className={inputCls} />
+                </div>
+                <div>
+                  <label className="text-[12px] font-medium text-neutral-600 block mb-1.5">Account Number</label>
+                  <input value={form.bank_account_number} onChange={(e) => setForm((f) => ({ ...f, bank_account_number: e.target.value }))}
+                    placeholder="0123456789" className={inputCls} />
+                </div>
+              </div>
+              <div>
+                <label className="text-[12px] font-medium text-neutral-600 block mb-1.5">Account Name</label>
+                <input value={form.bank_account_name} onChange={(e) => setForm((f) => ({ ...f, bank_account_name: e.target.value }))}
+                  placeholder="As on bank records" className={inputCls} />
+              </div>
+            </div>
+          </div>
         </div>
-        <div className="flex items-center justify-end gap-2.5 p-5 border-t border-neutral-100">
+        <div className="flex items-center justify-end gap-2.5 p-5 border-t border-neutral-100 shrink-0">
           <Button variant="outline" onClick={onClose} className="text-[13px] h-9">Cancel</Button>
-          <Button onClick={handleSubmit} disabled={saving} className="bg-emerald-600 hover:bg-emerald-700 text-white text-[13px] h-9">
+          <Button onClick={handleSubmit} disabled={saving} className="bg-[#0E2C72] hover:bg-[#0a2260] text-white text-[13px] h-9">
             {saving ? <><Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />Saving…</> : "Save Changes"}
           </Button>
         </div>
@@ -240,7 +283,7 @@ function EditRepModal({
 // ── Sub status badge ──────────────────────────────────────────────────────────
 function SubStatusBadge({ status }: { status?: string }) {
   const map: Record<string, { cls: string; label: string }> = {
-    ACTIVE:     { cls: "bg-emerald-100 text-emerald-700", label: "Active" },
+    ACTIVE:     { cls: "bg-[#d6e0f5] text-[#0E2C72]", label: "Active" },
     COMPLETED:  { cls: "bg-blue-100 text-blue-700",       label: "Completed" },
     DEFAULTING: { cls: "bg-red-100 text-red-700",         label: "Defaulting" },
     CANCELLED:  { cls: "bg-neutral-100 text-neutral-500", label: "Cancelled" },
@@ -438,7 +481,7 @@ export function SalesRepDetail() {
             <ArrowLeft className="w-4 h-4 text-neutral-600" />
           </button>
           <div className="flex items-center gap-3 flex-wrap">
-            <div className="w-11 h-11 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center text-white text-[14px] font-bold shadow-sm shrink-0">
+            <div className="w-11 h-11 rounded-full bg-gradient-to-br from-[#2a52a8] to-[#0E2C72] flex items-center justify-center text-white text-[14px] font-bold shadow-sm shrink-0">
               {rep.name.slice(0, 2).toUpperCase()}
             </div>
             <div>
@@ -448,10 +491,10 @@ export function SalesRepDetail() {
                   {TIER_LABELS[rep.tier]}
                 </Badge>
                 <Badge className={rep.is_active
-                  ? "bg-emerald-100 text-emerald-700 border-0 gap-1 text-[11px]"
+                  ? "bg-[#d6e0f5] text-[#0E2C72] border-0 gap-1 text-[11px]"
                   : "bg-neutral-100 text-neutral-600 border-0 gap-1 text-[11px]"
                 }>
-                  <span className={cn("w-1.5 h-1.5 rounded-full inline-block", rep.is_active ? "bg-emerald-500" : "bg-neutral-400")} />
+                  <span className={cn("w-1.5 h-1.5 rounded-full inline-block", rep.is_active ? "bg-[#1a3d8f]" : "bg-neutral-400")} />
                   {rep.is_active ? "Active" : "Inactive"}
                 </Badge>
               </div>
@@ -466,7 +509,7 @@ export function SalesRepDetail() {
           </Button>
           {pendingComms.length > 0 && (
             <Button size="sm" onClick={() => { setSelectedComms(pendingComms.map((c) => c.id)); setShowMarkPaid(true); }}
-              className="text-[12px] h-8 gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white">
+              className="text-[12px] h-8 gap-1.5 bg-[#0E2C72] hover:bg-[#0a2260] text-white">
               <Check className="w-3.5 h-3.5" /> Mark Commission as Paid
             </Button>
           )}
@@ -474,7 +517,7 @@ export function SalesRepDetail() {
             variant="outline" size="sm"
             onClick={handleToggleActive}
             disabled={togglingActive}
-            className={cn("text-[12px] h-8 gap-1.5", rep.is_active ? "text-red-600 hover:bg-red-50 border-red-200" : "text-emerald-700 hover:bg-emerald-50 border-emerald-200")}
+            className={cn("text-[12px] h-8 gap-1.5", rep.is_active ? "text-red-600 hover:bg-red-50 border-red-200" : "text-[#0E2C72] hover:bg-[#0E2C72]/6 border-[#8aaad8]")}
           >
             {togglingActive ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : rep.is_active ? <UserX className="w-3.5 h-3.5" /> : <UserCheck className="w-3.5 h-3.5" />}
             {rep.is_active ? "Deactivate" : "Activate"}
@@ -524,7 +567,7 @@ export function SalesRepDetail() {
                           <p className="text-[13px] font-medium text-neutral-800 truncate">{value}</p>
                           {canCopy && (
                             <button onClick={copyCode} className="shrink-0 w-5 h-5 rounded flex items-center justify-center hover:bg-neutral-100 transition-colors">
-                              {copied ? <Check className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3 text-neutral-400" />}
+                              {copied ? <Check className="w-3 h-3 text-[#0E2C72]" /> : <Copy className="w-3 h-3 text-neutral-400" />}
                             </button>
                           )}
                         </div>
@@ -542,7 +585,7 @@ export function SalesRepDetail() {
                   { label: "Total Triggered",     value: fmt(totalTriggered),      color: "blue"    as const },
                   { label: "Commission Rate",     value: rep.commission_type === "PERCENTAGE" ? `${rep.commission_rate}%` : fmt(rep.commission_rate), color: "violet" as const },
                 ].map(({ label, value, color }) => {
-                  const bg = { emerald: "bg-emerald-500", amber: "bg-amber-500", blue: "bg-blue-500", violet: "bg-violet-500" }[color];
+                  const bg = { emerald: "bg-[#1a3d8f]", amber: "bg-amber-500", blue: "bg-blue-500", violet: "bg-violet-500" }[color];
                   return (
                     <div key={label} className="relative bg-white rounded-xl border border-neutral-100 p-4 shadow-sm overflow-hidden">
                       <div className={`absolute top-0 left-0 right-0 h-0.5 ${bg}`} />
@@ -585,7 +628,7 @@ export function SalesRepDetail() {
                     value={custSearch}
                     onChange={(e) => setCustSearch(e.target.value)}
                     placeholder="Search by customer name…"
-                    className="w-full pl-8 pr-3 h-9 border border-neutral-200 bg-white rounded-lg text-[12.5px] focus:outline-none focus:ring-1 focus:ring-emerald-500/30"
+                    className="w-full pl-8 pr-3 h-9 border border-neutral-200 bg-white rounded-lg text-[12.5px] focus:outline-none focus:ring-1 focus:ring-[#1a3d8f]/30"
                   />
                 </div>
                 <select
@@ -623,9 +666,9 @@ export function SalesRepDetail() {
                             <td className="px-4 py-3.5 whitespace-nowrap text-[12.5px] text-neutral-700">{c.land_size ? `${c.land_size} sqm` : "—"}</td>
                             <td className="px-4 py-3.5 whitespace-nowrap text-[12.5px] text-neutral-700">{c.plan_name ?? "—"}</td>
                             <td className="px-4 py-3.5 whitespace-nowrap text-[12.5px] font-medium text-neutral-800">{fmt(c.locked_price)}</td>
-                            <td className="px-4 py-3.5 whitespace-nowrap text-[12.5px] font-medium text-emerald-700">{fmt(c.amount_paid)}</td>
+                            <td className="px-4 py-3.5 whitespace-nowrap text-[12.5px] font-medium text-[#0E2C72]">{fmt(c.amount_paid)}</td>
                             <td className="px-4 py-3.5 whitespace-nowrap text-[12.5px] font-medium text-red-600">{fmt(c.balance)}</td>
-                            <td className="px-4 py-3.5 whitespace-nowrap text-[12.5px] font-medium text-emerald-700">{fmt(c.commission_earned)}</td>
+                            <td className="px-4 py-3.5 whitespace-nowrap text-[12.5px] font-medium text-[#0E2C72]">{fmt(c.commission_earned)}</td>
                             <td className="px-4 py-3.5 whitespace-nowrap text-[12.5px] font-medium text-amber-600">{fmt(c.commission_pending)}</td>
                             <td className="px-4 py-3.5 whitespace-nowrap"><SubStatusBadge status={c.subscription_status} /></td>
                             <td className="px-4 py-3.5 whitespace-nowrap">
@@ -654,7 +697,7 @@ export function SalesRepDetail() {
               <div className="grid grid-cols-3 gap-3">
                 {[
                   { label: "Total Triggered", value: fmt(totalTriggered), color: "bg-blue-500" },
-                  { label: "Total Paid Out",   value: fmt(totalPaid),     color: "bg-emerald-500" },
+                  { label: "Total Paid Out",   value: fmt(totalPaid),     color: "bg-[#1a3d8f]" },
                   { label: "Total Pending",    value: fmt(totalPending),  color: "bg-amber-500" },
                 ].map(({ label, value, color }) => (
                   <div key={label} className="relative bg-white rounded-xl border border-neutral-100 p-4 shadow-sm overflow-hidden">
@@ -672,7 +715,7 @@ export function SalesRepDetail() {
                     <button key={s} onClick={() => setCommStatusFilter(s)}
                       className={cn(
                         "px-3 py-1.5 rounded-lg text-[12px] font-semibold transition-colors",
-                        commStatusFilter === s ? "bg-emerald-600 text-white" : "bg-neutral-100 text-neutral-600 hover:bg-neutral-200"
+                        commStatusFilter === s ? "bg-[#0E2C72] text-white" : "bg-neutral-100 text-neutral-600 hover:bg-neutral-200"
                       )}>
                       {s === "ALL" ? "All" : s === "PENDING" ? "Pending" : "Paid"}
                     </button>
@@ -680,7 +723,7 @@ export function SalesRepDetail() {
                 </div>
                 {selectedComms.length > 0 && (
                   <Button size="sm" onClick={() => setShowMarkPaid(true)}
-                    className="text-[12px] h-8 gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white">
+                    className="text-[12px] h-8 gap-1.5 bg-[#0E2C72] hover:bg-[#0a2260] text-white">
                     <Check className="w-3.5 h-3.5" /> Mark {selectedComms.length} as Paid
                   </Button>
                 )}
@@ -725,10 +768,10 @@ export function SalesRepDetail() {
                             <td className="px-4 py-3.5 whitespace-nowrap text-[12.5px] font-medium text-neutral-900">{c.customer_name ?? c.customer ?? "—"}</td>
                             <td className="px-4 py-3.5 whitespace-nowrap text-[12.5px] text-neutral-700">{c.property_name ?? c.property ?? "—"}</td>
                             <td className="px-4 py-3.5 whitespace-nowrap text-[12.5px] font-medium text-neutral-800">{fmt(c.payment_amount)}</td>
-                            <td className="px-4 py-3.5 whitespace-nowrap text-[12.5px] font-semibold text-emerald-700">{fmt(c.commission_amount)}</td>
+                            <td className="px-4 py-3.5 whitespace-nowrap text-[12.5px] font-semibold text-[#0E2C72]">{fmt(c.commission_amount)}</td>
                             <td className="px-4 py-3.5 whitespace-nowrap text-[12px] text-neutral-500">{c.commission_type === "PERCENTAGE" ? "%" : "Fixed"}</td>
                             <td className="px-4 py-3.5 whitespace-nowrap">
-                              <Badge className={cn("text-[11px] border-0", c.status === "PAID" ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700")}>
+                              <Badge className={cn("text-[11px] border-0", c.status === "PAID" ? "bg-[#d6e0f5] text-[#0E2C72]" : "bg-amber-100 text-amber-700")}>
                                 {c.status === "PAID" ? "Paid" : "Pending"}
                               </Badge>
                             </td>
@@ -737,7 +780,7 @@ export function SalesRepDetail() {
                               {c.status === "PENDING" && (
                                 <button
                                   onClick={() => { setSelectedComms([c.id]); setShowMarkPaid(true); }}
-                                  className="inline-flex items-center gap-1 px-2.5 py-1 text-[11.5px] font-medium bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-md transition-colors"
+                                  className="inline-flex items-center gap-1 px-2.5 py-1 text-[11.5px] font-medium bg-[#0E2C72]/6 hover:bg-[#d6e0f5] text-[#0E2C72] rounded-md transition-colors"
                                 >
                                   <Check className="w-3 h-3" /> Mark Paid
                                 </button>
@@ -782,13 +825,32 @@ export function SalesRepDetail() {
                       <span className="text-[13px] font-semibold text-neutral-800">{value}</span>
                       {canCopy && (
                         <button onClick={copyCode} className="w-6 h-6 rounded flex items-center justify-center hover:bg-neutral-100 transition-colors">
-                          {copied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5 text-neutral-400" />}
+                          {copied ? <Check className="w-3.5 h-3.5 text-[#0E2C72]" /> : <Copy className="w-3.5 h-3.5 text-neutral-400" />}
                         </button>
                       )}
                     </div>
                   </div>
                 ))}
               </div>
+
+              {(rep.address || rep.bank_name || rep.bank_account_number) && (
+                <div className="border-t border-neutral-100 pt-5">
+                  <p className="text-[11px] font-semibold text-neutral-400 uppercase tracking-wider mb-4">Account Details</p>
+                  <div className="space-y-4 divide-y divide-neutral-50">
+                    {[
+                      { label: "Address",          value: rep.address || "—" },
+                      { label: "Bank Name",         value: rep.bank_name || "—" },
+                      { label: "Account Number",    value: rep.bank_account_number || "—" },
+                      { label: "Account Name",      value: rep.bank_account_name || "—" },
+                    ].map(({ label, value }) => (
+                      <div key={label} className="flex items-start justify-between pt-4 first:pt-0 gap-4">
+                        <span className="text-[12px] text-neutral-500 font-medium shrink-0">{label}</span>
+                        <span className="text-[13px] font-semibold text-neutral-800 text-right">{value}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -813,3 +875,5 @@ export function SalesRepDetail() {
     </div>
   );
 }
+
+

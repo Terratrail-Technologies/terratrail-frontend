@@ -1,9 +1,9 @@
-import { useState } from "react";
+﻿import { useState } from "react";
 import { useNavigate } from "react-router";
 import { useForm } from "react-hook-form";
-import { toast } from "sonner";
 import { FormInput } from "../components/FormInput";
 import s from "../styles/onboarding.module.css";
+import { useAuth } from "../../hooks/useAuth";
 
 interface ForgotForm {
   email: string;
@@ -15,23 +15,22 @@ const BackArrow = () => (
   </svg>
 );
 
-import { useAuth } from "../../hooks/useAuth";
-
 export function ForgotPassword() {
   const navigate = useNavigate();
   const { otpRequest } = useAuth();
   const [loading, setLoading] = useState(false);
+  const [formError, setFormError] = useState("");
 
   const { register, handleSubmit, formState: { errors } } = useForm<ForgotForm>();
 
   const onSubmit = async (data: ForgotForm) => {
     setLoading(true);
+    setFormError("");
     try {
       await otpRequest({ email: data.email });
-      toast.success("Verification code sent! Check your inbox.");
       navigate("/auth/verify", { state: { email: data.email, flow: "reset" } });
     } catch (err: any) {
-      toast.error(err.message || "Something went wrong. Please try again.");
+      setFormError(err.message || "Something went wrong. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -41,8 +40,7 @@ export function ForgotPassword() {
     <>
       <h1 className={s.heading}>Forgot Password?</h1>
       <p className={s.subtext}>
-        Enter your email address and we&apos;ll send you a link to reset your
-        password.
+        Enter your email address and we&apos;ll send you a verification code to reset your password.
       </p>
 
       <form className={s.form} onSubmit={handleSubmit(onSubmit)} noValidate>
@@ -58,10 +56,25 @@ export function ForgotPassword() {
           })}
         />
 
+        {formError && (
+          <div style={{
+            background: "#fef2f2",
+            border: "1px solid #fecaca",
+            borderRadius: 6,
+            padding: "9px 12px",
+            fontSize: 12.5,
+            color: "#dc2626",
+            fontWeight: 600,
+            fontFamily: "inherit",
+          }}>
+            {formError}
+          </div>
+        )}
+
         <button type="submit" className={s.btn} disabled={loading}>
           <span className={s.btnInner}>
             {loading && <span className={s.spinner} />}
-            {loading ? "Sending…" : "Send Reset Link"}
+            {loading ? "Sending…" : "Send Reset Code"}
           </span>
         </button>
       </form>
@@ -79,3 +92,4 @@ export function ForgotPassword() {
     </>
   );
 }
+

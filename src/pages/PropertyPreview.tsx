@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+﻿import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router";
 import {
   ArrowLeft, MapPin, CheckCircle2, Clock, ChevronLeft, ChevronRight,
@@ -28,7 +28,7 @@ function Gallery({ cover, images }: { cover: string | null; images: any[] }) {
 
   if (all.length === 0) {
     return (
-      <div className="w-full h-72 md:h-96 bg-gradient-to-br from-neutral-100 to-emerald-50 flex items-center justify-center rounded-2xl border border-neutral-100">
+      <div className="w-full h-72 md:h-96 bg-gradient-to-br from-neutral-100 to-[#eef2fb] flex items-center justify-center rounded-2xl border border-neutral-100">
         <div className="flex flex-col items-center gap-2 text-neutral-400">
           <BuildingIcon className="w-14 h-14 opacity-40" />
           <span className="text-sm font-medium">No images available</span>
@@ -73,7 +73,7 @@ function Gallery({ cover, images }: { cover: string | null; images: any[] }) {
           {all.map((img, i) => (
             <button key={i} onClick={() => setIdx(i)}
               className={cn("shrink-0 w-16 h-16 rounded-lg overflow-hidden border-2 transition-all",
-                i === idx ? "border-emerald-500" : "border-transparent opacity-60 hover:opacity-100")}>
+                i === idx ? "border-[#0E2C72]" : "border-transparent opacity-60 hover:opacity-100")}>
               <img src={img.image} alt="" className="w-full h-full object-cover" />
             </button>
           ))}
@@ -107,8 +107,8 @@ function Section({ title, icon: Icon, children }: { title: string; icon: any; ch
   return (
     <div className="bg-white rounded-2xl border border-neutral-100 p-6 shadow-[0_1px_4px_rgba(0,0,0,0.05)]">
       <div className="flex items-center gap-2.5 mb-5">
-        <div className="w-8 h-8 bg-emerald-50 rounded-lg flex items-center justify-center">
-          <Icon className="w-4 h-4 text-emerald-600" />
+        <div className="w-8 h-8 bg-[#0E2C72]/6 rounded-lg flex items-center justify-center">
+          <Icon className="w-4 h-4 text-[#0E2C72]" />
         </div>
         <h2 className="font-semibold text-neutral-900 text-[15px]">{title}</h2>
       </div>
@@ -119,7 +119,7 @@ function Section({ title, icon: Icon, children }: { title: string; icon: any; ch
 
 // ── Amenity status color ──────────────────────────────────────────────────────
 const amenityColor = (s: string) =>
-  s === "COMPLETED" ? "bg-emerald-100 text-emerald-700" :
+  s === "COMPLETED" ? "bg-[#d6e0f5] text-[#0E2C72]" :
   s === "IN_PROGRESS" ? "bg-amber-100 text-amber-700" :
   "bg-neutral-100 text-neutral-500";
 
@@ -134,7 +134,7 @@ const docLabel = (t: string) => ({
 }[t] ?? t);
 
 const docStatusColor = (s: string) =>
-  s === "READY" ? "bg-emerald-100 text-emerald-700" :
+  s === "READY" ? "bg-[#d6e0f5] text-[#0E2C72]" :
   s === "IN_PROGRESS" ? "bg-amber-100 text-amber-700" :
   "bg-neutral-100 text-neutral-500";
 
@@ -187,8 +187,8 @@ function AppreciationModal({ propertyId, onClose, onSave }: { propertyId: string
         className="bg-white rounded-2xl shadow-2xl w-full max-w-md border border-neutral-100">
         <div className="flex items-center justify-between p-5 border-b border-neutral-100">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 bg-emerald-50 rounded-lg flex items-center justify-center">
-              <TrendingUp className="w-4 h-4 text-emerald-600" />
+            <div className="w-8 h-8 bg-[#0E2C72]/6 rounded-lg flex items-center justify-center">
+              <TrendingUp className="w-4 h-4 text-[#0E2C72]" />
             </div>
             <h2 className="font-semibold text-neutral-900">Record Appreciation</h2>
           </div>
@@ -201,35 +201,35 @@ function AppreciationModal({ propertyId, onClose, onSave }: { propertyId: string
           <div>
             <label className="text-[12px] font-medium text-neutral-600 block mb-1.5">Effective Date</label>
             <input type="date" value={form.effective_date} onChange={e => setForm(f => ({ ...f, effective_date: e.target.value }))}
-              className="w-full h-9 px-3 rounded-lg border border-neutral-200 text-[13px] focus:outline-none focus:ring-1 focus:ring-emerald-500/40 focus:border-emerald-400" />
+              className="w-full h-9 px-3 rounded-lg border border-neutral-200 text-[13px] focus:outline-none focus:ring-1 focus:ring-[#1a3d8f]/40 focus:border-[#2a52a8]" />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="text-[12px] font-medium text-neutral-600 block mb-1.5">Previous Price (₦)</label>
               <input type="number" min="0" placeholder="0" value={form.old_price} onChange={e => setForm(f => ({ ...f, old_price: e.target.value }))}
-                className="w-full h-9 px-3 rounded-lg border border-neutral-200 text-[13px] focus:outline-none focus:ring-1 focus:ring-emerald-500/40 focus:border-emerald-400" />
+                className="w-full h-9 px-3 rounded-lg border border-neutral-200 text-[13px] focus:outline-none focus:ring-1 focus:ring-[#1a3d8f]/40 focus:border-[#2a52a8]" />
             </div>
             <div>
               <label className="text-[12px] font-medium text-neutral-600 block mb-1.5">New Price (₦)</label>
               <input type="number" min="0" placeholder="0" value={form.new_price} onChange={e => setForm(f => ({ ...f, new_price: e.target.value }))}
-                className="w-full h-9 px-3 rounded-lg border border-neutral-200 text-[13px] focus:outline-none focus:ring-1 focus:ring-emerald-500/40 focus:border-emerald-400" />
+                className="w-full h-9 px-3 rounded-lg border border-neutral-200 text-[13px] focus:outline-none focus:ring-1 focus:ring-[#1a3d8f]/40 focus:border-[#2a52a8]" />
             </div>
           </div>
           {pct !== null && (
-            <div className={cn("text-[12.5px] font-semibold px-3 py-2 rounded-lg", Number(pct) >= 0 ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-700")}>
+            <div className={cn("text-[12.5px] font-semibold px-3 py-2 rounded-lg", Number(pct) >= 0 ? "bg-[#0E2C72]/6 text-[#0E2C72]" : "bg-red-50 text-red-700")}>
               {Number(pct) >= 0 ? "+" : ""}{pct}% change
             </div>
           )}
           <div>
             <label className="text-[12px] font-medium text-neutral-600 block mb-1.5">Notes (optional)</label>
             <textarea rows={2} placeholder="Reason for appreciation…" value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))}
-              className="w-full px-3 py-2 rounded-lg border border-neutral-200 text-[13px] resize-none focus:outline-none focus:ring-1 focus:ring-emerald-500/40 focus:border-emerald-400" />
+              className="w-full px-3 py-2 rounded-lg border border-neutral-200 text-[13px] resize-none focus:outline-none focus:ring-1 focus:ring-[#1a3d8f]/40 focus:border-[#2a52a8]" />
           </div>
         </div>
 
         <div className="flex items-center justify-end gap-2.5 p-5 border-t border-neutral-100">
           <Button variant="outline" onClick={onClose} className="text-[13px] h-9">Cancel</Button>
-          <Button onClick={handleSubmit} disabled={saving} className="bg-emerald-600 hover:bg-emerald-700 text-white text-[13px] h-9">{saving ? "Saving…" : "Save Record"}</Button>
+          <Button onClick={handleSubmit} disabled={saving} className="bg-[#0E2C72] hover:bg-[#0a2260] text-white text-[13px] h-9">{saving ? "Saving…" : "Save Record"}</Button>
         </div>
       </motion.div>
     </div>
@@ -308,7 +308,7 @@ export default function PropertyPreview() {
             <div className="flex items-center gap-2 flex-wrap">
               <h1 className="text-xl font-bold text-neutral-900">{property.name}</h1>
               <Badge className={isPublished
-                ? "bg-emerald-100 text-emerald-700 border-0 gap-1"
+                ? "bg-[#d6e0f5] text-[#0E2C72] border-0 gap-1"
                 : "bg-neutral-100 text-neutral-600 border-0 gap-1"}>
                 {isPublished ? <><CheckCircle2 className="w-3 h-3" />Published</> : <><Clock className="w-3 h-3" />Draft</>}
               </Badge>
@@ -331,7 +331,7 @@ export default function PropertyPreview() {
               <Button
                 onClick={() => handleStatusChange("PUBLISHED")}
                 disabled={publishing}
-                className="text-sm bg-emerald-600 hover:bg-emerald-700 text-white gap-1.5"
+                className="text-sm bg-[#0E2C72] hover:bg-[#0a2260] text-white gap-1.5"
               >
                 {publishing ? <Loader2 className="w-4 h-4 animate-spin" /> : <><CheckCircle2 className="w-4 h-4" />Publish</>}
               </Button>
@@ -398,14 +398,14 @@ export default function PropertyPreview() {
                 href={`https://www.google.com/maps?q=${loc.latitude},${loc.longitude}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="mt-3 flex items-center gap-2.5 px-4 py-3 rounded-xl border border-neutral-200 bg-neutral-50 hover:bg-emerald-50 hover:border-emerald-200 transition-colors group"
+                className="mt-3 flex items-center gap-2.5 px-4 py-3 rounded-xl border border-neutral-200 bg-neutral-50 hover:bg-[#0E2C72]/6 hover:border-[#8aaad8] transition-colors group"
               >
-                <MapPin className="w-4 h-4 text-emerald-600 shrink-0" />
+                <MapPin className="w-4 h-4 text-[#0E2C72] shrink-0" />
                 <div className="min-w-0">
-                  <p className="text-[12.5px] font-semibold text-neutral-800 group-hover:text-emerald-700 transition-colors">View on Google Maps</p>
+                  <p className="text-[12.5px] font-semibold text-neutral-800 group-hover:text-[#0a2260] transition-colors">View on Google Maps</p>
                   <p className="text-[11px] text-neutral-400">{Number(loc.latitude).toFixed(5)}, {Number(loc.longitude).toFixed(5)}</p>
                 </div>
-                <span className="ml-auto text-neutral-300 group-hover:text-emerald-400 transition-colors text-sm">↗</span>
+                <span className="ml-auto text-neutral-300 group-hover:text-[#4a6fc0] transition-colors text-sm">↗</span>
               </a>
             )}
           </div>
@@ -427,7 +427,7 @@ export default function PropertyPreview() {
                     {plan.payment_type === "OUTRIGHT" ? "Outright" : "Installment"}
                   </Badge>
                 </div>
-                <div className="text-2xl font-bold text-emerald-700 mb-3">{fmt(plan.total_price)}</div>
+                <div className="text-2xl font-bold text-[#0E2C72] mb-3">{fmt(plan.total_price)}</div>
                 {plan.payment_type === "INSTALLMENT" && (
                   <div className="flex flex-wrap gap-4 text-[12.5px] text-neutral-500">
                     <span>Initial: <span className="font-semibold text-neutral-800">{fmt(plan.initial_payment)}</span></span>
@@ -464,8 +464,8 @@ export default function PropertyPreview() {
             {property.documents.map((d: any) => (
               <div key={d.id} className="flex items-center justify-between p-3.5 border border-neutral-100 rounded-lg">
                 <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 bg-emerald-50 rounded-lg flex items-center justify-center shrink-0">
-                    <FileText className="w-4 h-4 text-emerald-600" />
+                  <div className="w-8 h-8 bg-[#0E2C72]/6 rounded-lg flex items-center justify-center shrink-0">
+                    <FileText className="w-4 h-4 text-[#0E2C72]" />
                   </div>
                   <span className="text-[13px] font-medium text-neutral-800">{docLabel(d.document_type)}</span>
                 </div>
@@ -499,7 +499,7 @@ export default function PropertyPreview() {
           {isAdmin && (
             <div className="flex justify-end">
               <Button onClick={() => setShowAppreciation(true)}
-                className="h-8 gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-[12px] rounded-lg px-3">
+                className="h-8 gap-1.5 bg-[#0E2C72] hover:bg-[#0a2260] text-white text-[12px] rounded-lg px-3">
                 <Plus className="w-3.5 h-3.5" />
                 Record Update
               </Button>
@@ -521,7 +521,7 @@ export default function PropertyPreview() {
                         <Calendar className="w-3.5 h-3.5" />
                         {new Date(entry.effective_date).toLocaleDateString("en-NG", { year: "numeric", month: "long", day: "numeric" })}
                       </div>
-                      <span className={cn("text-[12px] font-bold px-2 py-0.5 rounded-md", up ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-700")}>
+                      <span className={cn("text-[12px] font-bold px-2 py-0.5 rounded-md", up ? "bg-[#0E2C72]/6 text-[#0E2C72]" : "bg-red-50 text-red-700")}>
                         {up ? "+" : ""}{pct}%
                       </span>
                     </div>
@@ -558,3 +558,7 @@ export default function PropertyPreview() {
     </div>
   );
 }
+
+
+
+

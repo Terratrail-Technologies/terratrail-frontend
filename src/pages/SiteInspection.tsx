@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+﻿import { useState, useEffect } from "react";
 import { usePolling } from "../hooks/usePolling";
 import { usePageTitle } from "../hooks/usePageTitle";
 import { useWorkspaceRole } from "../hooks/useWorkspaceRole";
@@ -56,9 +56,9 @@ const STATUS_CONFIG = {
   },
   ATTENDED: {
     label: "Attended",
-    bg: "bg-emerald-50",
-    text: "text-emerald-700",
-    dot: "bg-emerald-500",
+    bg: "bg-[#0E2C72]/6",
+    text: "text-[#0E2C72]",
+    dot: "bg-[#1a3d8f]",
     icon: CheckCircle2,
   },
   CANCELLED: {
@@ -290,7 +290,7 @@ function AddInspectionModal({
   }
 
   const inputCls =
-    "w-full px-3 py-2 text-[13px] border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400 bg-white placeholder:text-neutral-400";
+    "w-full px-3 py-2 text-[13px] border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1a3d8f]/30 focus:border-[#2a52a8] bg-white placeholder:text-neutral-400";
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-black/40 backdrop-blur-sm overflow-y-auto">
@@ -494,7 +494,7 @@ function AddInspectionModal({
             <button
               type="submit"
               disabled={saving}
-              className="flex-1 py-2.5 rounded-xl bg-emerald-600 text-white text-[13px] font-semibold hover:bg-emerald-700 disabled:opacity-60 transition-colors shadow-sm"
+              className="flex-1 py-2.5 rounded-xl bg-[#0E2C72] text-white text-[13px] font-semibold hover:bg-[#0a2260] disabled:opacity-60 transition-colors shadow-sm"
             >
               {saving ? "Creating…" : "Create Request"}
             </button>
@@ -549,11 +549,11 @@ function ActionConfirmModal({
         <div className="p-5">
           <div
             className={`w-10 h-10 rounded-full flex items-center justify-center mb-4 ${
-              isAttend ? "bg-emerald-50" : "bg-red-50"
+              isAttend ? "bg-[#0E2C72]/6" : "bg-red-50"
             }`}
           >
             {isAttend ? (
-              <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+              <CheckCircle2 className="w-5 h-5 text-[#0E2C72]" />
             ) : (
               <XCircle className="w-5 h-5 text-red-500" />
             )}
@@ -580,7 +580,7 @@ function ActionConfirmModal({
             disabled={saving}
             className={`flex-1 py-2.5 rounded-xl text-[13px] font-semibold text-white transition-colors disabled:opacity-60 ${
               isAttend
-                ? "bg-emerald-600 hover:bg-emerald-700"
+                ? "bg-[#0E2C72] hover:bg-[#0a2260]"
                 : "bg-red-500 hover:bg-red-600"
             }`}
           >
@@ -630,7 +630,7 @@ function ConvertInspectionModal({
     }
   };
 
-  const inputCls = "w-full px-3 py-2 text-[13px] border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400 bg-white";
+  const inputCls = "w-full px-3 py-2 text-[13px] border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1a3d8f]/30 focus:border-[#2a52a8] bg-white";
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
@@ -655,15 +655,15 @@ function ConvertInspectionModal({
               <p className="px-3 py-4 text-[12px] text-neutral-400 text-center">No customers found.</p>
             ) : filtered.slice(0, 20).map((c) => (
               <button key={c.id} type="button" onClick={() => setSelectedId(c.id)}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 text-left transition-colors ${selectedId === c.id ? "bg-emerald-50" : "hover:bg-neutral-50"}`}>
-                <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-bold shrink-0 ${selectedId === c.id ? "bg-emerald-600 text-white" : "bg-neutral-100 text-neutral-500"}`}>
+                className={`w-full flex items-center gap-3 px-3 py-2.5 text-left transition-colors ${selectedId === c.id ? "bg-[#0E2C72]/6" : "hover:bg-neutral-50"}`}>
+                <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-bold shrink-0 ${selectedId === c.id ? "bg-[#0E2C72] text-white" : "bg-neutral-100 text-neutral-500"}`}>
                   {c.full_name.charAt(0).toUpperCase()}
                 </div>
                 <div className="min-w-0">
                   <p className="text-[13px] font-semibold text-neutral-800 truncate">{c.full_name}</p>
                   <p className="text-[11px] text-neutral-400 truncate">{c.email}</p>
                 </div>
-                {selectedId === c.id && <CheckCircle2 className="size-4 text-emerald-600 shrink-0 ml-auto" />}
+                {selectedId === c.id && <CheckCircle2 className="size-4 text-[#0E2C72] shrink-0 ml-auto" />}
               </button>
             ))}
           </div>
@@ -672,7 +672,7 @@ function ConvertInspectionModal({
         <div className="flex gap-3 px-5 pb-5">
           <button onClick={onClose} className="flex-1 py-2.5 rounded-xl border border-neutral-200 text-[13px] font-medium text-neutral-600 hover:bg-neutral-50 transition-colors">Cancel</button>
           <button onClick={handleConvert} disabled={saving || !selectedId}
-            className="flex-1 py-2.5 rounded-xl bg-emerald-600 text-white text-[13px] font-semibold hover:bg-emerald-700 disabled:opacity-60 transition-colors flex items-center justify-center gap-1.5">
+            className="flex-1 py-2.5 rounded-xl bg-[#0E2C72] text-white text-[13px] font-semibold hover:bg-[#0a2260] disabled:opacity-60 transition-colors flex items-center justify-center gap-1.5">
             {saving ? <><Loader2 className="size-3.5 animate-spin" />Saving…</> : <><UserCheck className="size-3.5" />Confirm Conversion</>}
           </button>
         </div>
@@ -716,7 +716,7 @@ function InspectionConfigModal({ onClose }: { onClose: () => void }) {
   const [newMode, setNewMode]           = useState<"RECURRING" | "ONE_TIME">("RECURRING");
   const [newDate, setNewDate]           = useState("");
 
-  const inputCls = "w-full px-3 py-2 text-[13px] border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400 bg-white";
+  const inputCls = "w-full px-3 py-2 text-[13px] border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1a3d8f]/30 focus:border-[#2a52a8] bg-white";
 
   useEffect(() => {
     api.properties.list().then((list: any[]) => {
@@ -861,7 +861,7 @@ function InspectionConfigModal({ onClose }: { onClose: () => void }) {
                   <div className="flex flex-wrap gap-2">
                     {DAYS.map((d) => (
                       <button key={d} type="button" onClick={() => toggleDay(d)}
-                        className={`px-2.5 py-1 rounded-lg text-[11.5px] font-medium border transition-colors ${availableDays.includes(d) ? "bg-emerald-600 text-white border-emerald-600" : "bg-white border-neutral-200 text-neutral-600 hover:border-emerald-300"}`}>
+                        className={`px-2.5 py-1 rounded-lg text-[11.5px] font-medium border transition-colors ${availableDays.includes(d) ? "bg-[#0E2C72] text-white border-[#0E2C72]" : "bg-white border-neutral-200 text-neutral-600 hover:border-[#0E2C72]/40"}`}>
                         {d.slice(0, 3)}
                       </button>
                     ))}
@@ -891,7 +891,7 @@ function InspectionConfigModal({ onClose }: { onClose: () => void }) {
                           {/* Active toggle */}
                           <button type="button" onClick={() => toggleSlotActive(slot.id)}
                             title={slot.is_active ? "Deactivate slot" : "Activate slot"}
-                            className={`w-8 h-4.5 rounded-full relative transition-colors shrink-0 ${slot.is_active ? "bg-emerald-500" : "bg-neutral-300"}`}
+                            className={`w-8 h-4.5 rounded-full relative transition-colors shrink-0 ${slot.is_active ? "bg-[#1a3d8f]" : "bg-neutral-300"}`}
                             style={{ height: "18px", width: "32px" }}>
                             <span className={`absolute top-0.5 w-3.5 h-3.5 bg-white rounded-full shadow transition-transform ${slot.is_active ? "translate-x-[14px]" : "translate-x-0.5"}`} />
                           </button>
@@ -932,7 +932,7 @@ function InspectionConfigModal({ onClose }: { onClose: () => void }) {
                       )}
                     </div>
                     <button type="button" onClick={addSlot}
-                      className="w-full py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-[12px] font-semibold rounded-lg transition-colors">
+                      className="w-full py-1.5 bg-[#0E2C72] hover:bg-[#0a2260] text-white text-[12px] font-semibold rounded-lg transition-colors">
                       + Add Slot
                     </button>
                   </div>
@@ -957,7 +957,7 @@ function InspectionConfigModal({ onClose }: { onClose: () => void }) {
 
           <div className="flex gap-3 px-5 pb-5">
             <button onClick={onClose} className="flex-1 py-2.5 rounded-xl border border-neutral-200 text-[13px] font-medium text-neutral-600 hover:bg-neutral-50 transition-colors">Cancel</button>
-            <button onClick={handleSave} disabled={saving} className="flex-1 py-2.5 rounded-xl bg-emerald-600 text-white text-[13px] font-semibold hover:bg-emerald-700 disabled:opacity-60 transition-colors shadow-sm">
+            <button onClick={handleSave} disabled={saving} className="flex-1 py-2.5 rounded-xl bg-[#0E2C72] text-white text-[13px] font-semibold hover:bg-[#0a2260] disabled:opacity-60 transition-colors shadow-sm">
               {saving ? "Saving…" : "Save Settings"}
             </button>
           </div>
@@ -984,7 +984,7 @@ function InspectionConfigModal({ onClose }: { onClose: () => void }) {
                   Go Back
                 </button>
                 <button onClick={async () => { setShowConsent(false); await doSave(); }}
-                  className="flex-1 py-2.5 rounded-xl bg-emerald-600 text-white text-[13px] font-semibold hover:bg-emerald-700 transition-colors">
+                  className="flex-1 py-2.5 rounded-xl bg-[#0E2C72] text-white text-[13px] font-semibold hover:bg-[#0a2260] transition-colors">
                   Save Anyway
                 </button>
               </div>
@@ -1093,9 +1093,9 @@ export function SiteInspection() {
     {
       label: "Completed Inspections",
       value: completed,
-      valueColor: "text-emerald-600",
-      iconBg: "bg-emerald-50",
-      icon: <CheckCircle2 className="w-5 h-5 text-emerald-500" />,
+      valueColor: "text-[#0E2C72]",
+      iconBg: "bg-[#0E2C72]/6",
+      icon: <CheckCircle2 className="w-5 h-5 text-[#1a3d8f]" />,
     },
     {
       label: "Cancelled Inspections",
@@ -1126,7 +1126,7 @@ export function SiteInspection() {
           </div>
           <div className="flex items-center gap-2">
             {loading && (
-              <Loader2 className="w-3.5 h-3.5 text-emerald-500 animate-spin" />
+              <Loader2 className="w-3.5 h-3.5 text-[#1a3d8f] animate-spin" />
             )}
             {isAdmin && (
               <button
@@ -1139,7 +1139,7 @@ export function SiteInspection() {
             )}
             <button
               onClick={() => setShowAdd(true)}
-              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-emerald-600 text-white text-[12px] font-semibold hover:bg-emerald-700 transition-colors shadow-sm"
+              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-[#0E2C72] text-white text-[12px] font-semibold hover:bg-[#0a2260] transition-colors shadow-sm"
             >
               <Plus className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">Add Inspection Request</span>
@@ -1188,7 +1188,7 @@ export function SiteInspection() {
               placeholder="Search by name, email, phone…"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-9 pr-3 py-2 text-[13px] border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400 bg-white placeholder:text-neutral-400"
+              className="w-full pl-9 pr-3 py-2 text-[13px] border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1a3d8f]/30 focus:border-[#2a52a8] bg-white placeholder:text-neutral-400"
             />
           </div>
 
@@ -1203,7 +1203,7 @@ export function SiteInspection() {
                 onClick={() => setStatusFilter(f)}
                 className={`px-2.5 py-1.5 rounded-lg text-[11.5px] font-semibold transition-all ${
                   statusFilter === f
-                    ? "bg-emerald-600 text-white shadow-sm"
+                    ? "bg-[#0E2C72] text-white shadow-sm"
                     : "bg-white border border-neutral-200 text-neutral-600 hover:bg-neutral-50"
                 }`}
               >
@@ -1379,7 +1379,7 @@ export function SiteInspection() {
                                   <button
                                     onClick={() => setActionTarget({ inspection, action: "ATTENDED" })}
                                     title="Mark Attended"
-                                    className="p-1.5 rounded-lg hover:bg-emerald-50 text-neutral-400 hover:text-emerald-600 transition-colors"
+                                    className="p-1.5 rounded-lg hover:bg-[#0E2C72]/6 text-neutral-400 hover:text-[#0E2C72] transition-colors"
                                   >
                                     <CheckCircle2 className="w-3.5 h-3.5" />
                                   </button>
@@ -1493,7 +1493,7 @@ export function SiteInspection() {
                         <>
                           <button
                             onClick={() => setActionTarget({ inspection, action: "ATTENDED" })}
-                            className="flex-1 py-1.5 rounded-lg text-[12px] font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 transition-colors flex items-center justify-center gap-1.5"
+                            className="flex-1 py-1.5 rounded-lg text-[12px] font-medium text-[#0E2C72] bg-[#0E2C72]/6 hover:bg-[#d6e0f5] transition-colors flex items-center justify-center gap-1.5"
                           >
                             <CheckCircle2 className="w-3.5 h-3.5" /> Attended
                           </button>
@@ -1561,3 +1561,5 @@ export function SiteInspection() {
     </div>
   );
 }
+
+

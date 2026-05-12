@@ -1,40 +1,39 @@
-import { useState } from "react";
-import { useNavigate } from "react-router";
+﻿import { useState } from "react";
+import { useNavigate, useLocation } from "react-router";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { PasswordInput } from "../components/PasswordInput";
 import s from "../styles/onboarding.module.css";
+import { useAuth } from "../../hooks/useAuth";
 
 interface NewPasswordForm {
   newPassword: string;
   confirmPassword: string;
 }
 
-import { useAuth } from "../../hooks/useAuth";
-import { useLocation } from "react-router";
-
 export function CreateNewPassword() {
   const navigate = useNavigate();
   const location = useLocation();
   const { resetPassword } = useAuth();
   const [loading, setLoading] = useState(false);
+  const [formError, setFormError] = useState("");
 
   const { register, handleSubmit, watch, formState: { errors } } = useForm<NewPasswordForm>();
   const newPassword = watch("newPassword");
 
   const onSubmit = async (data: NewPasswordForm) => {
     setLoading(true);
+    setFormError("");
     try {
-      // In a real flow, this might need an 'otp' from state or URL
       await resetPassword({
         password: data.newPassword,
         email: (location.state as any)?.email,
-        otp: (location.state as any)?.otp, // or however it is passed
+        otp: (location.state as any)?.otp,
       });
       toast.success("Password updated successfully! You can now log in.");
       navigate("/auth/sign-in");
     } catch (err: any) {
-      toast.error(err.message || "Something went wrong. Please try again.");
+      setFormError(err.message || "Something went wrong. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -70,6 +69,21 @@ export function CreateNewPassword() {
           })}
         />
 
+        {formError && (
+          <div style={{
+            background: "#fef2f2",
+            border: "1px solid #fecaca",
+            borderRadius: 6,
+            padding: "9px 12px",
+            fontSize: 12.5,
+            color: "#dc2626",
+            fontWeight: 600,
+            fontFamily: "inherit",
+          }}>
+            {formError}
+          </div>
+        )}
+
         <button type="submit" className={s.btn} disabled={loading}>
           <span className={s.btnInner}>
             {loading && <span className={s.spinner} />}
@@ -80,3 +94,4 @@ export function CreateNewPassword() {
     </>
   );
 }
+

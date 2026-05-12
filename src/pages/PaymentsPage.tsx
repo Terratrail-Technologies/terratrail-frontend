@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+﻿import { useState, useCallback } from "react";
 import { useNavigate } from "react-router";
 import {
   DollarSign, Clock, XCircle, TrendingUp, Search, CheckCircle2,
@@ -23,7 +23,7 @@ function StatCard({ label, value, sub, icon: Icon, color }: {
   icon: React.ElementType; color: "emerald" | "amber" | "red" | "violet";
 }) {
   const c = {
-    emerald: { bg: "bg-emerald-500", icon: "bg-emerald-50 text-emerald-600" },
+    emerald: { bg: "bg-[#1a3d8f]", icon: "bg-[#0E2C72]/6 text-[#0E2C72]" },
     amber:   { bg: "bg-amber-500",   icon: "bg-amber-50 text-amber-600" },
     red:     { bg: "bg-red-500",     icon: "bg-red-50 text-red-600" },
     violet:  { bg: "bg-violet-500",  icon: "bg-violet-50 text-violet-600" },
@@ -65,7 +65,7 @@ function BarChart({ payments }: { payments: any[] }) {
           <p className="text-[11px] text-neutral-400">Last 6 months — approved payments</p>
         </div>
         <div className="flex items-center gap-3 text-[11px]">
-          <span className="flex items-center gap-1"><span className="w-3 h-2 rounded-sm bg-emerald-500 inline-block" />Approved</span>
+          <span className="flex items-center gap-1"><span className="w-3 h-2 rounded-sm bg-[#1a3d8f] inline-block" />Approved</span>
           <span className="flex items-center gap-1"><span className="w-3 h-0.5 border-t-2 border-dashed border-amber-400 inline-block" />Projected</span>
         </div>
       </div>
@@ -86,7 +86,7 @@ function BarChart({ payments }: { payments: any[] }) {
           return (
             <g key={m.month}>
               <rect x={cx - 14} y={160 - barH} width="28" height={barH}
-                rx="3" fill="#10b981" opacity="0.85" />
+                rx="3" fill="#0E2C72" opacity="0.85" />
               {projH && (
                 <rect x={cx - 14} y={160 - projH} width="28" height={projH - barH}
                   rx="3" fill="#f59e0b" opacity="0.3" />
@@ -103,7 +103,7 @@ function BarChart({ payments }: { payments: any[] }) {
 function PayStatusBadge({ status }: { status: string }) {
   const map: Record<string, string> = {
     PENDING:  "bg-amber-100 text-amber-700",
-    APPROVED: "bg-emerald-100 text-emerald-700",
+    APPROVED: "bg-[#d6e0f5] text-[#0E2C72]",
     REJECTED: "bg-red-100 text-red-700",
   };
   return (
@@ -213,7 +213,7 @@ export function PaymentsPage() {
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-neutral-400" />
                   <input value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }}
                     placeholder="Search customer…"
-                    className="h-9 pl-9 pr-3 border border-neutral-200 rounded-lg text-[13px] bg-white focus:outline-none focus:ring-1 focus:ring-emerald-500/30 focus:border-emerald-400 w-56" />
+                    className="h-9 pl-9 pr-3 border border-neutral-200 rounded-lg text-[13px] bg-white focus:outline-none focus:ring-1 focus:ring-[#1a3d8f]/30 focus:border-[#2a52a8] w-56" />
                 </div>
               </div>
 
@@ -240,7 +240,7 @@ export function PaymentsPage() {
                           <td className="px-4 py-3 whitespace-nowrap">
                             {(p.receipt_url || p.receipt_file) ? (
                               <a href={p.receipt_url || p.receipt_file} target="_blank" rel="noopener noreferrer"
-                                className="text-emerald-600 hover:text-emerald-700 flex items-center gap-1 text-[12px]">
+                                className="text-[#0E2C72] hover:text-[#0a2260] flex items-center gap-1 text-[12px]">
                                 <ExternalLink className="size-3.5" /> View
                               </a>
                             ) : <span className="text-neutral-300 text-[12px]">—</span>}
@@ -249,7 +249,7 @@ export function PaymentsPage() {
                             {p.status === "PENDING" && (
                               <div className="flex items-center gap-1.5">
                                 <button onClick={() => handleApprove(p.id)} disabled={acting === p.id}
-                                  className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-700 text-[11.5px] font-semibold hover:bg-emerald-100 transition-colors disabled:opacity-50">
+                                  className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#0E2C72]/6 text-[#0E2C72] text-[11.5px] font-semibold hover:bg-[#d6e0f5] transition-colors disabled:opacity-50">
                                   {acting === p.id ? <Loader2 className="size-3 animate-spin" /> : <CheckCircle2 className="size-3" />} Approve
                                 </button>
                                 <button onClick={() => setRejectId(rejectId === p.id ? null : p.id)}
@@ -313,3 +313,5 @@ export function PaymentsPage() {
     </div>
   );
 }
+
+

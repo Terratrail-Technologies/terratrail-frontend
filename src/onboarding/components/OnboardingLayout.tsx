@@ -27,11 +27,13 @@ export function OnboardingLayout() {
   const location = useLocation();
   const isSelectPlan = location.pathname === "/auth/select-plan";
   const isSignUp     = location.pathname === "/auth/sign-up";
+  const isSignIn     = location.pathname === "/auth/sign-in" || location.pathname === "/auth/";
+  const isSplit      = isSignUp || isSignIn;
 
   const cardClass = [
     s.card,
     isSelectPlan ? s.cardWide   : "",
-    isSignUp     ? s.cardSignup : "",
+    isSplit      ? s.cardSignup : "",
   ].filter(Boolean).join(" ");
 
   return (
@@ -50,7 +52,7 @@ export function OnboardingLayout() {
             transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
           >
             {/* Logo rendered inside non-split pages only */}
-            {!isSignUp && <Logo />}
+            {!isSplit && <Logo />}
             <Outlet />
           </motion.div>
         </AnimatePresence>

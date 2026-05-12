@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+﻿import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router";
 import {
   MapPin, ChevronLeft, ChevronRight, X, Phone, Mail, ArrowRight,
@@ -75,7 +75,7 @@ function Gallery({ cover, images }: { cover: string | null; images: { id: string
 
   if (all.length === 0) {
     return (
-      <div className="w-full h-80 bg-gradient-to-br from-neutral-100 to-emerald-50 flex items-center justify-center">
+      <div className="w-full h-80 bg-gradient-to-br from-neutral-100 to-[#eef2fb] flex items-center justify-center">
         <Building2 className="size-16 text-neutral-300" />
       </div>
     );
@@ -117,7 +117,7 @@ function Gallery({ cover, images }: { cover: string | null; images: { id: string
         <div className="flex gap-2 px-4 py-3 overflow-x-auto bg-neutral-900">
           {all.map((img, i) => (
             <button key={img.id} onClick={() => setIdx(i)}
-              className={`shrink-0 w-16 h-12 rounded-lg overflow-hidden border-2 transition-all ${i === idx ? "border-emerald-400" : "border-transparent opacity-60 hover:opacity-100"}`}>
+              className={`shrink-0 w-16 h-12 rounded-lg overflow-hidden border-2 transition-all ${i === idx ? "border-[#2a52a8]" : "border-transparent opacity-60 hover:opacity-100"}`}>
               <img src={imgSrc(img.image)} alt="" className="w-full h-full object-cover" loading="lazy" />
             </button>
           ))}
@@ -243,7 +243,7 @@ function InspectionModal({ property, workspaceSlug, onClose }: {
     } finally { setLoading(false); }
   };
 
-  const inputCls = "w-full h-10 px-3 rounded-xl border border-neutral-200 text-[13px] focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400 bg-white";
+  const inputCls = "w-full h-10 px-3 rounded-xl border border-neutral-200 text-[13px] focus:outline-none focus:ring-2 focus:ring-[#1a3d8f]/30 focus:border-[#2a52a8] bg-white";
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
@@ -260,18 +260,18 @@ function InspectionModal({ property, workspaceSlug, onClose }: {
 
         {sent ? (
           <div className="p-8 text-center">
-            <div className="w-14 h-14 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <CheckCircle2 className="size-7 text-emerald-600" />
+            <div className="w-14 h-14 bg-[#d6e0f5] rounded-full flex items-center justify-center mx-auto mb-4">
+              <CheckCircle2 className="size-7 text-[#0E2C72]" />
             </div>
             <h3 className="font-bold text-neutral-900 mb-2">Request Submitted!</h3>
             <p className="text-[13px] text-neutral-500">Our team will contact you within 24 hours to confirm your inspection.</p>
-            <button onClick={onClose} className="mt-5 w-full py-2.5 rounded-xl bg-emerald-600 text-white font-semibold text-[14px]">Done</button>
+            <button onClick={onClose} className="mt-5 w-full py-2.5 rounded-xl bg-[#0E2C72] text-white font-semibold text-[14px]">Done</button>
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="p-5 space-y-4">
             {/* Show available days hint if configured */}
             {availableDays.length > 0 && (
-              <div className="bg-emerald-50 border border-emerald-100 rounded-xl px-3 py-2.5 text-[12px] text-emerald-700">
+              <div className="bg-[#0E2C72]/6 border border-[#0E2C72]/15 rounded-xl px-3 py-2.5 text-[12px] text-[#0E2C72]">
                 <span className="font-semibold">Available days: </span>
                 {availableDays.join(", ")}
               </div>
@@ -335,13 +335,13 @@ function InspectionModal({ property, workspaceSlug, onClose }: {
                 <label className="text-[12px] font-medium text-neutral-600 block mb-1.5">Message (optional)</label>
                 <textarea value={form.message} onChange={(e) => set("message", e.target.value)} rows={3}
                   placeholder="Any additional notes…"
-                  className="w-full px-3 py-2 rounded-xl border border-neutral-200 text-[13px] focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400 resize-none" />
+                  className="w-full px-3 py-2 rounded-xl border border-neutral-200 text-[13px] focus:outline-none focus:ring-2 focus:ring-[#1a3d8f]/30 focus:border-[#2a52a8] resize-none" />
               </div>
             </div>
 
             <button type="submit"
               disabled={loading || !form.name || !form.phone || !form.date || !dateAllowed}
-              className="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-semibold text-[14px] flex items-center justify-center gap-2 transition-colors">
+              className="w-full py-3 rounded-xl bg-[#0E2C72] hover:bg-[#0a2260] disabled:opacity-50 text-white font-semibold text-[14px] flex items-center justify-center gap-2 transition-colors">
               {loading ? <><Loader2 className="size-4 animate-spin" />Submitting…</> : "Submit Request"}
             </button>
           </form>
@@ -473,7 +473,7 @@ function BuyFlow({ property, workspaceSlug, initialPlanId, onClose }: {
     finally { setLoading(false); }
   };
 
-  const inputBase = "w-full h-10 px-3 rounded-xl border border-neutral-200 text-[13px] focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400 bg-white";
+  const inputBase = "w-full h-10 px-3 rounded-xl border border-neutral-200 text-[13px] focus:outline-none focus:ring-2 focus:ring-[#1a3d8f]/30 focus:border-[#2a52a8] bg-white";
   const label = (t: string, req = false) => (
     <label className="text-[12px] font-medium text-neutral-600 block mb-1.5">{t}{req && <span className="text-red-500 ml-0.5">*</span>}</label>
   );
@@ -495,9 +495,9 @@ function BuyFlow({ property, workspaceSlug, initialPlanId, onClose }: {
           <div className="flex items-center gap-2 max-w-lg mx-auto">
             {STEPS.map((s, i) => (
               <div key={s} className="flex items-center gap-2 flex-1">
-                <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-bold shrink-0 transition-colors ${i <= stepIndex ? "bg-emerald-600 text-white" : "bg-neutral-100 text-neutral-400"}`}>{i + 1}</div>
-                <span className={`text-[11px] font-medium hidden sm:block ${i === stepIndex ? "text-emerald-700" : "text-neutral-400"}`}>{STEP_LABELS[i]}</span>
-                {i < STEPS.length - 1 && <div className={`flex-1 h-px ${i < stepIndex ? "bg-emerald-400" : "bg-neutral-200"}`} />}
+                <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-bold shrink-0 transition-colors ${i <= stepIndex ? "bg-[#0E2C72] text-white" : "bg-neutral-100 text-neutral-400"}`}>{i + 1}</div>
+                <span className={`text-[11px] font-medium hidden sm:block ${i === stepIndex ? "text-[#0E2C72]" : "text-neutral-400"}`}>{STEP_LABELS[i]}</span>
+                {i < STEPS.length - 1 && <div className={`flex-1 h-px ${i < stepIndex ? "bg-[#2a52a8]" : "bg-neutral-200"}`} />}
               </div>
             ))}
           </div>
@@ -513,15 +513,15 @@ function BuyFlow({ property, workspaceSlug, initialPlanId, onClose }: {
         {/* ── Submitted ── */}
         {submitted && (
           <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="text-center py-8">
-            <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <CheckCircle2 className="size-8 text-emerald-600" />
+            <div className="w-16 h-16 bg-[#d6e0f5] rounded-full flex items-center justify-center mx-auto mb-4">
+              <CheckCircle2 className="size-8 text-[#0E2C72]" />
             </div>
             <h2 className="text-xl font-bold text-neutral-900 mb-2">Booking Submitted!</h2>
             <p className="text-[14px] text-neutral-500 max-w-sm mx-auto mb-6">
               Our team will review your booking and get back to you within 24–48 hours. Check your email for a summary.
             </p>
             <button onClick={onClose}
-              className="px-8 py-3 rounded-xl bg-emerald-600 text-white font-semibold text-[14px] hover:bg-emerald-700 transition-colors">
+              className="px-8 py-3 rounded-xl bg-[#0E2C72] text-white font-semibold text-[14px] hover:bg-[#0a2260] transition-colors">
               Close
             </button>
           </motion.div>
@@ -555,13 +555,13 @@ function BuyFlow({ property, workspaceSlug, initialPlanId, onClose }: {
                   <div>{label("Confirm Password", true)}<input type="password" value={state.confirmPassword} onChange={(e) => set("confirmPassword", e.target.value)} className={inputBase} /></div>
                 )}
                 <button onClick={isSignIn ? handleSignIn : handleRegister} disabled={loading}
-                  className="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-semibold text-[14px] flex items-center justify-center gap-2 transition-colors">
+                  className="w-full py-3 rounded-xl bg-[#0E2C72] hover:bg-[#0a2260] disabled:opacity-50 text-white font-semibold text-[14px] flex items-center justify-center gap-2 transition-colors">
                   {loading ? <><Loader2 className="size-4 animate-spin" />Please wait…</> : isSignIn ? "Sign In & Continue" : "Create Account & Continue"}
                 </button>
               </div>
             ) : (
               <div className="space-y-4">
-                <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl text-[13px] text-emerald-700">
+                <div className="p-4 bg-[#0E2C72]/6 border border-[#8aaad8] rounded-xl text-[13px] text-[#0E2C72]">
                   A 6-digit code has been sent to <strong>{state.email}</strong>. Enter it below.
                 </div>
                 <div>{label("Verification Code", true)}
@@ -569,7 +569,7 @@ function BuyFlow({ property, workspaceSlug, initialPlanId, onClose }: {
                     className={`${inputBase} text-center text-[18px] font-mono tracking-widest`} />
                 </div>
                 <button onClick={handleVerifyOtp} disabled={loading || otp.length < 4}
-                  className="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-semibold text-[14px] flex items-center justify-center gap-2 transition-colors">
+                  className="w-full py-3 rounded-xl bg-[#0E2C72] hover:bg-[#0a2260] disabled:opacity-50 text-white font-semibold text-[14px] flex items-center justify-center gap-2 transition-colors">
                   {loading ? <><Loader2 className="size-4 animate-spin" />Verifying…</> : "Verify & Continue"}
                 </button>
               </div>
@@ -664,15 +664,15 @@ function BuyFlow({ property, workspaceSlug, initialPlanId, onClose }: {
                       value={state.referralCode}
                       onChange={(e) => { set("referralCode", e.target.value); setRepValidation("idle"); setRepName(null); }}
                       onBlur={handleReferralBlur}
-                      className={`${inputBase} pr-8 ${repValidation === "valid" ? "border-emerald-400 ring-1 ring-emerald-300" : repValidation === "invalid" ? "border-red-400 ring-1 ring-red-200" : ""}`}
+                      className={`${inputBase} pr-8 ${repValidation === "valid" ? "border-[#2a52a8] ring-1 ring-[#4a6fc0]" : repValidation === "invalid" ? "border-red-400 ring-1 ring-red-200" : ""}`}
                       placeholder="Optional"
                     />
                     {repValidation === "loading" && <Loader2 className="absolute right-2.5 top-2.5 size-4 text-neutral-400 animate-spin" />}
-                    {repValidation === "valid" && <CheckCircle2 className="absolute right-2.5 top-2.5 size-4 text-emerald-500" />}
+                    {repValidation === "valid" && <CheckCircle2 className="absolute right-2.5 top-2.5 size-4 text-[#1a3d8f]" />}
                     {repValidation === "invalid" && <span className="absolute right-2.5 top-2 text-red-500 text-[16px]">✕</span>}
                   </div>
                   {repValidation === "valid" && repName && (
-                    <p className="text-[12px] text-emerald-600 mt-1 font-medium">✓ {repName}</p>
+                    <p className="text-[12px] text-[#0E2C72] mt-1 font-medium">✓ {repName}</p>
                   )}
                   {repValidation === "invalid" && (
                     <p className="text-[12px] text-red-500 mt-1">Referral code not found.</p>
@@ -694,7 +694,7 @@ function BuyFlow({ property, workspaceSlug, initialPlanId, onClose }: {
                 Back
               </button>
               <button onClick={() => setStep("plan")} disabled={!state.firstName || !state.lastName || !state.phone || !state.address}
-                className="flex-1 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-semibold text-[14px] transition-colors">
+                className="flex-1 py-3 rounded-xl bg-[#0E2C72] hover:bg-[#0a2260] disabled:opacity-50 text-white font-semibold text-[14px] transition-colors">
                 Save & Continue
               </button>
             </div>
@@ -716,10 +716,10 @@ function BuyFlow({ property, workspaceSlug, initialPlanId, onClose }: {
                   return (
                     <button key={ls.land_size} disabled={!available}
                       onClick={() => { set("selectedLandSize", ls.land_size); set("selectedPlanId", ""); }}
-                      className={`p-4 rounded-xl border text-left transition-all ${state.selectedLandSize === ls.land_size ? "border-emerald-500 bg-emerald-50" : !available ? "border-neutral-100 bg-neutral-50 opacity-50 cursor-not-allowed" : "border-neutral-200 hover:border-emerald-300"}`}>
+                      className={`p-4 rounded-xl border text-left transition-all ${state.selectedLandSize === ls.land_size ? "border-[#0E2C72] bg-[#0E2C72]/6" : !available ? "border-neutral-100 bg-neutral-50 opacity-50 cursor-not-allowed" : "border-neutral-200 hover:border-[#0E2C72]/40"}`}>
                       <p className="font-bold text-neutral-800 text-[15px]">{ls.land_size} SQM</p>
                       {available
-                        ? <p className="text-[11px] text-emerald-600 mt-0.5">{ls.total_slots} slots remaining</p>
+                        ? <p className="text-[11px] text-[#0E2C72] mt-0.5">{ls.total_slots} slots remaining</p>
                         : <p className="text-[11px] text-neutral-400 mt-0.5">Fully Subscribed</p>}
                     </button>
                   );
@@ -735,12 +735,12 @@ function BuyFlow({ property, workspaceSlug, initialPlanId, onClose }: {
                     .filter((p) => p.is_active && p.land_size === state.selectedLandSize)
                     .map((plan) => (
                       <button key={plan.id} onClick={() => set("selectedPlanId", plan.id)}
-                        className={`w-full text-left p-4 rounded-xl border transition-all ${state.selectedPlanId === plan.id ? "border-emerald-500 bg-emerald-50" : "border-neutral-200 hover:border-emerald-300"}`}>
+                        className={`w-full text-left p-4 rounded-xl border transition-all ${state.selectedPlanId === plan.id ? "border-[#0E2C72] bg-[#0E2C72]/6" : "border-neutral-200 hover:border-[#0E2C72]/40"}`}>
                         <div className="flex items-center justify-between mb-2">
                           <span className="font-bold text-neutral-800">{plan.plan_name}</span>
                           <span className="text-[11px] px-2 py-0.5 rounded-full bg-neutral-100 text-neutral-600">{plan.payment_type === "OUTRIGHT" ? "Outright" : "Installment"}</span>
                         </div>
-                        <p className="text-[18px] font-bold text-emerald-600">{fmt(plan.total_price)}</p>
+                        <p className="text-[18px] font-bold text-[#0E2C72]">{fmt(plan.total_price)}</p>
                         {plan.payment_type === "INSTALLMENT" && (
                           <p className="text-[12px] text-neutral-500 mt-1">
                             {fmt(plan.initial_payment)} initial · {fmt(plan.monthly_installment)}/mo · {plan.duration_months} months
@@ -779,7 +779,7 @@ function BuyFlow({ property, workspaceSlug, initialPlanId, onClose }: {
                 Back
               </button>
               <button onClick={() => setStep("confirm")} disabled={!state.selectedPlanId}
-                className="flex-1 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-semibold text-[14px] transition-colors">
+                className="flex-1 py-3 rounded-xl bg-[#0E2C72] hover:bg-[#0a2260] disabled:opacity-50 text-white font-semibold text-[14px] transition-colors">
                 Proceed
               </button>
             </div>
@@ -841,7 +841,7 @@ function BuyFlow({ property, workspaceSlug, initialPlanId, onClose }: {
             {/* Receipt */}
             <div>
               <label className="text-[12px] font-medium text-neutral-600 block mb-1.5">Payment Receipt <span className="text-red-500">*</span></label>
-              <label className="block w-full border-2 border-dashed border-neutral-200 rounded-xl p-5 text-center cursor-pointer hover:border-emerald-400 transition-colors">
+              <label className="block w-full border-2 border-dashed border-neutral-200 rounded-xl p-5 text-center cursor-pointer hover:border-[#2a52a8] transition-colors">
                 <Upload className="size-6 mx-auto mb-2 text-neutral-400" />
                 <p className="text-[13px] text-neutral-600 font-medium">
                   {state.receiptFile ? state.receiptFile.name : "Click to upload receipt"}
@@ -860,7 +860,7 @@ function BuyFlow({ property, workspaceSlug, initialPlanId, onClose }: {
               ].map(({ key, text }) => (
                 <label key={key} className="flex items-start gap-3 cursor-pointer">
                   <input type="checkbox" checked={(state as any)[key]} onChange={(e) => set(key as keyof BuyState, e.target.checked)}
-                    className="mt-0.5 w-4 h-4 accent-emerald-600 shrink-0" />
+                    className="mt-0.5 w-4 h-4 accent-[#0E2C72] shrink-0" />
                   <span className="text-[13px] text-neutral-600">{text}</span>
                 </label>
               ))}
@@ -872,7 +872,7 @@ function BuyFlow({ property, workspaceSlug, initialPlanId, onClose }: {
                 Back
               </button>
               <button onClick={handleSubmit} disabled={!state.receiptFile || !state.decl1 || !state.decl2 || loading}
-                className="flex-1 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-semibold text-[14px] flex items-center justify-center gap-2 transition-colors">
+                className="flex-1 py-3 rounded-xl bg-[#0E2C72] hover:bg-[#0a2260] disabled:opacity-50 text-white font-semibold text-[14px] flex items-center justify-center gap-2 transition-colors">
                 {loading ? <><Loader2 className="size-4 animate-spin" />Submitting…</> : "Submit Booking"}
               </button>
             </div>
@@ -887,7 +887,7 @@ function BuyFlow({ property, workspaceSlug, initialPlanId, onClose }: {
 
 function AmenityBadge({ status }: { status: string }) {
   const map: Record<string, { cls: string; label: string }> = {
-    COMPLETED:   { cls: "bg-emerald-100 text-emerald-700", label: "Completed" },
+    COMPLETED:   { cls: "bg-[#d6e0f5] text-[#0E2C72]", label: "Completed" },
     IN_PROGRESS: { cls: "bg-amber-100 text-amber-700",    label: "In Progress" },
     NOT_STARTED: { cls: "bg-neutral-100 text-neutral-500", label: "Not Started" },
   };
@@ -958,7 +958,7 @@ export default function EstateDetailPage() {
         </p>
         <button
           onClick={() => navigate(`/estates/${workspaceSlug}`)}
-          className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-[13px] font-semibold transition-colors"
+          className="px-5 py-2.5 rounded-xl bg-[#0E2C72] hover:bg-[#0a2260] text-white text-[13px] font-semibold transition-colors"
         >
           ← Browse Other Properties
         </button>
@@ -974,11 +974,11 @@ export default function EstateDetailPage() {
       <div className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-neutral-100 shadow-sm">
         <div className="max-w-5xl mx-auto px-4 flex items-center justify-between h-14">
           <div className="flex items-center gap-3">
-            <div className="flex h-7 w-7 items-center justify-center rounded-lg overflow-hidden bg-emerald-600 shadow-sm">
-              <img src="/logo.png" alt="TerraTrail" className="w-full h-full object-cover" />
+            <div className="flex h-7 w-7 items-center justify-center rounded-lg overflow-hidden bg-[#0E2C72] shadow-sm">
+              <img src="/logo.png" alt="Terratrail" className="w-full h-full object-cover" />
             </div>
             <button onClick={() => navigate(`/estates/${workspaceSlug}`)}
-              className="flex items-center gap-1.5 text-[13px] font-semibold text-neutral-700 hover:text-emerald-600 transition-colors">
+              className="flex items-center gap-1.5 text-[13px] font-semibold text-neutral-700 hover:text-[#0E2C72] transition-colors">
               <ChevronLeft className="size-4" /> All Properties
             </button>
           </div>
@@ -989,7 +989,7 @@ export default function EstateDetailPage() {
               Request Inspection
             </button>
             <button onClick={() => handleBuy()}
-              className="px-4 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[12px] font-semibold transition-colors">
+              className="px-4 py-1.5 rounded-lg bg-[#0E2C72] hover:bg-[#0a2260] text-white text-[12px] font-semibold transition-colors">
               Buy Property
             </button>
           </div>
@@ -1018,7 +1018,7 @@ export default function EstateDetailPage() {
           <div className="flex gap-0 overflow-x-auto">
             {PUBLIC_TABS.map(({ key, label }) => (
               <button key={key} onClick={() => setTab(key)}
-                className={`px-5 py-3.5 text-[13px] font-semibold whitespace-nowrap border-b-2 transition-colors ${tab === key ? "border-emerald-600 text-emerald-700" : "border-transparent text-neutral-500 hover:text-neutral-800"}`}>
+                className={`px-5 py-3.5 text-[13px] font-semibold whitespace-nowrap border-b-2 transition-colors ${tab === key ? "border-[#0E2C72] text-[#0E2C72]" : "border-transparent text-neutral-500 hover:text-neutral-800"}`}>
                 {label}
               </button>
             ))}
@@ -1070,7 +1070,7 @@ export default function EstateDetailPage() {
                           <h3 className="text-[18px] font-bold text-neutral-900">{ls.land_size} SQM</h3>
                           {isFull
                             ? <span className="text-[12px] font-bold px-3 py-1 rounded-full bg-neutral-200 text-neutral-500">Fully Subscribed</span>
-                            : <span className="text-[12px] font-bold px-3 py-1 rounded-full bg-emerald-100 text-emerald-700">{ls.total_slots} slots available</span>}
+                            : <span className="text-[12px] font-bold px-3 py-1 rounded-full bg-[#d6e0f5] text-[#0E2C72]">{ls.total_slots} slots available</span>}
                         </div>
                         {plans.length > 0 ? (
                           <div className="space-y-3">
@@ -1083,7 +1083,7 @@ export default function EstateDetailPage() {
                                       {plan.payment_type === "OUTRIGHT" ? "Outright" : "Installment"}
                                     </span>
                                   </div>
-                                  <p className="text-[20px] font-bold text-emerald-600">{fmt(plan.total_price)}</p>
+                                  <p className="text-[20px] font-bold text-[#0E2C72]">{fmt(plan.total_price)}</p>
                                   {plan.payment_type === "INSTALLMENT" && (
                                     <p className="text-[12px] text-neutral-500 mt-0.5">
                                       {fmt(plan.initial_payment)} initial · {fmt(plan.monthly_installment)}/mo · {plan.duration_months} months
@@ -1092,7 +1092,7 @@ export default function EstateDetailPage() {
                                 </div>
                                 {!isFull && (
                                   <button onClick={() => handleBuy(plan.id)}
-                                    className="shrink-0 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-[13px] transition-colors">
+                                    className="shrink-0 px-4 py-2 rounded-xl bg-[#0E2C72] hover:bg-[#0a2260] text-white font-semibold text-[13px] transition-colors">
                                     Buy Now
                                   </button>
                                 )}
@@ -1151,7 +1151,7 @@ export default function EstateDetailPage() {
                         </div>
                         {doc.document_file && (
                           <a href={imgSrc(doc.document_file)} target="_blank" rel="noreferrer"
-                            className="flex items-center gap-1 text-[12px] font-semibold text-emerald-600 hover:text-emerald-700">
+                            className="flex items-center gap-1 text-[12px] font-semibold text-[#0E2C72] hover:text-[#0a2260]">
                             <Download className="size-3.5" /> Download
                           </a>
                         )}
@@ -1186,7 +1186,7 @@ export default function EstateDetailPage() {
                     {property.location.latitude && property.location.longitude && (
                       <a href={`https://www.google.com/maps/dir/?api=1&destination=${property.location.latitude},${property.location.longitude}`}
                         target="_blank" rel="noreferrer"
-                        className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-[13px] transition-colors">
+                        className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#0E2C72] hover:bg-[#0a2260] text-white font-semibold text-[13px] transition-colors">
                         <MapPin className="size-4" /> Get Directions
                       </a>
                     )}
@@ -1202,16 +1202,16 @@ export default function EstateDetailPage() {
       </div>
 
       {/* Mid-page CTA */}
-      <FadeIn className="bg-emerald-700 py-12 px-4 text-center text-white">
+      <FadeIn className="bg-[#0c2870] py-12 px-4 text-center text-white">
         <h2 className="text-2xl font-bold mb-2">Ready to own land at {property.name}?</h2>
-        <p className="text-emerald-200 text-[14px] mb-6">Join hundreds of property owners. Start with a flexible payment plan.</p>
+        <p className="text-[#8aaad8] text-[14px] mb-6">Join hundreds of property owners. Start with a flexible payment plan.</p>
         <div className="flex gap-3 justify-center flex-wrap">
           <button onClick={() => handleBuy()}
-            className="px-8 py-3 rounded-xl bg-white text-emerald-700 font-bold text-[14px] hover:bg-emerald-50 transition-colors">
+            className="px-8 py-3 rounded-xl bg-white text-[#0E2C72] font-bold text-[14px] hover:bg-[#0E2C72]/6 transition-colors">
             Buy Property
           </button>
           <button onClick={() => setShowInspection(true)}
-            className="px-8 py-3 rounded-xl border-2 border-emerald-400 text-white font-bold text-[14px] hover:bg-emerald-600 transition-colors">
+            className="px-8 py-3 rounded-xl border-2 border-[#2a52a8] text-white font-bold text-[14px] hover:bg-[#0E2C72] transition-colors">
             Request Inspection
           </button>
         </div>
@@ -1223,7 +1223,7 @@ export default function EstateDetailPage() {
         <p className="text-neutral-400 text-[14px] mb-6">Join hundreds of property owners. Start with a flexible payment plan.</p>
         <div className="flex gap-3 justify-center flex-wrap">
           <button onClick={() => handleBuy()}
-            className="px-8 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[14px] transition-colors">
+            className="px-8 py-3 rounded-xl bg-[#0E2C72] hover:bg-[#0a2260] text-white font-bold text-[14px] transition-colors">
             Buy Property
           </button>
           <button onClick={() => setShowInspection(true)}
@@ -1245,3 +1245,7 @@ export default function EstateDetailPage() {
     </div>
   );
 }
+
+
+
+

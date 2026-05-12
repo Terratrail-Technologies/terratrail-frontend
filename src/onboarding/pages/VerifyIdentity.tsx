@@ -1,14 +1,13 @@
-import { useState } from "react";
+﻿import { useState } from "react";
 import { useNavigate, useLocation } from "react-router";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import s from "../styles/onboarding.module.css";
+import { useAuth } from "../../hooks/useAuth";
 
 interface VerifyForm {
   code: string;
 }
-
-import { useAuth } from "../../hooks/useAuth";
 
 export function VerifyIdentity() {
   const navigate = useNavigate();
@@ -21,22 +20,24 @@ export function VerifyIdentity() {
 
   const [loading, setLoading]             = useState(false);
   const [resendCooldown, setResendCooldown] = useState(0);
+  const [formError, setFormError]         = useState("");
+  const [resendError, setResendError]     = useState("");
 
   const { register, handleSubmit, formState: { errors } } = useForm<VerifyForm>();
 
   const onSubmit = async (data: VerifyForm) => {
     if (!email) {
-      toast.error("Missing email. Please go back and try again.");
+      setFormError("Missing email. Please go back and try again.");
       return;
     }
     setLoading(true);
+    setFormError("");
     try {
       await otpVerify({ email, code: data.code });
       toast.success("Identity verified!");
       if (flow === "reset") {
         navigate("/auth/reset-password", { state: { email } });
       } else if (flow === "signup" && inviteToken) {
-        // Invited user — skip workspace setup, go straight to accept the invite
         navigate(`/accept-invite/${inviteToken}`, { replace: true });
       } else if (flow === "signup") {
         navigate("/auth/workspace-setup", { state: { email } });
@@ -44,7 +45,7 @@ export function VerifyIdentity() {
         navigate("/");
       }
     } catch (err: any) {
-      toast.error(err.message || "Invalid code. Please try again.");
+      setFormError(err.message || "Invalid code. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -52,9 +53,10 @@ export function VerifyIdentity() {
 
   const handleResend = async () => {
     if (resendCooldown > 0 || !email) return;
+    setResendError("");
     try {
       await otpRequest({ email });
-      toast.success("A new code has been sent.");
+      toast.success("A new code has been sent to your inbox.");
       setResendCooldown(30);
       const timer = setInterval(() => {
         setResendCooldown((prev) => {
@@ -63,7 +65,7 @@ export function VerifyIdentity() {
         });
       }, 1000);
     } catch (err: any) {
-      toast.error(err.message || "Failed to resend code.");
+      setResendError(err.message || "Failed to resend code. Please try again.");
     }
   };
 
@@ -99,6 +101,21 @@ export function VerifyIdentity() {
           )}
         </div>
 
+        {formError && (
+          <div style={{
+            background: "#fef2f2",
+            border: "1px solid #fecaca",
+            borderRadius: 6,
+            padding: "9px 12px",
+            fontSize: 12.5,
+            color: "#dc2626",
+            fontWeight: 600,
+            fontFamily: "inherit",
+          }}>
+            {formError}
+          </div>
+        )}
+
         <div className={s.resendRow}>
           Didn&apos;t receive the code?{" "}
           <button
@@ -112,6 +129,20 @@ export function VerifyIdentity() {
           </button>
         </div>
 
+        {resendError && (
+          <div style={{
+            background: "#fef2f2",
+            border: "1px solid #fecaca",
+            borderRadius: 6,
+            padding: "8px 12px",
+            fontSize: 12,
+            color: "#dc2626",
+            fontFamily: "inherit",
+          }}>
+            {resendError}
+          </div>
+        )}
+
         <button type="submit" className={s.btn} disabled={loading}>
           <span className={s.btnInner}>
             {loading && <span className={s.spinner} />}
@@ -122,3 +153,4 @@ export function VerifyIdentity() {
     </>
   );
 }
+

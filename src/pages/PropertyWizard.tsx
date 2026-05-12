@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+﻿import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate, useParams } from "react-router";
 import {
   ArrowLeft,
@@ -147,9 +147,13 @@ export function PropertyWizard() {
   const [currentStep, setCurrentStep] = useState(1);
 
   // ── Step 1 state ─────────────────────────────────────────────────────────
-  const [propertyName, setPropertyName] = useState("");
-  const [propertyType, setPropertyType] = useState("RESIDENTIAL_LAND");
-  const [description, setDescription]   = useState("");
+  const [propertyName, setPropertyName]               = useState("");
+  const [propertyType, setPropertyType]               = useState("RESIDENTIAL_LAND");
+  const [estateLandTitle, setEstateLandTitle]         = useState("");
+  const [description, setDescription]                 = useState("");
+  const [brochureFile, setBrochureFile]               = useState<File | null>(null);
+  const [brochureExistingUrl, setBrochureExistingUrl] = useState<string | null>(null);
+  const brochureRef = useRef<HTMLInputElement>(null);
 
   // ── Step 2 state ─────────────────────────────────────────────────────────
   const [coverImage, setCoverImage]       = useState<File | null>(null);
@@ -246,7 +250,9 @@ export function PropertyWizard() {
     api.properties.get(id).then((prop: any) => {
       setPropertyName(prop.name ?? "");
       setPropertyType(prop.property_type ?? "RESIDENTIAL_LAND");
+      setEstateLandTitle(prop.estate_land_title ?? "");
       setDescription(prop.description ?? "");
+      if (prop.brochure) setBrochureExistingUrl(prop.brochure);
       if (prop.featured_image) setCoverPreview(prop.featured_image);
       if (prop.location) {
         setStreetAddress(prop.location.address ?? "");
@@ -297,7 +303,7 @@ export function PropertyWizard() {
       if (prop.bank_accounts?.length) {
         setPaymentMethods(prop.bank_accounts.map((b: any) => ({
           id: b.id, bankName: b.bank_name, bankCode: "",
-          accountName: b.account_name, accountNumber: b.account_number, active: true,
+          accountName: b.account_name, accountNumber: b.account_number, active: b.is_active ?? true,
         })));
       }
     }).catch(() => toast.error("Failed to load property data."));
@@ -508,6 +514,7 @@ export function PropertyWizard() {
       const payload: any = {
         name: propertyName,
         property_type: propertyType,
+        estate_land_title: estateLandTitle || "",
         description,
         status: overrideStatus ?? "DRAFT",
         unit_measurement: "sqm",
@@ -554,6 +561,7 @@ export function PropertyWizard() {
           bank_name: m.bankName,
           account_name: m.accountName,
           account_number: m.accountNumber,
+          is_active: m.active,
         })),
       };
 
@@ -568,6 +576,14 @@ export function PropertyWizard() {
           await api.properties.uploadFeaturedImage(propertyId, coverImage);
         } catch {
           toast.error("Property saved, but cover image upload failed.");
+        }
+      }
+
+      if (brochureFile && propertyId) {
+        try {
+          await api.properties.uploadBrochure(propertyId, brochureFile);
+        } catch {
+          toast.error("Property saved, but brochure upload failed.");
         }
       }
 
@@ -638,25 +654,25 @@ export function PropertyWizard() {
                   disabled={!isEditing && step.id > currentStep}
                   className={cn(
                     "flex items-center gap-1.5 px-2.5 py-2 rounded-md text-xs font-medium flex-1 min-w-0 transition-colors truncate",
-                    active  ? "bg-emerald-50 text-emerald-700 border border-emerald-200 cursor-pointer"
+                    active  ? "bg-[#0E2C72]/6 text-[#0E2C72] border border-[#8aaad8] cursor-pointer"
                             : (done || isEditing) ? "bg-neutral-100 text-neutral-600 cursor-pointer hover:bg-neutral-200"
                                     : "bg-white text-neutral-300 border border-neutral-100 cursor-not-allowed"
                   )}
                 >
                   {done ? (
-                    <span className="w-4 h-4 rounded-full bg-emerald-500 flex items-center justify-center shrink-0">
+                    <span className="w-4 h-4 rounded-full bg-[#1a3d8f] flex items-center justify-center shrink-0">
                       <Check className="w-2.5 h-2.5 text-white" />
                     </span>
                   ) : (
                     <span className={cn(
                       "w-4 h-4 rounded-full flex items-center justify-center shrink-0 text-[10px] font-bold",
-                      active ? "bg-emerald-500 text-white" : "bg-neutral-200 text-neutral-500"
+                      active ? "bg-[#1a3d8f] text-white" : "bg-neutral-200 text-neutral-500"
                     )}>{step.id}</span>
                   )}
                   <span className="truncate hidden lg:inline">{step.name}</span>
                 </button>
                 {index < steps.length - 1 && (
-                  <div className={cn("w-3 h-0.5 shrink-0 mx-0.5", done ? "bg-emerald-300" : "bg-neutral-200")} />
+                  <div className={cn("w-3 h-0.5 shrink-0 mx-0.5", done ? "bg-[#4a6fc0]" : "bg-neutral-200")} />
                 )}
               </div>
             );
@@ -679,6 +695,8 @@ export function PropertyWizard() {
               {/* ── Step 1: Basic Info ── */}
               {currentStep === 1 && (
                 <div className="bg-white rounded-xl border border-neutral-200 p-6 sm:p-8 space-y-6">
+                  <input ref={brochureRef} type="file" accept=".pdf,application/pdf" className="hidden"
+                    onChange={(e) => { const f = e.target.files?.[0]; if (f) { setBrochureFile(f); setBrochureExistingUrl(null); } }} />
                   <div>
                     <label className="block text-sm font-medium text-neutral-700 mb-1.5">
                       Property Name <span className="text-red-500">*</span>
@@ -686,22 +704,62 @@ export function PropertyWizard() {
                     <Input value={propertyName} onChange={(e) => setPropertyName(e.target.value)}
                       placeholder="e.g. Tehillah Estate Phase 1" className="bg-white" />
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-neutral-700 mb-1.5">
-                      Property Type <span className="text-red-500">*</span>
-                    </label>
-                    <select value={propertyType} onChange={(e) => setPropertyType(e.target.value)}
-                      className="flex h-10 w-full rounded-md border border-neutral-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
-                      <option value="RESIDENTIAL_LAND">Residential Land</option>
-                      <option value="FARM_LAND">Farm Land</option>
-                      <option value="COMMERCIAL">Commercial</option>
-                      <option value="MIXED_USE">Mixed Use</option>
-                    </select>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-neutral-700 mb-1.5">
+                        Property Type <span className="text-red-500">*</span>
+                      </label>
+                      <select value={propertyType} onChange={(e) => setPropertyType(e.target.value)}
+                        className="flex h-10 w-full rounded-md border border-neutral-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1a3d8f]">
+                        <option value="RESIDENTIAL_LAND">Residential Land</option>
+                        <option value="FARM_LAND">Farm Land</option>
+                        <option value="COMMERCIAL">Commercial Land</option>
+                        <option value="MIXED_USE">Mixed Use</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-neutral-700 mb-1.5">
+                        Estate Land Title <span className="text-neutral-400 text-xs font-normal">(optional)</span>
+                      </label>
+                      <Input value={estateLandTitle} onChange={(e) => setEstateLandTitle(e.target.value)}
+                        placeholder="e.g. C of O No. 12345" className="bg-white" />
+                    </div>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-neutral-700 mb-1.5">Description</label>
                     <Textarea rows={5} value={description} onChange={(e) => setDescription(e.target.value)}
                       placeholder="Describe your property…" className="bg-white resize-y min-h-[100px]" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-neutral-700 mb-1.5">
+                      Brochure <span className="text-neutral-400 text-xs font-normal">(PDF, optional)</span>
+                    </label>
+                    {brochureFile || brochureExistingUrl ? (
+                      <div className="flex items-center gap-3 p-3 border border-neutral-200 rounded-lg bg-neutral-50">
+                        <FileText className="w-5 h-5 text-red-500 shrink-0" />
+                        <span className="text-sm text-neutral-700 flex-1 truncate">
+                          {brochureFile ? brochureFile.name : "Existing brochure"}
+                        </span>
+                        <div className="flex items-center gap-2 shrink-0">
+                          {brochureExistingUrl && !brochureFile && (
+                            <a href={brochureExistingUrl} target="_blank" rel="noopener noreferrer"
+                              className="text-xs text-[#0E2C72] hover:underline">View</a>
+                          )}
+                          <button type="button"
+                            onClick={() => { setBrochureFile(null); setBrochureExistingUrl(null); if (brochureRef.current) brochureRef.current.value = ""; }}
+                            className="p-1 hover:bg-neutral-200 rounded transition-colors">
+                            <X className="w-3.5 h-3.5 text-neutral-500" />
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div onClick={() => brochureRef.current?.click()}
+                        className="border-2 border-dashed border-neutral-300 rounded-lg p-5 text-center hover:border-[#1a3d8f] hover:bg-[#eef2fb]/30 transition-colors cursor-pointer">
+                        <Upload className="w-7 h-7 text-neutral-400 mx-auto mb-2" />
+                        <p className="text-sm text-neutral-600">Click to upload PDF brochure</p>
+                        <p className="text-xs text-neutral-400 mt-0.5">PDF up to 20 MB</p>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
@@ -718,7 +776,7 @@ export function PropertyWizard() {
                     </label>
                     <div
                       onClick={() => coverRef.current?.click()}
-                      className="border-2 border-dashed border-neutral-300 rounded-lg p-10 text-center hover:border-emerald-500 hover:bg-emerald-50/30 transition-colors cursor-pointer"
+                      className="border-2 border-dashed border-neutral-300 rounded-lg p-10 text-center hover:border-[#0E2C72] hover:bg-[#0E2C72]/6/30 transition-colors cursor-pointer"
                     >
                       {coverPreview ? (
                         <div className="relative inline-block">
@@ -747,7 +805,7 @@ export function PropertyWizard() {
                     </label>
                     <div
                       onClick={() => galleryRef.current?.click()}
-                      className="border-2 border-dashed border-neutral-300 rounded-lg p-6 text-center hover:border-emerald-500 hover:bg-emerald-50/30 transition-colors cursor-pointer"
+                      className="border-2 border-dashed border-neutral-300 rounded-lg p-6 text-center hover:border-[#0E2C72] hover:bg-[#0E2C72]/6/30 transition-colors cursor-pointer"
                     >
                       <ImageIcon className="w-8 h-8 text-neutral-400 mx-auto mb-2" />
                       <p className="text-sm text-neutral-600">Click to add gallery images</p>
@@ -779,7 +837,7 @@ export function PropertyWizard() {
                     <div className="sm:col-span-2">
                       <label className="block text-sm font-medium text-neutral-700 mb-1.5">Street Address</label>
                       <Input value={streetAddress} onChange={(e) => setStreetAddress(e.target.value)}
-                        placeholder="Enter address" className="bg-white border-neutral-300 focus-visible:ring-emerald-500/30 focus-visible:border-emerald-400" />
+                        placeholder="Enter address" className="bg-white border-neutral-300 focus-visible:ring-[#1a3d8f]/30 focus-visible:border-[#2a52a8]" />
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-neutral-700 mb-1.5">
@@ -792,7 +850,7 @@ export function PropertyWizard() {
                         State <span className="text-red-500">*</span>
                       </label>
                       <select value={state} onChange={(e) => setState(e.target.value)}
-                        className="flex h-10 w-full rounded-md border border-neutral-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                        className="flex h-10 w-full rounded-md border border-neutral-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1a3d8f]">
                         <option value="">Select state</option>
                         {NIGERIAN_STATES.map((s) => <option key={s} value={s}>{s}</option>)}
                       </select>
@@ -817,7 +875,7 @@ export function PropertyWizard() {
 
                   <div className="flex gap-2">
                     <button type="button" onClick={handleUseLocation} disabled={geoLoading}
-                      className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-md hover:bg-emerald-700 transition-colors disabled:opacity-60">
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-[#0E2C72] text-white rounded-md hover:bg-[#0a2260] transition-colors disabled:opacity-60">
                       {geoLoading ? (
                         <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none">
                           <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
@@ -864,7 +922,7 @@ export function PropertyWizard() {
                   <div className="flex items-center justify-between mb-6">
                     <h3 className="font-semibold text-neutral-900">Property Amenities</h3>
                     <button onClick={openAddAmenity}
-                      className="inline-flex items-center gap-1.5 px-3 py-2 bg-emerald-600 text-white rounded-md text-sm hover:bg-emerald-700">
+                      className="inline-flex items-center gap-1.5 px-3 py-2 bg-[#0E2C72] text-white rounded-md text-sm hover:bg-[#0a2260]">
                       <Plus className="w-4 h-4" /> Add Amenity
                     </button>
                   </div>
@@ -896,7 +954,7 @@ export function PropertyWizard() {
                       <p className="font-medium text-neutral-700 mb-1">No amenities added yet</p>
                       <p className="text-sm text-neutral-400 mb-5">Add features like fencing, street lights, etc.</p>
                       <button onClick={openAddAmenity}
-                        className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-md text-sm hover:bg-emerald-700">
+                        className="inline-flex items-center gap-2 px-4 py-2 bg-[#0E2C72] text-white rounded-md text-sm hover:bg-[#0a2260]">
                         <Plus className="w-4 h-4" /> Add First Amenity
                       </button>
                     </div>
@@ -910,7 +968,7 @@ export function PropertyWizard() {
                   <div className="flex items-center justify-between mb-6">
                     <h3 className="font-semibold text-neutral-900">Property Documents</h3>
                     <button onClick={openAddDoc}
-                      className="inline-flex items-center gap-1.5 px-3 py-2 bg-emerald-600 text-white rounded-md text-sm hover:bg-emerald-700">
+                      className="inline-flex items-center gap-1.5 px-3 py-2 bg-[#0E2C72] text-white rounded-md text-sm hover:bg-[#0a2260]">
                       <Plus className="w-4 h-4" /> Add Document
                     </button>
                   </div>
@@ -919,8 +977,8 @@ export function PropertyWizard() {
                       {documents.map((doc) => (
                         <div key={doc.id} className="flex items-center justify-between p-4 border border-neutral-200 rounded-lg">
                           <div className="flex items-center gap-3">
-                            <div className="w-9 h-9 bg-emerald-50 rounded-lg flex items-center justify-center">
-                              <FileText className="w-4 h-4 text-emerald-600" />
+                            <div className="w-9 h-9 bg-[#0E2C72]/6 rounded-lg flex items-center justify-center">
+                              <FileText className="w-4 h-4 text-[#0E2C72]" />
                             </div>
                             <div>
                               <div className="font-medium text-neutral-900">{docDisplayLabel(doc)}</div>
@@ -942,7 +1000,7 @@ export function PropertyWizard() {
                       <p className="font-medium text-neutral-700 mb-1">No documents added</p>
                       <p className="text-sm text-neutral-400 mb-5">Upload survey plans, deeds, and other legal documents</p>
                       <button onClick={openAddDoc}
-                        className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-md text-sm hover:bg-emerald-700">
+                        className="inline-flex items-center gap-2 px-4 py-2 bg-[#0E2C72] text-white rounded-md text-sm hover:bg-[#0a2260]">
                         <Plus className="w-4 h-4" /> Add First Document
                       </button>
                     </div>
@@ -955,16 +1013,16 @@ export function PropertyWizard() {
                 <div className="space-y-5">
                   {/* Summary bar */}
                   {landSizes.length > 0 && (
-                    <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 flex items-center justify-between flex-wrap gap-3">
+                    <div className="bg-[#0E2C72]/6 border border-[#8aaad8] rounded-xl p-4 flex items-center justify-between flex-wrap gap-3">
                       <div>
-                        <p className="text-[11px] font-semibold text-emerald-700 uppercase tracking-wide">Computed Totals</p>
-                        <p className="text-[22px] font-bold text-emerald-900 leading-tight">
+                        <p className="text-[11px] font-semibold text-[#0E2C72] uppercase tracking-wide">Computed Totals</p>
+                        <p className="text-[22px] font-bold text-[#071a45] leading-tight">
                           {fmtSqm(computedTotalSqms)} SQM
                         </p>
                       </div>
                       <div className="text-right">
-                        <p className="text-[11px] font-semibold text-emerald-700 uppercase tracking-wide">Total Slots</p>
-                        <p className="text-[22px] font-bold text-emerald-900 leading-tight">{computedAvailableUnits}</p>
+                        <p className="text-[11px] font-semibold text-[#0E2C72] uppercase tracking-wide">Total Slots</p>
+                        <p className="text-[22px] font-bold text-[#071a45] leading-tight">{computedAvailableUnits}</p>
                       </div>
                     </div>
                   )}
@@ -978,7 +1036,7 @@ export function PropertyWizard() {
                         </p>
                       </div>
                       <button onClick={openAddLandSize}
-                        className="inline-flex items-center gap-1.5 px-3 py-2 bg-emerald-600 text-white rounded-md text-sm hover:bg-emerald-700 shrink-0">
+                        className="inline-flex items-center gap-1.5 px-3 py-2 bg-[#0E2C72] text-white rounded-md text-sm hover:bg-[#0a2260] shrink-0">
                         <Plus className="w-4 h-4" /> Add Land Size
                       </button>
                     </div>
@@ -1000,7 +1058,7 @@ export function PropertyWizard() {
                               <tr key={ls.id} className="hover:bg-neutral-50 transition-colors">
                                 <td className="px-3 py-3 font-semibold text-neutral-800">{ls.landSize} SQM</td>
                                 <td className="px-3 py-3 text-center text-neutral-600">{ls.totalSlots}</td>
-                                <td className="px-3 py-3 text-center font-medium text-emerald-700">
+                                <td className="px-3 py-3 text-center font-medium text-[#0E2C72]">
                                   {fmtSqm((Number(ls.landSize) || 0) * (Number(ls.totalSlots) || 0))}
                                 </td>
                                 <td className="px-3 py-3 text-neutral-400 text-xs">{ls.description || "—"}</td>
@@ -1022,7 +1080,7 @@ export function PropertyWizard() {
                             <tr className="border-t-2 border-neutral-200 bg-neutral-50">
                               <td className="px-3 py-2.5 text-[11px] font-bold text-neutral-600 uppercase">Total</td>
                               <td className="px-3 py-2.5 text-center text-[13px] font-bold text-neutral-700">{computedAvailableUnits}</td>
-                              <td className="px-3 py-2.5 text-center text-[13px] font-bold text-emerald-700">{fmtSqm(computedTotalSqms)}</td>
+                              <td className="px-3 py-2.5 text-center text-[13px] font-bold text-[#0E2C72]">{fmtSqm(computedTotalSqms)}</td>
                               <td colSpan={2} />
                             </tr>
                           </tfoot>
@@ -1036,7 +1094,7 @@ export function PropertyWizard() {
                           e.g. 300 SQM × 30 slots, 500 SQM × 20 slots
                         </p>
                         <button onClick={openAddLandSize}
-                          className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-md text-sm hover:bg-emerald-700">
+                          className="inline-flex items-center gap-2 px-4 py-2 bg-[#0E2C72] text-white rounded-md text-sm hover:bg-[#0a2260]">
                           <Plus className="w-4 h-4" /> Add First Land Size
                         </button>
                       </div>
@@ -1058,7 +1116,7 @@ export function PropertyWizard() {
                       )}
                     </div>
                     <button onClick={openAddPricing}
-                      className="inline-flex items-center gap-1.5 px-3 py-2 bg-emerald-600 text-white rounded-md text-sm hover:bg-emerald-700">
+                      className="inline-flex items-center gap-1.5 px-3 py-2 bg-[#0E2C72] text-white rounded-md text-sm hover:bg-[#0a2260]">
                       <Plus className="w-4 h-4" /> Add Plan
                     </button>
                   </div>
@@ -1072,7 +1130,7 @@ export function PropertyWizard() {
                               <div>
                                 <div className="flex items-center gap-2">
                                   <h4 className="font-semibold text-neutral-900">{p.name}</h4>
-                                  <Badge className={cn("text-xs", p.active ? "bg-emerald-100 text-emerald-700" : "bg-neutral-100 text-neutral-500")}>
+                                  <Badge className={cn("text-xs", p.active ? "bg-[#d6e0f5] text-[#0E2C72]" : "bg-neutral-100 text-neutral-500")}>
                                     {p.active ? "Active" : "Inactive"}
                                   </Badge>
                                 </div>
@@ -1082,9 +1140,9 @@ export function PropertyWizard() {
                                 <button
                                   onClick={() => setPricingPlans((prev) => prev.map((x) => x.id === p.id ? { ...x, active: !x.active } : x))}
                                   title={p.active ? "Set Inactive" : "Set Active"}
-                                  className={`p-2 rounded-md transition-colors ${p.active ? "hover:bg-amber-50 text-emerald-600" : "hover:bg-emerald-50 text-neutral-400"}`}
+                                  className={`p-2 rounded-md transition-colors ${p.active ? "hover:bg-amber-50 text-[#0E2C72]" : "hover:bg-[#0E2C72]/6 text-neutral-400"}`}
                                 >
-                                  <div className={`w-8 h-4 rounded-full flex items-center transition-colors ${p.active ? "bg-emerald-500" : "bg-neutral-300"}`}>
+                                  <div className={`w-8 h-4 rounded-full flex items-center transition-colors ${p.active ? "bg-[#1a3d8f]" : "bg-neutral-300"}`}>
                                     <div className={`w-3 h-3 rounded-full bg-white shadow mx-0.5 transition-transform ${p.active ? "translate-x-4" : "translate-x-0"}`} />
                                   </div>
                                 </button>
@@ -1122,7 +1180,7 @@ export function PropertyWizard() {
                       <p className="font-medium text-neutral-700 mb-1">No pricing plans yet</p>
                       <p className="text-sm text-neutral-400 mb-5">Set up selling prices and installment options</p>
                       <button onClick={openAddPricing}
-                        className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-md text-sm hover:bg-emerald-700">
+                        className="inline-flex items-center gap-2 px-4 py-2 bg-[#0E2C72] text-white rounded-md text-sm hover:bg-[#0a2260]">
                         <Plus className="w-4 h-4" /> Create Plan
                       </button>
                     </div>
@@ -1136,7 +1194,7 @@ export function PropertyWizard() {
                   <div className="flex items-center justify-between mb-6">
                     <h3 className="font-semibold text-neutral-900">Payment Methods</h3>
                     <button onClick={openAddPayment}
-                      className="inline-flex items-center gap-1.5 px-3 py-2 bg-emerald-600 text-white rounded-md text-sm hover:bg-emerald-700">
+                      className="inline-flex items-center gap-1.5 px-3 py-2 bg-[#0E2C72] text-white rounded-md text-sm hover:bg-[#0a2260]">
                       <Plus className="w-4 h-4" /> Add Method
                     </button>
                   </div>
@@ -1148,14 +1206,23 @@ export function PropertyWizard() {
                             <div>
                               <div className="flex items-center gap-2">
                                 <span className="font-semibold text-neutral-900">{m.bankName}</span>
-                                <Badge className={cn("text-xs", m.active ? "bg-emerald-100 text-emerald-700" : "bg-neutral-100 text-neutral-500")}>
+                                <Badge className={cn("text-xs", m.active ? "bg-[#d6e0f5] text-[#0E2C72]" : "bg-neutral-100 text-neutral-500")}>
                                   {m.active ? "Active" : "Inactive"}
                                 </Badge>
                               </div>
                               <div className="text-sm text-neutral-600 mt-0.5">{m.accountName}</div>
                               <div className="text-sm text-neutral-400">{m.accountNumber}</div>
                             </div>
-                            <div className="flex gap-1">
+                            <div className="flex items-center gap-1">
+                              <button
+                                onClick={() => setPaymentMethods((prev) => prev.map((x) => x.id === m.id ? { ...x, active: !x.active } : x))}
+                                title={m.active ? "Set Inactive" : "Set Active"}
+                                className={`p-2 rounded-md transition-colors ${m.active ? "hover:bg-amber-50 text-[#0E2C72]" : "hover:bg-[#0E2C72]/6 text-neutral-400"}`}
+                              >
+                                <div className={`w-8 h-4 rounded-full flex items-center transition-colors ${m.active ? "bg-[#1a3d8f]" : "bg-neutral-300"}`}>
+                                  <div className={`w-3 h-3 rounded-full bg-white shadow mx-0.5 transition-transform ${m.active ? "translate-x-4" : "translate-x-0"}`} />
+                                </div>
+                              </button>
                               <button onClick={() => openEditPayment(m)} className="p-2 hover:bg-neutral-100 rounded-md">
                                 <Pencil className="w-4 h-4 text-neutral-500" />
                               </button>
@@ -1174,7 +1241,7 @@ export function PropertyWizard() {
                       <p className="font-medium text-neutral-700 mb-1">No payment methods yet</p>
                       <p className="text-sm text-neutral-400 mb-5">Configure how customers will pay</p>
                       <button onClick={openAddPayment}
-                        className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-md text-sm hover:bg-emerald-700">
+                        className="inline-flex items-center gap-2 px-4 py-2 bg-[#0E2C72] text-white rounded-md text-sm hover:bg-[#0a2260]">
                         <Plus className="w-4 h-4" /> Add Method
                       </button>
                     </div>
@@ -1237,7 +1304,7 @@ export function PropertyWizard() {
                             <div className="text-[11px] font-semibold text-neutral-400 uppercase tracking-wide mb-2">Land Inventory</div>
                             <div className="flex flex-wrap gap-2">
                               {landSizes.map((ls) => (
-                                <span key={ls.id} className="px-2.5 py-1 bg-emerald-50 text-emerald-700 rounded-lg text-[12px] font-medium border border-emerald-100">
+                                <span key={ls.id} className="px-2.5 py-1 bg-[#0E2C72]/6 text-[#0E2C72] rounded-lg text-[12px] font-medium border border-[#0E2C72]/15">
                                   {ls.landSize} SQM × {ls.totalSlots} slots
                                 </span>
                               ))}
@@ -1259,8 +1326,8 @@ export function PropertyWizard() {
                                     <div className="text-[11px] text-neutral-500">{p.landSize} SQM · {p.paymentType}</div>
                                   </div>
                                   <div className="text-right">
-                                    <div className="text-[14px] font-bold text-emerald-700">{fmt(Number(p.totalPrice))}</div>
-                                    <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ${p.active ? "bg-emerald-100 text-emerald-700" : "bg-neutral-200 text-neutral-500"}`}>
+                                    <div className="text-[14px] font-bold text-[#0E2C72]">{fmt(Number(p.totalPrice))}</div>
+                                    <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ${p.active ? "bg-[#d6e0f5] text-[#0E2C72]" : "bg-neutral-200 text-neutral-500"}`}>
                                       {p.active ? "Active" : "Inactive"}
                                     </span>
                                   </div>
@@ -1278,7 +1345,7 @@ export function PropertyWizard() {
                             <div className="text-[11px] font-semibold text-neutral-400 uppercase tracking-wide mb-2">Amenities</div>
                             <div className="flex flex-wrap gap-2">
                               {amenities.map((a) => (
-                                <span key={a.id} className={`px-2.5 py-1 rounded-lg text-[12px] font-medium border ${a.status === "AVAILABLE" ? "bg-emerald-50 text-emerald-700 border-emerald-100" : a.status === "COMING_SOON" ? "bg-amber-50 text-amber-700 border-amber-100" : "bg-neutral-50 text-neutral-500 border-neutral-200"}`}>
+                                <span key={a.id} className={`px-2.5 py-1 rounded-lg text-[12px] font-medium border ${a.status === "AVAILABLE" ? "bg-[#0E2C72]/6 text-[#0E2C72] border-[#0E2C72]/15" : a.status === "COMING_SOON" ? "bg-amber-50 text-amber-700 border-amber-100" : "bg-neutral-50 text-neutral-500 border-neutral-200"}`}>
                                   {a.name}
                                   <span className="ml-1 text-[10px] opacity-70">· {a.status.replace(/_/g, " ").toLowerCase()}</span>
                                 </span>
@@ -1299,7 +1366,7 @@ export function PropertyWizard() {
                                   <span className="text-[13px] font-medium text-neutral-800">
                                     {d.documentType === "CUSTOM" ? d.customDocName || "Custom Document" : d.documentType.replace(/_/g, " ")}
                                   </span>
-                                  <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ${d.status === "AVAILABLE" ? "bg-emerald-100 text-emerald-700" : d.status === "PENDING" ? "bg-amber-100 text-amber-700" : "bg-neutral-200 text-neutral-500"}`}>
+                                  <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ${d.status === "AVAILABLE" ? "bg-[#d6e0f5] text-[#0E2C72]" : d.status === "PENDING" ? "bg-amber-100 text-amber-700" : "bg-neutral-200 text-neutral-500"}`}>
                                     {d.status}
                                   </span>
                                 </div>
@@ -1371,16 +1438,16 @@ export function PropertyWizard() {
                     </div>
                   </div>
                   {/* Publish actions */}
-                  <div className="bg-gradient-to-br from-emerald-50 via-white to-emerald-50 border border-emerald-100 rounded-xl p-6">
-                    <h4 className="font-semibold text-emerald-900 mb-1">Ready to publish?</h4>
-                    <p className="text-[13px] text-emerald-700/70 mb-4">Publishing makes this property visible on your public estate page.</p>
+                  <div className="bg-gradient-to-br from-[#eef2fb] via-white to-[#eef2fb] border border-[#0E2C72]/15 rounded-xl p-6">
+                    <h4 className="font-semibold text-[#071a45] mb-1">Ready to publish?</h4>
+                    <p className="text-[13px] text-[#0E2C72]/70 mb-4">Publishing makes this property visible on your public estate page.</p>
                     <div className="flex gap-3 flex-wrap">
                       <Button disabled={submitting} onClick={() => handleSubmit("DRAFT")}
                         variant="outline" className="border-neutral-300 bg-white text-neutral-700">
                         {submitting ? <><Loader2 className="w-4 h-4 animate-spin mr-1.5" />Saving…</> : "Save as Draft"}
                       </Button>
                       <Button disabled={submitting} onClick={() => handleSubmit("PUBLISHED")}
-                        className="bg-emerald-600 hover:bg-emerald-700 text-white">
+                        className="bg-[#0E2C72] hover:bg-[#0a2260] text-white">
                         {submitting ? <><Loader2 className="w-4 h-4 animate-spin mr-1.5" />Publishing…</> : <><Check className="w-4 h-4 mr-1.5" />Publish Property</>}
                       </Button>
                     </div>
@@ -1406,7 +1473,7 @@ export function PropertyWizard() {
                   {isEditing && currentStep !== 9 && (
                     <Button disabled={submitting}
                       onClick={() => handleSubmit("PUBLISHED")}
-                      className="inline-flex items-center gap-2 px-6 bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-70">
+                      className="inline-flex items-center gap-2 px-6 bg-[#0E2C72] text-white hover:bg-[#0a2260] disabled:opacity-70">
                       {submitting ? (
                         <><Loader2 className="w-4 h-4 animate-spin" /> Saving…</>
                       ) : (
@@ -1416,7 +1483,7 @@ export function PropertyWizard() {
                   )}
                   {currentStep !== 9 && (
                     <Button onClick={handleNext} disabled={submitting}
-                      className="inline-flex items-center gap-2 px-6 bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-70">
+                      className="inline-flex items-center gap-2 px-6 bg-[#0E2C72] text-white hover:bg-[#0a2260] disabled:opacity-70">
                       {submitting ? (
                         <><Loader2 className="w-4 h-4 animate-spin" /> Saving…</>
                       ) : (
@@ -1449,14 +1516,14 @@ export function PropertyWizard() {
                 <input type="text" value={amenityForm.name}
                   onChange={(e) => setAmenityForm((f) => ({ ...f, name: e.target.value }))}
                   placeholder="e.g. Perimeter Fencing"
-                  className="w-full px-3 py-2 border border-neutral-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className="w-full px-3 py-2 border border-neutral-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-[#1a3d8f]"
                 />
               </div>
               <div>
                 <label className="block text-sm font-medium text-neutral-700 mb-1.5">Status</label>
                 <select value={amenityForm.status}
                   onChange={(e) => setAmenityForm((f) => ({ ...f, status: e.target.value }))}
-                  className="w-full px-3 py-2 border border-neutral-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                  className="w-full px-3 py-2 border border-neutral-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-[#1a3d8f]">
                   {AMENITY_STATUSES.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
                 </select>
               </div>
@@ -1465,7 +1532,7 @@ export function PropertyWizard() {
               <button onClick={() => setShowAmenityModal(false)}
                 className="flex-1 px-4 py-2 border border-neutral-300 text-neutral-700 rounded-md text-sm hover:bg-neutral-50">Cancel</button>
               <button onClick={saveAmenity}
-                className="flex-1 px-4 py-2 bg-emerald-600 text-white rounded-md text-sm hover:bg-emerald-700">
+                className="flex-1 px-4 py-2 bg-[#0E2C72] text-white rounded-md text-sm hover:bg-[#0a2260]">
                 {editingAmenityId ? "Update" : "Add"}
               </button>
             </div>
@@ -1488,7 +1555,7 @@ export function PropertyWizard() {
                 <label className="block text-sm font-medium text-neutral-700 mb-1.5">Document Type <span className="text-red-500">*</span></label>
                 <select value={docForm.documentType}
                   onChange={(e) => setDocForm((d) => ({ ...d, documentType: e.target.value, customDocName: "" }))}
-                  className="w-full px-3 py-2 border border-neutral-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400 transition-colors">
+                  className="w-full px-3 py-2 border border-neutral-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-[#1a3d8f]/30 focus:border-[#2a52a8] transition-colors">
                   {DOCUMENT_TYPES.map((dt) => <option key={dt.value} value={dt.value}>{dt.label}</option>)}
                 </select>
                 {docForm.documentType === "OTHER" && (
@@ -1497,17 +1564,9 @@ export function PropertyWizard() {
                     value={docForm.customDocName}
                     onChange={(e) => setDocForm((d) => ({ ...d, customDocName: e.target.value }))}
                     placeholder="Enter document name…"
-                    className="w-full mt-2 px-3 py-2 border border-neutral-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400 transition-colors"
+                    className="w-full mt-2 px-3 py-2 border border-neutral-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-[#1a3d8f]/30 focus:border-[#2a52a8] transition-colors"
                   />
                 )}
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-neutral-700 mb-1.5">Status</label>
-                <select value={docForm.status}
-                  onChange={(e) => setDocForm((d) => ({ ...d, status: e.target.value }))}
-                  className="w-full px-3 py-2 border border-neutral-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400 transition-colors">
-                  {DOCUMENT_STATUSES.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
-                </select>
               </div>
               <div>
                 <label className="block text-sm font-medium text-neutral-700 mb-1.5">Notes</label>
@@ -1515,7 +1574,7 @@ export function PropertyWizard() {
                   onChange={(e) => setDocForm((d) => ({ ...d, notes: e.target.value }))}
                   placeholder="Additional notes about this document…"
                   rows={3}
-                  className="w-full px-3 py-2 border border-neutral-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400 transition-colors resize-y"
+                  className="w-full px-3 py-2 border border-neutral-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-[#1a3d8f]/30 focus:border-[#2a52a8] transition-colors resize-y"
                 />
               </div>
             </div>
@@ -1523,7 +1582,7 @@ export function PropertyWizard() {
               <button onClick={() => setShowDocModal(false)}
                 className="flex-1 px-4 py-2 border border-neutral-300 text-neutral-700 rounded-md text-sm hover:bg-neutral-50">Cancel</button>
               <button onClick={saveDoc}
-                className="flex-1 px-4 py-2 bg-emerald-600 text-white rounded-md text-sm hover:bg-emerald-700">Add Document</button>
+                className="flex-1 px-4 py-2 bg-[#0E2C72] text-white rounded-md text-sm hover:bg-[#0a2260]">Add Document</button>
             </div>
           </div>
         </div>
@@ -1546,7 +1605,7 @@ export function PropertyWizard() {
                   <input type="number" value={landSizeForm.landSize}
                     onChange={(e) => setLandSizeForm((f) => ({ ...f, landSize: e.target.value }))}
                     placeholder="e.g. 300"
-                    className="w-full px-3 py-2 border border-neutral-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    className="w-full px-3 py-2 border border-neutral-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-[#1a3d8f]"
                   />
                 </div>
                 <div>
@@ -1554,13 +1613,13 @@ export function PropertyWizard() {
                   <input type="number" value={landSizeForm.totalSlots}
                     onChange={(e) => setLandSizeForm((f) => ({ ...f, totalSlots: e.target.value }))}
                     placeholder="e.g. 30"
-                    className="w-full px-3 py-2 border border-neutral-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    className="w-full px-3 py-2 border border-neutral-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-[#1a3d8f]"
                   />
                 </div>
               </div>
               {landSizeForm.landSize && landSizeForm.totalSlots && (
-                <div className="p-3 bg-emerald-50 rounded-lg border border-emerald-200 text-sm">
-                  <span className="text-emerald-700 font-medium">
+                <div className="p-3 bg-[#0E2C72]/6 rounded-lg border border-[#8aaad8] text-sm">
+                  <span className="text-[#0E2C72] font-medium">
                     {fmtSqm((Number(landSizeForm.landSize) || 0) * (Number(landSizeForm.totalSlots) || 0))} SQM total
                   </span>
                   <span className="text-neutral-500 ml-1.5">
@@ -1573,7 +1632,7 @@ export function PropertyWizard() {
                 <input type="text" value={landSizeForm.description}
                   onChange={(e) => setLandSizeForm((f) => ({ ...f, description: e.target.value }))}
                   placeholder="e.g. Half Plot"
-                  className="w-full px-3 py-2 border border-neutral-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className="w-full px-3 py-2 border border-neutral-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-[#1a3d8f]"
                 />
               </div>
             </div>
@@ -1581,7 +1640,7 @@ export function PropertyWizard() {
               <button onClick={() => setShowLandSizeModal(false)}
                 className="flex-1 px-4 py-2 border border-neutral-300 text-neutral-700 rounded-md text-sm hover:bg-neutral-50">Cancel</button>
               <button onClick={saveLandSize}
-                className="flex-1 px-4 py-2 bg-emerald-600 text-white rounded-md text-sm hover:bg-emerald-700">
+                className="flex-1 px-4 py-2 bg-[#0E2C72] text-white rounded-md text-sm hover:bg-[#0a2260]">
                 {editingLandSizeId ? "Update" : "Add"}
               </button>
             </div>
@@ -1605,7 +1664,7 @@ export function PropertyWizard() {
                 <input type="text" value={pricingForm.name}
                   onChange={(e) => setPricingForm((f) => ({ ...f, name: e.target.value }))}
                   placeholder="e.g. Pre-launch Price"
-                  className="w-full px-3 py-2 border border-neutral-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className="w-full px-3 py-2 border border-neutral-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-[#1a3d8f]"
                 />
               </div>
               <div className="grid grid-cols-2 gap-4">
@@ -1614,7 +1673,7 @@ export function PropertyWizard() {
                   {landSizes.length > 0 ? (
                     <select value={pricingForm.landSize}
                       onChange={(e) => setPricingForm((f) => ({ ...f, landSize: e.target.value }))}
-                      className="w-full px-3 py-2 border border-neutral-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                      className="w-full px-3 py-2 border border-neutral-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-[#1a3d8f]">
                       <option value="">— Select —</option>
                       {landSizes.map((ls) => (
                         <option key={ls.id} value={ls.landSize}>
@@ -1626,7 +1685,7 @@ export function PropertyWizard() {
                     <input type="number" value={pricingForm.landSize}
                       onChange={(e) => setPricingForm((f) => ({ ...f, landSize: e.target.value }))}
                       placeholder="e.g. 300"
-                      className="w-full px-3 py-2 border border-neutral-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                      className="w-full px-3 py-2 border border-neutral-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-[#1a3d8f]"
                     />
                   )}
                 </div>
@@ -1634,7 +1693,7 @@ export function PropertyWizard() {
                   <label className="block text-sm font-medium text-neutral-700 mb-1.5">Currency</label>
                   <select value={pricingForm.currency}
                     onChange={(e) => setPricingForm((f) => ({ ...f, currency: e.target.value }))}
-                    className="w-full px-3 py-2 border border-neutral-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                    className="w-full px-3 py-2 border border-neutral-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-[#1a3d8f]">
                     <option value="NGN">NGN (₦)</option>
                     <option value="USD">USD ($)</option>
                   </select>
@@ -1645,7 +1704,7 @@ export function PropertyWizard() {
                 <input type="number" value={pricingForm.basePrice}
                   onChange={(e) => setPricingForm((f) => ({ ...f, basePrice: e.target.value }))}
                   placeholder="e.g. 1500000"
-                  className="w-full px-3 py-2 border border-neutral-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className="w-full px-3 py-2 border border-neutral-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-[#1a3d8f]"
                 />
               </div>
 
@@ -1655,7 +1714,7 @@ export function PropertyWizard() {
                   <label className="block text-sm font-medium text-neutral-700">Statutory Fees</label>
                   <button type="button"
                     onClick={() => setPricingFees((f) => [...f, { id: Date.now().toString(), name: "", amount: "", note: "" }])}
-                    className="flex items-center gap-1.5 text-xs text-emerald-600 hover:text-emerald-700 font-medium px-2.5 py-1.5 border border-emerald-200 rounded-md hover:bg-emerald-50 transition-colors">
+                    className="flex items-center gap-1.5 text-xs text-[#0E2C72] hover:text-[#0a2260] font-medium px-2.5 py-1.5 border border-[#8aaad8] rounded-md hover:bg-[#0E2C72]/6 transition-colors">
                     <Plus className="w-3.5 h-3.5" /> Add Statutory Fee
                   </button>
                 </div>
@@ -1676,18 +1735,18 @@ export function PropertyWizard() {
                         <input type="text" placeholder="Fee name (e.g. Survey Fee)"
                           value={fee.name}
                           onChange={(e) => setPricingFees((f) => f.map((item, i) => i === idx ? { ...item, name: e.target.value } : item))}
-                          className="px-2.5 py-1.5 border border-neutral-300 rounded-md text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                          className="px-2.5 py-1.5 border border-neutral-300 rounded-md text-xs focus:outline-none focus:ring-2 focus:ring-[#1a3d8f]"
                         />
                         <input type="number" placeholder="Amount"
                           value={fee.amount}
                           onChange={(e) => setPricingFees((f) => f.map((item, i) => i === idx ? { ...item, amount: e.target.value } : item))}
-                          className="px-2.5 py-1.5 border border-neutral-300 rounded-md text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                          className="px-2.5 py-1.5 border border-neutral-300 rounded-md text-xs focus:outline-none focus:ring-2 focus:ring-[#1a3d8f]"
                         />
                       </div>
                       <input type="text" placeholder="Note (optional)"
                         value={fee.note}
                         onChange={(e) => setPricingFees((f) => f.map((item, i) => i === idx ? { ...item, note: e.target.value } : item))}
-                        className="w-full px-2.5 py-1.5 border border-neutral-300 rounded-md text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                        className="w-full px-2.5 py-1.5 border border-neutral-300 rounded-md text-xs focus:outline-none focus:ring-2 focus:ring-[#1a3d8f]"
                       />
                     </div>
                   ))}
@@ -1696,18 +1755,18 @@ export function PropertyWizard() {
 
               {/* Total Package Price (auto-computed) */}
               {pricingForm.basePrice && (
-                <div className="p-3 bg-emerald-50 rounded-lg border border-emerald-200 flex items-center justify-between">
+                <div className="p-3 bg-[#0E2C72]/6 rounded-lg border border-[#8aaad8] flex items-center justify-between">
                   <div>
-                    <span className="text-sm font-semibold text-emerald-900">Total Package Price</span>
+                    <span className="text-sm font-semibold text-[#071a45]">Total Package Price</span>
                     {pricingFees.length > 0 && (
-                      <p className="text-xs text-emerald-700 mt-0.5">
+                      <p className="text-xs text-[#0E2C72] mt-0.5">
                         Base {pricingForm.currency === "USD" ? "$" : "₦"}{Number(pricingForm.basePrice).toLocaleString("en-NG")}
                         {" + "}
                         {pricingFees.map((f) => f.name || "Fee").join(", ")}
                       </p>
                     )}
                   </div>
-                  <span className="text-base font-bold text-emerald-900">
+                  <span className="text-base font-bold text-[#071a45]">
                     {(() => {
                       const sym = pricingForm.currency === "USD" ? "$" : "₦";
                       const total = Number(pricingForm.basePrice) + pricingFees.reduce((s, f) => s + (Number(f.amount) || 0), 0);
@@ -1723,7 +1782,7 @@ export function PropertyWizard() {
                     <label key={t} className="flex items-center gap-2 cursor-pointer">
                       <input type="radio" value={t} checked={pricingForm.paymentType === t}
                         onChange={() => setPricingForm((f) => ({ ...f, paymentType: t }))}
-                        className="accent-emerald-600"
+                        className="accent-[#0E2C72]"
                       />
                       <span className="text-sm capitalize">{t}</span>
                     </label>
@@ -1738,7 +1797,7 @@ export function PropertyWizard() {
                       <input type="number" value={pricingForm.initialPayment}
                         onChange={(e) => setPricingForm((f) => ({ ...f, initialPayment: e.target.value }))}
                         placeholder="e.g. 250000"
-                        className="w-full px-3 py-2 border border-neutral-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                        className="w-full px-3 py-2 border border-neutral-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-[#1a3d8f]"
                       />
                     </div>
                     <div>
@@ -1746,7 +1805,7 @@ export function PropertyWizard() {
                       <input type="number" value={pricingForm.duration}
                         onChange={(e) => setPricingForm((f) => ({ ...f, duration: e.target.value }))}
                         placeholder="e.g. 12"
-                        className="w-full px-3 py-2 border border-neutral-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                        className="w-full px-3 py-2 border border-neutral-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-[#1a3d8f]"
                       />
                     </div>
                   </div>
@@ -1756,7 +1815,7 @@ export function PropertyWizard() {
                       <label className="flex items-start gap-2 cursor-pointer p-3 border border-neutral-200 rounded-md hover:bg-neutral-50">
                         <input type="radio" value="separate" checked={pricingForm.spreadMethod === "separate"}
                           onChange={() => setPricingForm((f) => ({ ...f, spreadMethod: "separate" }))}
-                          className="mt-0.5 accent-emerald-600"
+                          className="mt-0.5 accent-[#0E2C72]"
                         />
                         <div>
                           <div className="text-sm font-medium">Initial Payment Separate</div>
@@ -1766,7 +1825,7 @@ export function PropertyWizard() {
                       <label className="flex items-start gap-2 cursor-pointer p-3 border border-neutral-200 rounded-md hover:bg-neutral-50">
                         <input type="radio" value="first_month" checked={pricingForm.spreadMethod === "first_month"}
                           onChange={() => setPricingForm((f) => ({ ...f, spreadMethod: "first_month" }))}
-                          className="mt-0.5 accent-emerald-600"
+                          className="mt-0.5 accent-[#0E2C72]"
                         />
                         <div>
                           <div className="text-sm font-medium">Initial as First Month</div>
@@ -1776,8 +1835,8 @@ export function PropertyWizard() {
                     </div>
                   </div>
                   {pricingForm.basePrice && pricingForm.duration && (
-                    <div className="p-4 bg-emerald-50 rounded-lg border border-emerald-200 text-sm space-y-1">
-                      <div className="font-medium text-emerald-800 mb-2">Summary</div>
+                    <div className="p-4 bg-[#0E2C72]/6 rounded-lg border border-[#8aaad8] text-sm space-y-1">
+                      <div className="font-medium text-[#0E2C72] mb-2">Summary</div>
                       {(() => {
                         const sym = pricingForm.currency === "USD" ? "$" : "₦";
                         const computedTotal = Number(pricingForm.basePrice) + pricingFees.reduce((s, f) => s + (Number(f.amount) || 0), 0);
@@ -1812,7 +1871,7 @@ export function PropertyWizard() {
               <button onClick={() => setShowPricingModal(false)}
                 className="flex-1 px-4 py-2 border border-neutral-300 text-neutral-700 rounded-md text-sm hover:bg-neutral-50">Cancel</button>
               <button onClick={savePricing}
-                className="flex-1 px-4 py-2 bg-emerald-600 text-white rounded-md text-sm hover:bg-emerald-700">
+                className="flex-1 px-4 py-2 bg-[#0E2C72] text-white rounded-md text-sm hover:bg-[#0a2260]">
                 {editingPlanId ? "Update Plan" : "Create Plan"}
               </button>
             </div>
@@ -1844,7 +1903,7 @@ export function PropertyWizard() {
                     setVerifyError("");
                     setVerifyFailed(false);
                   }}
-                  className="w-full px-3 py-2 border border-neutral-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400 transition-colors disabled:opacity-60">
+                  className="w-full px-3 py-2 border border-neutral-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-[#1a3d8f]/30 focus:border-[#2a52a8] transition-colors disabled:opacity-60">
                   <option value="">{banksLoading ? "Loading banks…" : "— Select a bank —"}</option>
                   {banks.map((b, i) => <option key={`${b.code}-${i}`} value={b.code}>{b.name}</option>)}
                 </select>
@@ -1863,11 +1922,11 @@ export function PropertyWizard() {
                     }}
                     placeholder="10-digit account number"
                     maxLength={10}
-                    className="flex-1 px-3 py-2 border border-neutral-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400 transition-colors"
+                    className="flex-1 px-3 py-2 border border-neutral-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-[#1a3d8f]/30 focus:border-[#2a52a8] transition-colors"
                   />
                   <button type="button" onClick={handleVerifyAccount}
                     disabled={verifyingAccount || paymentForm.accountNumber.length !== 10 || !paymentForm.bankCode}
-                    className="px-3 py-2 bg-emerald-600 text-white rounded-md text-sm hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-1.5 shrink-0">
+                    className="px-3 py-2 bg-[#0E2C72] text-white rounded-md text-sm hover:bg-[#0a2260] disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-1.5 shrink-0">
                     {verifyingAccount ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
                     {verifyingAccount ? "Checking…" : "Verify"}
                   </button>
@@ -1902,15 +1961,15 @@ export function PropertyWizard() {
                 ) : (
                   <div className={`w-full px-3 py-2 border rounded-md text-sm min-h-[38px] flex items-center ${
                     paymentForm.accountName
-                      ? "border-emerald-300 bg-emerald-50 text-emerald-800 font-medium"
+                      ? "border-[#4a6fc0] bg-[#0E2C72]/6 text-[#0E2C72] font-medium"
                       : "border-neutral-200 bg-neutral-50 text-neutral-400"
                   }`}>
                     {paymentForm.accountName || "Will appear after verification"}
                   </div>
                 )}
                 {paymentForm.accountName && !verifyFailed && (
-                  <p className="text-xs text-emerald-600 mt-1 flex items-center gap-1">
-                    <span className="w-3 h-3 rounded-full bg-emerald-500 flex items-center justify-center text-white text-[8px] font-bold">✓</span>
+                  <p className="text-xs text-[#0E2C72] mt-1 flex items-center gap-1">
+                    <span className="w-3 h-3 rounded-full bg-[#1a3d8f] flex items-center justify-center text-white text-[8px] font-bold">✓</span>
                     Account verified
                   </p>
                 )}
@@ -1920,7 +1979,7 @@ export function PropertyWizard() {
               <button onClick={() => { setShowPaymentModal(false); setVerifyFailed(false); }}
                 className="flex-1 px-4 py-2 border border-neutral-300 text-neutral-700 rounded-md text-sm hover:bg-neutral-50">Cancel</button>
               <button onClick={savePayment} disabled={!paymentForm.accountName.trim()}
-                className="flex-1 px-4 py-2 bg-emerald-600 text-white rounded-md text-sm hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                className="flex-1 px-4 py-2 bg-[#0E2C72] text-white rounded-md text-sm hover:bg-[#0a2260] disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
                 {editingPaymentId ? "Update" : "Add Method"}
               </button>
             </div>
@@ -1930,3 +1989,7 @@ export function PropertyWizard() {
     </div>
   );
 }
+
+
+
+
