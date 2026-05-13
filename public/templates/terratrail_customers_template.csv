@@ -1,0 +1,10 @@
+full_name,email,phone,address,next_of_kin_name,next_of_kin_phone,next_of_kin_relationship,referral_source
+# REQUIRED — Customer's full name (first + last),# REQUIRED — Email address — must be unique per workspace,# optional — Phone number including country code,# optional — Home or office address,# optional — Full name of next of kin,# optional — Phone number of next of kin,# optional — Relationship to the customer (e.g. Mother),# optional — How the customer found you. Valid values: WALK_IN|REFERRAL|SOCIAL_MEDIA|WEBSITE|AGENT|OTHER
+Adebayo Johnson,adebayo.johnson@email.com,+2348012345678,"12 Broad Street, Lagos Island",Mrs. Funke Johnson,+2348098765432,Mother,REFERRAL
+Chidinma Okafor,chidinma.okafor@gmail.com,+2348123456789,"Plot 5 Galadimawa, Abuja",Mr. Emeka Okafor,+2347011223344,Husband,SOCIAL_MEDIA
+Oluwaseun Adeyemi,seun.adeyemi@yahoo.com,+2349012345678,"34 Allen Avenue, Ikeja, Lagos",,,, WEBSITE
+Fatima Al-Hassan,fatima.alhassan@gmail.com,+2348034567890,"Maiduguri Road, Kano",Alhaji Musa Al-Hassan,+2348045678901,Father,AGENT
+Emeka Eze,emeka.eze@company.ng,+2347034567890,"3 Trans-Amadi, Port Harcourt",Mrs. Ngozi Eze,+2348056789012,Wife,WALK_IN
+Aisha Bello,aisha.bello@outlook.com,+2348090123456,"Freedom Way, Lekki Phase 1, Lagos",Mr. Ibrahim Bello,+2348078901234,Brother,REFERRAL
+Tunde Ogundimu,tunde.ogundimu@hotmail.com,+2347056789012,"University Road, Ile-Ife, Osun",,,,OTHER
+Blessing Nwachukwu,blessing.nwachukwu@email.com,+2348012398765,"15 Onitsha Road, Enugu",Mr. Chukwu Nwachukwu,+2348023456789,Spouse,SOCIAL_MEDIA

@@ -121,7 +121,7 @@ export function GeneralSettings() {
   }
 
   const publicSlug = ws?.slug ?? "";
-  const publicUrl  = publicSlug ? `https://terra-trail.vercel.app/${publicSlug}/estates` : null;
+  const publicUrl  = publicSlug ? `https://terratrail.app/${publicSlug}/estates` : null;
   const currentLogoUrl = logoPreview ?? (ws?.logo ? `${BASE_URL.replace("/api/v1", "")}${ws.logo}` : null);
 
   return (
@@ -172,7 +172,7 @@ export function GeneralSettings() {
           <div>
             <label className={labelCls}>Workspace Slug <span className="text-neutral-400 font-normal">(read-only)</span></label>
             <div className="flex items-center gap-2">
-              <span className="text-sm text-neutral-400 shrink-0">app.terratrail.com/</span>
+              <span className="text-sm text-neutral-400 shrink-0">terratrail.app/</span>
               <input className={inputCls + " bg-neutral-50 text-neutral-500 cursor-not-allowed"} value={ws?.slug ?? ""} disabled readOnly />
             </div>
             <p className="text-xs text-neutral-400 mt-1">Contact support to change your slug.</p>

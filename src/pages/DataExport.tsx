@@ -70,8 +70,8 @@ const EXPORT_TYPES: {
   },
   {
     id: "bookings",
-    name: "Bookings",
-    description: "All booking records",
+    name: "Subscriptions",
+    description: "All subscription records",
     icon: Calendar,
   },
   {

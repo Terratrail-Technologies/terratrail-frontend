@@ -12,6 +12,7 @@ import { CustomerReps } from "./pages/CustomerReps";
 import { CustomerRepDetail } from "./pages/CustomerRepDetail";
 import { SiteInspection } from "./pages/SiteInspection";
 import { DataExport } from "./pages/DataExport";
+import { BulkUpload } from "./pages/BulkUpload";
 import { WorkspaceSettings } from "./pages/settings/WorkspaceSettings";
 import { AccountSettings } from "./pages/settings/AccountSettings";
 import { NotFound } from "./pages/NotFound";
@@ -99,6 +100,7 @@ export const router = createBrowserRouter([
           { path: "allocation", Component: AllocationPage },
           { path: "notifications", Component: NotificationsPage },
           { path: "data-export", Component: DataExport },
+          { path: "bulk-upload", Component: BulkUpload },
           { path: "help", Component: HelpPage },
           { path: "settings/*", Component: WorkspaceSettings },
           { path: "account", Component: AccountSettings },

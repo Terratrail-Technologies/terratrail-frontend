@@ -37,8 +37,8 @@ export function useWorkspace() {
 
   const slug = workspace?.slug || localStorage.getItem("tt_workspace_slug") || "";
   const name = workspace?.name || slug || "Terratrail";
-  // e.g. "dukiya.terratrail.com" — adjust domain as needed
-  const domain = slug ? `${slug}.terratrail.co` : null;
+  // e.g. "dukiya.terratrail.app" — adjust domain as needed
+  const domain = slug ? `${slug}.terratrail.app` : null;
 
   return { workspace, name, slug, domain };
 }

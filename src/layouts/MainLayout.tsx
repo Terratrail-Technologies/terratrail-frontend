@@ -14,6 +14,7 @@ import {
   UserCheck,
   Bell,
   Download,
+  Upload,
   Settings,
   HelpCircle,
   User,
@@ -438,6 +439,7 @@ const ALL_NAV_ITEMS = [
   { icon: CreditCard,      label: "Payments",        href: "/payments",       roles: ["OWNER","ADMIN","CUSTOMER_REP"] },
   { icon: MapPin,          label: "Allocation",      href: "/allocation",     roles: ["OWNER","ADMIN"] },
   { icon: Download,        label: "Data Export",     href: "/data-export",    roles: ["OWNER","ADMIN"] },
+  { icon: Upload,          label: "Bulk Upload",     href: "/bulk-upload",    roles: ["OWNER","ADMIN"] },
 ];
 
 const ALL_BOTTOM_ITEMS = [
@@ -551,7 +553,7 @@ function NavContent() {
               {workspaceName}
             </span>
             <span className="text-[10px] font-semibold text-neutral-400 tracking-wide truncate">
-              {domain || "terratrail.co"}
+              {domain || "terratrail.app"}
             </span>
           </div>
         </div>

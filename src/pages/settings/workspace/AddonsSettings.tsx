@@ -6,7 +6,7 @@ const addons = [
   {
     id: "subdomain",
     name: "Custom Subdomain",
-    description: "Branded subdomain (e.g. yourcompany.Terratrail.com)",
+    description: "Branded subdomain (e.g. yourcompany.terratrail.app)",
     requirement: "Starter plan or above",
     available: true,
   },
@@ -62,7 +62,7 @@ export function AddonsSettings() {
                         placeholder="yourcompany"
                         className="flex-1 px-4 py-2 border border-neutral-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#1a3d8f] focus:border-transparent"
                       />
-                      <span className="text-sm text-neutral-500">.Terratrail.com</span>
+                      <span className="text-sm text-neutral-500">.terratrail.app</span>
                     </div>
                   </div>
                   <button className="inline-flex items-center gap-2 px-4 py-2 bg-[#0E2C72] text-white rounded-md hover:bg-[#0a2260] transition-colors">

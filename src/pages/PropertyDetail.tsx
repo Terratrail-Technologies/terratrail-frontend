@@ -1480,7 +1480,7 @@ function LogInspectionSlideOver({ open, onClose, property, onLogged }: {
       onLogged();
       setForm({ name: "", phone: "", email: "", inspection_date: "", inspection_time: "", inspection_type: "PHYSICAL", category: "RESIDENTIAL", persons: "1", notes: "" });
       onClose();
-    } catch (err: any) { toast.error(err.message ?? "Failed to log inspection."); }
+    } catch (err: any) { toast.error(err.message ?? "Failed to add inspection."); }
     finally { setSaving(false); }
   };
 
@@ -1539,7 +1539,7 @@ function LogInspectionSlideOver({ open, onClose, property, onLogged }: {
           <textarea value={form.notes} onChange={(e) => set("notes", e.target.value)} rows={3}
             className={`${inputCls} h-auto py-2`} placeholder="Additional notes…" /></div>
         <Button className="w-full bg-[#0E2C72] hover:bg-[#0a2260] text-white gap-1.5" disabled={saving} onClick={handleSubmit}>
-          {saving ? <><Loader2 className="size-3.5 animate-spin" />Logging…</> : "Log Inspection"}
+          {saving ? <><Loader2 className="size-3.5 animate-spin" />Adding...</> : "Add Inspection Request"}
         </Button>
       </div>
     </SlideOver>
@@ -1599,7 +1599,7 @@ function SiteInspectionsTab({ property, inspections, loading, onRefresh }: {
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <h2 className="text-[16px] font-semibold text-neutral-800">Site Inspections</h2>
         <Button onClick={() => setShowLog(true)} className="bg-[#0E2C72] hover:bg-[#0a2260] text-white h-8 text-[12px] gap-1.5">
-          <Plus className="size-3.5" /> Log Inspection
+          <Plus className="size-3.5" /> Add Inspection Request
         </Button>
       </div>
 

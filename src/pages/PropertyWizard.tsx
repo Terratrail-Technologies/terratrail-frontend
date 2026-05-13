@@ -88,6 +88,9 @@ interface PricingPlan {
   active: boolean; statutoryFees: StatutoryFee[];
 }
 interface PaymentMethod { id: string; bankName: string; bankCode: string; accountName: string; accountNumber: string; active: boolean; }
+type GalleryItem =
+  | { kind: "existing"; id: string; url: string }
+  | { kind: "new"; file: File; preview: string };
 
 // Bank list is fetched live from Paystack via the backend — see useEffect below.
 // This fallback is used only if the API call fails on first mount.
@@ -156,9 +159,12 @@ export function PropertyWizard() {
   const brochureRef = useRef<HTMLInputElement>(null);
 
   // ── Step 2 state ─────────────────────────────────────────────────────────
-  const [coverImage, setCoverImage]       = useState<File | null>(null);
-  const [coverPreview, setCoverPreview]   = useState<string | null>(null);
-  const [galleryImages, setGalleryImages] = useState<{ file: File; preview: string }[]>([]);
+  const [coverImage, setCoverImage]         = useState<File | null>(null);
+  const [coverPreview, setCoverPreview]     = useState<string | null>(null);
+  const [gallery, setGallery]               = useState<GalleryItem[]>([]);
+  const [deletedGalleryIds, setDeletedGalleryIds] = useState<string[]>([]);
+  const [galleryLimitError, setGalleryLimitError] = useState(false);
+  const [dragGalleryIdx, setDragGalleryIdx] = useState<number | null>(null);
   const coverRef   = useRef<HTMLInputElement>(null);
   const galleryRef = useRef<HTMLInputElement>(null);
 
@@ -171,6 +177,7 @@ export function PropertyWizard() {
   const [latitude,  setLatitude]          = useState("");
   const [longitude, setLongitude]         = useState("");
   const [geoLoading, setGeoLoading]       = useState(false);
+  const [mapInput, setMapInput]           = useState("");
 
   // ── Step 4 state ─────────────────────────────────────────────────────────
   const [amenities, setAmenities]               = useState<Amenity[]>([]);
@@ -254,6 +261,9 @@ export function PropertyWizard() {
       setDescription(prop.description ?? "");
       if (prop.brochure) setBrochureExistingUrl(prop.brochure);
       if (prop.featured_image) setCoverPreview(prop.featured_image);
+      if (prop.gallery_images?.length) {
+        setGallery(prop.gallery_images.map((g: any) => ({ kind: "existing" as const, id: g.id, url: g.image })));
+      }
       if (prop.location) {
         setStreetAddress(prop.location.address ?? "");
         setCity(prop.location.city ?? "");
@@ -343,8 +353,46 @@ export function PropertyWizard() {
 
   const handleGalleryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? []);
-    const newImages = files.map((f) => ({ file: f, preview: URL.createObjectURL(f) }));
-    setGalleryImages((prev) => [...prev, ...newImages].slice(0, 10));
+    if (!files.length) return;
+    const remaining = 10 - gallery.length;
+    if (remaining <= 0) { setGalleryLimitError(true); e.target.value = ""; return; }
+    const toAdd = files.slice(0, remaining);
+    if (files.length > remaining) setGalleryLimitError(true); else setGalleryLimitError(false);
+    const newItems: GalleryItem[] = toAdd.map((f) => ({ kind: "new", file: f, preview: URL.createObjectURL(f) }));
+    setGallery((prev) => [...prev, ...newItems]);
+    e.target.value = "";
+  };
+
+  const removeGalleryItem = (idx: number) => {
+    const item = gallery[idx];
+    if (item.kind === "existing") setDeletedGalleryIds((prev) => [...prev, item.id]);
+    setGallery((prev) => prev.filter((_, i) => i !== idx));
+    setGalleryLimitError(false);
+  };
+
+  const parseMapInput = (input: string): { lat: string; lng: string } | null => {
+    const s = input.trim();
+    // Google Maps URL with @lat,lng
+    const atMatch = s.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
+    if (atMatch) return { lat: atMatch[1], lng: atMatch[2] };
+    // ?q=lat,lng or &q=lat,lng
+    const qMatch = s.match(/[?&]q=(-?\d+\.\d+),(-?\d+\.\d+)/);
+    if (qMatch) return { lat: qMatch[1], lng: qMatch[2] };
+    // Raw "lat, lng" or "lat lng"
+    const coordMatch = s.match(/^(-?\d+\.?\d*)[,\s]+(-?\d+\.?\d*)$/);
+    if (coordMatch) return { lat: coordMatch[1], lng: coordMatch[2] };
+    return null;
+  };
+
+  const handleMapInputChange = (value: string) => {
+    setMapInput(value);
+    if (!value.trim()) return;
+    const parsed = parseMapInput(value);
+    if (parsed) {
+      setLatitude(parsed.lat);
+      setLongitude(parsed.lng);
+      toast.success("Coordinates set from link.");
+    }
   };
 
   // ── Amenity CRUD ─────────────────────────────────────────────────────────
@@ -587,12 +635,30 @@ export function PropertyWizard() {
         }
       }
 
-      if (galleryImages.length > 0 && propertyId) {
-        await Promise.allSettled(
-          galleryImages.map((img, i) =>
-            api.properties.uploadGalleryImage(propertyId, img.file, i)
-          )
-        );
+      if (propertyId) {
+        // Delete removed existing images
+        if (deletedGalleryIds.length > 0) {
+          await Promise.allSettled(deletedGalleryIds.map((gid) => api.properties.deleteGalleryImage(gid)));
+        }
+        // Upload new images
+        const newGalleryItems = gallery.filter((g): g is Extract<GalleryItem, { kind: "new" }> => g.kind === "new");
+        const existingCount = gallery.filter((g) => g.kind === "existing").length;
+        if (newGalleryItems.length > 0) {
+          const results = await Promise.allSettled(
+            newGalleryItems.map((img, i) =>
+              api.properties.uploadGalleryImage(propertyId, img.file, existingCount + i)
+            )
+          );
+          const failed = results.filter((r) => r.status === "rejected").length;
+          if (failed > 0) toast.error(`${failed} gallery image(s) failed to upload.`);
+        }
+        // Update order for reordered existing images
+        const existingItems = gallery.filter((g): g is Extract<GalleryItem, { kind: "existing" }> => g.kind === "existing");
+        if (isEditing && existingItems.length > 0) {
+          await Promise.allSettled(
+            existingItems.map((g, i) => api.properties.updateGalleryOrder(g.id, i))
+          );
+        }
       }
 
       toast.success(isEditing ? "Property updated!" : "Property created!");
@@ -800,24 +866,58 @@ export function PropertyWizard() {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-neutral-700 mb-1.5">
-                      Gallery Images <span className="text-neutral-400">(Up to 10)</span>
-                    </label>
-                    <div
-                      onClick={() => galleryRef.current?.click()}
-                      className="border-2 border-dashed border-neutral-300 rounded-lg p-6 text-center hover:border-[#0E2C72] hover:bg-[#0E2C72]/6/30 transition-colors cursor-pointer"
-                    >
-                      <ImageIcon className="w-8 h-8 text-neutral-400 mx-auto mb-2" />
-                      <p className="text-sm text-neutral-600">Click to add gallery images</p>
-                      <p className="text-xs text-neutral-400 mt-1">{galleryImages.length}/10 added</p>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label className="block text-sm font-medium text-neutral-700">
+                        Gallery Images <span className="text-neutral-400">({gallery.length}/10)</span>
+                      </label>
+                      {gallery.length > 0 && (
+                        <span className="text-xs text-neutral-400">Drag images to reorder</span>
+                      )}
                     </div>
-                    {galleryImages.length > 0 && (
+                    {gallery.length < 10 && (
+                      <div
+                        onClick={() => { setGalleryLimitError(false); galleryRef.current?.click(); }}
+                        className="border-2 border-dashed border-neutral-300 rounded-lg p-6 text-center hover:border-[#0E2C72] hover:bg-[#0E2C72]/6 transition-colors cursor-pointer"
+                      >
+                        <ImageIcon className="w-8 h-8 text-neutral-400 mx-auto mb-2" />
+                        <p className="text-sm text-neutral-600">Click to add gallery images</p>
+                        <p className="text-xs text-neutral-400 mt-1">{10 - gallery.length} slot{10 - gallery.length !== 1 ? "s" : ""} remaining</p>
+                      </div>
+                    )}
+                    {galleryLimitError && (
+                      <p className="flex items-center gap-1.5 text-xs text-amber-600 mt-2">
+                        <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
+                        Maximum 10 images reached. Remove an image to add more.
+                      </p>
+                    )}
+                    {gallery.length > 0 && (
                       <div className="grid grid-cols-4 gap-3 mt-4">
-                        {galleryImages.map((img, i) => (
-                          <div key={i} className="relative aspect-square rounded-md overflow-hidden bg-neutral-100">
-                            <img src={img.preview} alt="" className="w-full h-full object-cover" />
+                        {gallery.map((item, i) => (
+                          <div
+                            key={item.kind === "existing" ? item.id : i}
+                            draggable
+                            onDragStart={() => setDragGalleryIdx(i)}
+                            onDragOver={(e) => {
+                              e.preventDefault();
+                              if (dragGalleryIdx === null || dragGalleryIdx === i) return;
+                              setGallery((prev) => {
+                                const next = [...prev];
+                                const [moved] = next.splice(dragGalleryIdx, 1);
+                                next.splice(i, 0, moved);
+                                return next;
+                              });
+                              setDragGalleryIdx(i);
+                            }}
+                            onDragEnd={() => setDragGalleryIdx(null)}
+                            className={`relative aspect-square rounded-md overflow-hidden bg-neutral-100 cursor-grab active:cursor-grabbing ${dragGalleryIdx === i ? "opacity-50 ring-2 ring-[#0E2C72]" : ""}`}
+                          >
+                            <img
+                              src={item.kind === "existing" ? item.url : item.preview}
+                              alt=""
+                              className="w-full h-full object-cover"
+                            />
                             <button
-                              onClick={() => setGalleryImages((prev) => prev.filter((_, idx) => idx !== i))}
+                              onClick={() => removeGalleryItem(i)}
                               className="absolute top-1 right-1 bg-black/60 text-white rounded-full w-5 h-5 flex items-center justify-center hover:bg-red-600"
                             >
                               <X className="w-3 h-3" />
@@ -833,6 +933,21 @@ export function PropertyWizard() {
               {/* ── Step 3: Location ── */}
               {currentStep === 3 && (
                 <div className="bg-white rounded-xl border border-neutral-200 p-6 sm:p-8 space-y-6">
+                  {/* Smart map input */}
+                  <div>
+                    <label className="block text-sm font-medium text-neutral-700 mb-1.5">
+                      Paste Google Maps Link or Coordinates
+                    </label>
+                    <Input
+                      value={mapInput}
+                      onChange={(e) => handleMapInputChange(e.target.value)}
+                      placeholder="e.g. https://maps.google.com/?q=6.524379,3.379206 or 6.524379, 3.379206"
+                      className="bg-white border-neutral-300"
+                    />
+                    <p className="text-xs text-neutral-400 mt-1">
+                      Accepts a Google Maps link, "lat, lng" coordinates, or a maps.google.com URL — auto-fills the fields below.
+                    </p>
+                  </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                     <div className="sm:col-span-2">
                       <label className="block text-sm font-medium text-neutral-700 mb-1.5">Street Address</label>
@@ -1396,7 +1511,7 @@ export function PropertyWizard() {
                         </>
                       )}
                       {/* Cover image + gallery */}
-                      {(coverPreview || galleryImages.length > 0) && (
+                      {(coverPreview || gallery.length > 0) && (
                         <>
                           <div className="border-t border-neutral-100" />
                           <div>
@@ -1408,9 +1523,9 @@ export function PropertyWizard() {
                                   <span className="absolute bottom-1 left-1 text-[9px] font-bold bg-black/60 text-white px-1.5 py-0.5 rounded">COVER</span>
                                 </div>
                               )}
-                              {galleryImages.map((img, i) => (
-                                <div key={i} className="aspect-square rounded-lg overflow-hidden bg-neutral-100">
-                                  <img src={img.preview} alt="" className="w-full h-full object-cover" />
+                              {gallery.map((item, i) => (
+                                <div key={item.kind === "existing" ? item.id : i} className="aspect-square rounded-lg overflow-hidden bg-neutral-100">
+                                  <img src={item.kind === "existing" ? item.url : item.preview} alt="" className="w-full h-full object-cover" />
                                 </div>
                               ))}
                             </div>

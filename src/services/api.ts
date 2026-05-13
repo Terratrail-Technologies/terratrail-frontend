@@ -414,12 +414,25 @@ export const api = {
       fd.append("order", String(order));
       return requestFile<any>("/properties/gallery/", fd, "POST");
     },
+    deleteGalleryImage: (id: string) =>
+      request<void>(`/properties/gallery/${id}/`, { method: "DELETE" }),
+    updateGalleryOrder: (id: string, order: number) =>
+      request<any>(`/properties/gallery/${id}/`, { method: "PATCH", body: JSON.stringify({ order }) }),
     publish: (id: string) =>
       request<any>(`/properties/${id}/publish/`, { method: "POST", body: JSON.stringify({}) }),
     unpublish: (id: string) =>
       request<any>(`/properties/${id}/unpublish/`, { method: "POST", body: JSON.stringify({}) }),
     planHistory: (planId: string) =>
       request<any>(`/properties/plans/${planId}/history/`).then(unwrapList),
+    bulkUpload: (file: File) => {
+      const fd = new FormData();
+      fd.append("file", file);
+      return requestFile<any>("/properties/bulk-upload/", fd, "POST");
+    },
+    bulkTemplate: (fmt: "csv" | "xlsx") =>
+      fmt === "csv"
+        ? "/templates/terratrail_properties_template.csv"
+        : `${BASE_URL}/properties/bulk-upload/template/?format=xlsx`,
   },
 
   // ── Subscriptions ─────────────────────────────────────────────────────────
@@ -464,6 +477,15 @@ export const api = {
       request<any>("/customers/", { method: "POST", body: JSON.stringify(data) }),
     update: (id: string, data: any) =>
       request<any>(`/customers/${id}/`, { method: "PATCH", body: JSON.stringify(data) }),
+    bulkUpload: (file: File) => {
+      const fd = new FormData();
+      fd.append("file", file);
+      return requestFile<any>("/customers/bulk-upload/", fd, "POST");
+    },
+    bulkTemplate: (fmt: "csv" | "xlsx") =>
+      fmt === "csv"
+        ? "/templates/terratrail_customers_template.csv"
+        : `${BASE_URL}/customers/bulk-upload/template/?format=xlsx`,
   },
 
   // ── Site Inspections ─────────────────────────────────────────────────────

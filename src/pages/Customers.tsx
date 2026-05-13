@@ -473,7 +473,7 @@ function LogInspectionModal({ customer, onClose, onCreated }: LogInspectionModal
       onCreated();
       onClose();
     } catch (err: any) {
-      setError(err.message ?? "Failed to log inspection.");
+      setError(err.message ?? "Failed to add inspection request.");
     } finally {
       setSaving(false);
     }
@@ -563,7 +563,7 @@ function LogInspectionModal({ customer, onClose, onCreated }: LogInspectionModal
           </button>
           <button type="submit" disabled={saving}
             className="flex-1 px-4 py-2.5 bg-[#0E2C72] text-white rounded-lg text-[13px] font-medium hover:bg-[#0a2260] disabled:opacity-60 transition-colors flex items-center justify-center gap-2">
-            {saving ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Saving…</> : "Log Inspection"}
+            {saving ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Saving…</> : "Add Inspection Request"}
           </button>
         </div>
       </form>
@@ -1169,7 +1169,7 @@ export function Customers() {
                                 </button>
                                 <button
                                   onClick={() => setLogInspTarget(customer)}
-                                  title="Log inspection"
+                                  title="Add inspection request"
                                   className="h-7 w-7 flex items-center justify-center rounded-lg text-neutral-400 hover:text-violet-700 hover:bg-violet-50 transition-colors"
                                 >
                                   <CalendarPlus className="w-3.5 h-3.5" />
