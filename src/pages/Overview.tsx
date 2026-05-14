@@ -443,7 +443,7 @@ export function Overview() {
         </div>
 
         {/* ── Properties Overview ───────────────────────────────── */}
-        <motion.div variants={item}>
+        {/* <motion.div variants={item}>
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-[13px] font-semibold text-neutral-800 flex items-center gap-2">
               <Building2 className="w-4 h-4 text-neutral-400" />
@@ -465,10 +465,10 @@ export function Overview() {
               </div>
             ))}
           </div>
-        </motion.div>
+        </motion.div> */}
 
         {/* ── Customer Overview ─────────────────────────────────── */}
-        <motion.div variants={item}>
+        {/* <motion.div variants={item}>
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-[13px] font-semibold text-neutral-800 flex items-center gap-2">
               <Users className="w-4 h-4 text-neutral-400" />
@@ -489,7 +489,7 @@ export function Overview() {
               </div>
             ))}
           </div>
-        </motion.div>
+        </motion.div> */}
 
         {/* ── Leaderboards – FILTERABLE ──────────────────────────── */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

@@ -64,9 +64,7 @@ export function ActivityLogs() {
       ) : (
         <div className="bg-white rounded-lg border border-neutral-200 divide-y divide-neutral-100">
           {logs.map((log) => {
-            const actor = log.actor
-              ? [log.actor.first_name, log.actor.last_name].filter(Boolean).join(" ") || "System"
-              : "System";
+            const actor = log.actor_name ?? "Terratrail System";
             const initials = actor.split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase();
             const cat = (log.category ?? "").toLowerCase();
 

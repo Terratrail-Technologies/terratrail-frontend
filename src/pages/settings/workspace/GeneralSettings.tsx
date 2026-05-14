@@ -45,6 +45,8 @@ export function GeneralSettings() {
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [logoFile,    setLogoFile]    = useState<File | null>(null);
   const logoInputRef = useRef<HTMLInputElement>(null);
+  const [showPublicPagesConfirm, setShowPublicPagesConfirm] = useState(false);
+  const [pendingPublicPages, setPendingPublicPages]         = useState<boolean | null>(null);
 
   useEffect(() => {
     Promise.all([api.workspaces.detail(), api.workspaces.getSettings()])
@@ -71,7 +73,10 @@ export function GeneralSettings() {
       if (logoFile) {
         const fd = new FormData();
         fd.append("logo", logoFile);
-        await (api.workspaces as any).uploadLogo?.(fd) ?? api.workspaces.updateDetail({ logo: logoFile });
+        const updated = await api.workspaces.uploadLogo(fd);
+        if (updated?.logo) setWs((p: any) => ({ ...p, logo: updated.logo }));
+        setLogoFile(null);
+        setLogoPreview(null);
       }
 
       // 2. Workspace detail fields
@@ -104,7 +109,6 @@ export function GeneralSettings() {
       }
 
       toast.success("Workspace settings saved.");
-      setLogoFile(null);
     } catch (err: any) {
       toast.error(err.message ?? "Failed to save.");
     } finally {
@@ -121,7 +125,7 @@ export function GeneralSettings() {
   }
 
   const publicSlug = ws?.slug ?? "";
-  const publicUrl  = publicSlug ? `https://terratrail.app/${publicSlug}/estates` : null;
+  const publicUrl  = publicSlug ? `https://${publicSlug}.terratrail.app/estates` : null;
   const currentLogoUrl = logoPreview ?? (ws?.logo ? `${BASE_URL.replace("/api/v1", "")}${ws.logo}` : null);
 
   return (
@@ -172,8 +176,8 @@ export function GeneralSettings() {
           <div>
             <label className={labelCls}>Workspace Slug <span className="text-neutral-400 font-normal">(read-only)</span></label>
             <div className="flex items-center gap-2">
-              <span className="text-sm text-neutral-400 shrink-0">terratrail.app/</span>
-              <input className={inputCls + " bg-neutral-50 text-neutral-500 cursor-not-allowed"} value={ws?.slug ?? ""} disabled readOnly />
+              <input className={inputCls + " bg-neutral-50 text-neutral-500 cursor-not-allowed font-mono"}
+                     value={ws?.slug ? `${ws.slug}.terratrail.app` : ""} disabled readOnly />
             </div>
             <p className="text-xs text-neutral-400 mt-1">Contact support to change your slug.</p>
           </div>
@@ -244,7 +248,7 @@ export function GeneralSettings() {
               </div>
               <Toggle
                 checked={!!ws?.create_estate_public_pages}
-                onChange={(v) => setWs((p: any) => ({ ...p, create_estate_public_pages: v }))}
+                onChange={(v) => { setPendingPublicPages(v); setShowPublicPagesConfirm(true); }}
               />
             </div>
           </div>
@@ -341,6 +345,37 @@ export function GeneralSettings() {
           {saving ? "Saving…" : "Save Changes"}
         </button>
       </div>
+
+      {showPublicPagesConfirm && pendingPublicPages !== null && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+          <div className="w-full max-w-md bg-white rounded-2xl shadow-xl p-6">
+            <h3 className="text-base font-semibold text-neutral-900 mb-2">
+              {pendingPublicPages ? "Enable Public Estate Pages" : "Disable Public Estate Pages"}
+            </h3>
+            <p className="text-sm text-neutral-600 mb-5 leading-relaxed">
+              Create Estate Public Pages — When ON, your estate listing and all published property pages are publicly accessible and indexed by search engines.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => { setShowPublicPagesConfirm(false); setPendingPublicPages(null); }}
+                className="flex-1 py-2.5 border border-neutral-200 rounded-xl text-sm font-medium text-neutral-600 hover:bg-neutral-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  setWs((p: any) => ({ ...p, create_estate_public_pages: pendingPublicPages }));
+                  setShowPublicPagesConfirm(false);
+                  setPendingPublicPages(null);
+                }}
+                className={`flex-1 py-2.5 rounded-xl text-sm font-semibold text-white ${pendingPublicPages ? "bg-[#0E2C72] hover:bg-[#0a2260]" : "bg-red-600 hover:bg-red-700"}`}
+              >
+                {pendingPublicPages ? "Enable" : "Disable"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

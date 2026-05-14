@@ -4,6 +4,7 @@ import {
   Building2, MapPin, Search, ChevronLeft, ChevronRight, X,
   Phone, Mail, CheckCircle2, ArrowRight, TrendingUp,
   Star, Shield, Clock, Users, ExternalLink,
+  Globe, Instagram, Facebook, Twitter, Linkedin, Youtube,
 } from "lucide-react";
 import { motion, AnimatePresence, useScroll, useTransform, useInView } from "motion/react";
 import { api, BASE_URL } from "../../services/api";
@@ -326,7 +327,7 @@ function ImageGallery({ images }: { images: string[] }) {
 }
 
 // ── Property Detail View ──────────────────────────────────────────────────────
-function PropertyDetail({ property, workspaceSlug, onBack }: { property: Property; workspaceSlug: string; onBack: () => void }) {
+function PropertyDetail({ property, workspaceSlug, onBack, workspace }: { property: Property; workspaceSlug: string; onBack: () => void; workspace: WorkspaceInfo | null }) {
   const navigate = useNavigate();
   const [showInspection, setShowInspection] = useState(false);
   const images = [
@@ -460,6 +461,30 @@ function PropertyDetail({ property, workspaceSlug, onBack }: { property: Propert
               Book Inspection
             </button>
           </div>
+
+          {/* Social links */}
+          {(() => {
+            const socialLinks = [
+              { key: "website_url",   label: "Website",    icon: Globe },
+              { key: "instagram_url", label: "Instagram",  icon: Instagram },
+              { key: "facebook_url",  label: "Facebook",   icon: Facebook },
+              { key: "twitter_url",   label: "X / Twitter",icon: Twitter },
+              { key: "linkedin_url",  label: "LinkedIn",   icon: Linkedin },
+              { key: "youtube_url",   label: "YouTube",    icon: Youtube },
+            ].filter(s => workspace?.[s.key as keyof WorkspaceInfo]);
+            return socialLinks.length > 0 ? (
+              <div className="flex flex-wrap gap-3 pt-3 border-t border-neutral-100">
+                {socialLinks.map(({ key, label, icon: Icon }) => (
+                  <a key={key} href={String(workspace![key as keyof WorkspaceInfo]!)}
+                     target="_blank" rel="noopener noreferrer"
+                     className="flex items-center gap-1.5 text-[12px] text-neutral-500 hover:text-[#0E2C72] transition-colors">
+                    <Icon className="size-3.5" />
+                    {label}
+                  </a>
+                ))}
+              </div>
+            ) : null;
+          })()}
         </motion.div>
       </div>
     </div>
@@ -595,6 +620,20 @@ function Hero({ search, setSearch, propertyCount }: { search: string; setSearch:
   );
 }
 
+// ── Workspace type ─────────────────────────────────────────────────────────────
+type WorkspaceInfo = {
+  name: string;
+  logo: string | null;
+  support_email: string;
+  support_whatsapp: string;
+  website_url: string;
+  instagram_url: string;
+  facebook_url: string;
+  twitter_url: string;
+  linkedin_url: string;
+  youtube_url: string;
+};
+
 // ── Main Page ─────────────────────────────────────────────────────────────────
 export default function EstatesPage() {
   const { workspaceSlug } = useParams<{ workspaceSlug: string }>();
@@ -604,12 +643,19 @@ export default function EstatesPage() {
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState("ALL");
   const [selected, setSelected] = useState<Property | null>(null);
+  const [workspace, setWorkspace] = useState<WorkspaceInfo | null>(null);
 
   useEffect(() => {
     if (!workspaceSlug) return;
     setLoading(true);
-    api.public.properties(workspaceSlug)
-      .then((data) => setProperties(Array.isArray(data) ? data : []))
+    Promise.all([
+      api.public.properties(workspaceSlug),
+      api.public.workspaceInfo(workspaceSlug),
+    ])
+      .then(([data, wsInfo]) => {
+        setProperties(Array.isArray(data) ? data : []);
+        setWorkspace(wsInfo ?? null);
+      })
       .catch(() => setError("Could not load properties. Please try again."))
       .finally(() => setLoading(false));
   }, [workspaceSlug]);
@@ -627,8 +673,8 @@ export default function EstatesPage() {
   if (selected) {
     return (
       <div className="min-h-screen bg-[#f7f9f8]">
-        <TopBar workspaceSlug={workspaceSlug!} />
-        <PropertyDetail property={selected} workspaceSlug={workspaceSlug!} onBack={() => setSelected(null)} />
+        <TopBar workspace={workspace} />
+        <PropertyDetail property={selected} workspaceSlug={workspaceSlug!} onBack={() => setSelected(null)} workspace={workspace} />
         <Footer />
       </div>
     );
@@ -636,7 +682,7 @@ export default function EstatesPage() {
 
   return (
     <div className="min-h-screen bg-[#f7f9f8]">
-      <TopBar workspaceSlug={workspaceSlug!} />
+      <TopBar workspace={workspace} />
       <Hero search={search} setSearch={setSearch} propertyCount={properties.length} />
 
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-10">
@@ -723,7 +769,7 @@ export default function EstatesPage() {
 }
 
 // ── Shared TopBar ─────────────────────────────────────────────────────────────
-function TopBar({ workspaceSlug: _workspaceSlug }: { workspaceSlug: string }) {
+function TopBar({ workspace }: { workspace: { name: string; logo: string | null; support_email: string; support_whatsapp: string } | null }) {
   const [scrolled, setScrolled] = useState(false);
   useEffect(() => {
     const handler = () => setScrolled(window.scrollY > 10);
@@ -736,19 +782,29 @@ function TopBar({ workspaceSlug: _workspaceSlug }: { workspaceSlug: string }) {
       <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
         <div className="flex items-center gap-2.5">
           <div className="flex h-8 w-8 items-center justify-center rounded-xl overflow-hidden bg-[#0E2C72] shadow-sm shadow-[#0E2C72]/30">
-            <img src="/logo.png" alt="Terratrail" className="w-full h-full object-cover" />
+            {workspace?.logo ? (
+              <img src={workspace.logo} alt={workspace.name} className="w-full h-full object-contain" />
+            ) : (
+              <span className="text-[11px] font-extrabold text-white leading-none">
+                {(workspace?.name ?? "T").slice(0, 2).toUpperCase()}
+              </span>
+            )}
           </div>
-          <span className={`text-[15px] font-extrabold tracking-tight transition-colors ${scrolled ? "text-neutral-900" : "text-white"}`}>Terratrail</span>
+          <span className={`text-[15px] font-extrabold tracking-tight transition-colors ${scrolled ? "text-neutral-900" : "text-white"}`}>{workspace?.name ?? "Terratrail"}</span>
         </div>
         <div className={`flex items-center gap-4 text-[12px] font-medium transition-colors ${scrolled ? "text-neutral-600" : "text-white/80"}`}>
-          <a href="tel:+234" className="hidden sm:flex items-center gap-1.5 hover:text-[#0E2C72] transition-colors">
-            <Phone className="size-3.5" />
-            Contact Us
-          </a>
-          <a href="mailto:hello@terratrail.io" className="hidden sm:flex items-center gap-1.5 hover:text-[#0E2C72] transition-colors">
-            <Mail className="size-3.5" />
-            Email
-          </a>
+          {workspace?.support_whatsapp && (
+            <a href={`tel:${workspace.support_whatsapp}`} className="hidden sm:flex items-center gap-1.5 hover:text-[#0E2C72] transition-colors">
+              <Phone className="size-3.5" />
+              Contact Us
+            </a>
+          )}
+          {workspace?.support_email && (
+            <a href={`mailto:${workspace.support_email}`} className="hidden sm:flex items-center gap-1.5 hover:text-[#0E2C72] transition-colors">
+              <Mail className="size-3.5" />
+              Email
+            </a>
+          )}
         </div>
       </div>
     </header>

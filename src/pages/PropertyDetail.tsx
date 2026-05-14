@@ -82,6 +82,8 @@ interface Inspection {
   is_converted: boolean;
 }
 
+interface Attendee { name: string; phone: string; email: string; }
+
 interface Customer { id: string; full_name: string; email: string; phone: string; }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -1437,8 +1439,9 @@ function LogInspectionSlideOver({ open, onClose, property, onLogged }: {
     name: "", phone: "", email: "", inspection_date: "",
     inspection_time: "", inspection_type: "PHYSICAL" as "PHYSICAL" | "VIRTUAL",
     category: "RESIDENTIAL" as "RESIDENTIAL" | "COMMERCIAL" | "FARM_LAND",
-    persons: "1", notes: "",
+    notes: "",
   });
+  const [attendees, setAttendees] = useState<Attendee[]>([{ name: "", phone: "", email: "" }]);
   const [availableSlots, setAvailableSlots] = useState<{ label: string; start_time: string }[]>([]);
   const [saving, setSaving] = useState(false);
   const set = (k: string, v: string) => setForm((f) => ({ ...f, [k]: v }));
@@ -1464,6 +1467,7 @@ function LogInspectionSlideOver({ open, onClose, property, onLogged }: {
 
   const handleSubmit = async () => {
     if (!form.name || !form.phone || !form.inspection_date) { toast.error("Name, phone, and date are required."); return; }
+    if (!attendees.some(a => a.name.trim())) { toast.error("Add at least one attendee."); return; }
     setSaving(true);
     try {
       await api.siteInspections.create({
@@ -1472,13 +1476,15 @@ function LogInspectionSlideOver({ open, onClose, property, onLogged }: {
         inspection_time: form.inspection_time || undefined,
         inspection_type: form.inspection_type,
         category: form.category,
-        persons: Math.max(1, Number(form.persons) || 1),
+        attendees: attendees.filter(a => a.name.trim()),
+        persons: Math.max(1, attendees.filter(a => a.name.trim()).length),
         notes: form.notes,
         linked_property: property.id, property_name: property.name,
       });
       toast.success("Inspection logged.");
       onLogged();
-      setForm({ name: "", phone: "", email: "", inspection_date: "", inspection_time: "", inspection_type: "PHYSICAL", category: "RESIDENTIAL", persons: "1", notes: "" });
+      setForm({ name: "", phone: "", email: "", inspection_date: "", inspection_time: "", inspection_type: "PHYSICAL", category: "RESIDENTIAL", notes: "" });
+      setAttendees([{ name: "", phone: "", email: "" }]);
       onClose();
     } catch (err: any) { toast.error(err.message ?? "Failed to add inspection."); }
     finally { setSaving(false); }
@@ -1496,11 +1502,47 @@ function LogInspectionSlideOver({ open, onClose, property, onLogged }: {
         <div className="grid grid-cols-2 gap-3">
           <div><label className={labelCls}>Phone <span className="text-red-500">*</span></label>
             <input value={form.phone} onChange={(e) => set("phone", e.target.value)} className={inputCls} placeholder="08012345678" /></div>
-          <div><label className={labelCls}>No. of Persons</label>
-            <input type="number" min="1" value={form.persons} onChange={(e) => set("persons", e.target.value)} className={inputCls} /></div>
+          <div><label className={labelCls}>Email</label>
+            <input type="email" value={form.email} onChange={(e) => set("email", e.target.value)} className={inputCls} placeholder="email@example.com" /></div>
         </div>
-        <div><label className={labelCls}>Email</label>
-          <input type="email" value={form.email} onChange={(e) => set("email", e.target.value)} className={inputCls} placeholder="email@example.com" /></div>
+        {/* Attendees */}
+        <div>
+          <div className="flex items-center justify-between mb-1.5">
+            <label className={labelCls}>Attendees <span className="text-red-500">*</span></label>
+            <button type="button"
+              onClick={() => setAttendees(prev => [...prev, { name: "", phone: "", email: "" }])}
+              className="text-[11px] font-semibold text-[#0E2C72] hover:text-[#0a2260] flex items-center gap-1"
+            >
+              <Plus className="w-3 h-3" /> Add Attendee
+            </button>
+          </div>
+          <div className="space-y-2">
+            {attendees.map((att, i) => (
+              <div key={i} className="grid grid-cols-[1fr_1fr_auto] gap-2 items-center">
+                <input
+                  className={inputCls}
+                  placeholder="Name *"
+                  value={att.name}
+                  onChange={e => setAttendees(prev => prev.map((a, idx) => idx === i ? { ...a, name: e.target.value } : a))}
+                />
+                <input
+                  className={inputCls}
+                  placeholder="Phone (optional)"
+                  value={att.phone}
+                  onChange={e => setAttendees(prev => prev.map((a, idx) => idx === i ? { ...a, phone: e.target.value } : a))}
+                />
+                {attendees.length > 1 && (
+                  <button type="button"
+                    onClick={() => setAttendees(prev => prev.filter((_, idx) => idx !== i))}
+                    className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-md"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
         <div className="grid grid-cols-2 gap-3">
           <div><label className={labelCls}>Inspection Date <span className="text-red-500">*</span></label>
             <input type="date" value={form.inspection_date} onChange={(e) => set("inspection_date", e.target.value)} className={inputCls} /></div>

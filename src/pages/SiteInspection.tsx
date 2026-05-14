@@ -18,6 +18,8 @@ import {
   Eye,
   UserCheck,
 } from "lucide-react";
+
+interface Attendee { name: string; phone: string; email: string; }
 import { Skeleton } from "../components/ui/skeleton";
 import { api } from "../services/api";
 import { EmptyState } from "../components/ui/empty-state";
@@ -195,7 +197,6 @@ const BLANK_FORM = {
   inspection_time: "",
   inspection_type: "PHYSICAL" as "PHYSICAL" | "VIRTUAL",
   category: "RESIDENTIAL" as "RESIDENTIAL" | "COMMERCIAL" | "FARM_LAND",
-  persons: "1",
   notes: "",
 };
 
@@ -210,6 +211,7 @@ function AddInspectionModal({
   const [saving, setSaving] = useState(false);
   const [properties, setProperties] = useState<{ id: string; name: string }[]>([]);
   const [availableSlots, setAvailableSlots] = useState<{ label: string; start_time: string }[]>([]);
+  const [attendees, setAttendees] = useState<Attendee[]>([{ name: "", phone: "", email: "" }]);
 
   useEffect(() => {
     api.properties.list().then((list: any[]) => {
@@ -262,6 +264,10 @@ function AddInspectionModal({
       );
       return;
     }
+    if (!attendees.some(a => a.name.trim())) {
+      toast.error("Add at least one attendee.");
+      return;
+    }
     setSaving(true);
     try {
       const payload: any = {
@@ -273,7 +279,8 @@ function AddInspectionModal({
         inspection_time: form.inspection_time || undefined,
         inspection_type: form.inspection_type,
         category: form.category,
-        persons: Math.max(1, Number(form.persons) || 1),
+        attendees: attendees.filter(a => a.name.trim()),
+        persons: Math.max(1, attendees.filter(a => a.name.trim()).length),
         notes: form.notes.trim(),
         status: "PENDING",
       };
@@ -298,7 +305,7 @@ function AddInspectionModal({
         initial={{ opacity: 0, y: 30 }}
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: 30 }}
-        className="w-full max-w-lg bg-white rounded-2xl shadow-xl my-auto"
+        className="w-full max-w-lg bg-white rounded-2xl shadow-xl my-auto max-h-[90vh] flex flex-col"
       >
         <div className="flex items-center justify-between px-5 py-4 border-b border-neutral-100">
           <h3 className="text-[14px] font-semibold text-neutral-900">
@@ -312,7 +319,7 @@ function AddInspectionModal({
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-5 space-y-4">
+        <form onSubmit={handleSubmit} className="p-5 space-y-4 overflow-y-auto max-h-[calc(90vh-56px)]">
           {/* Contact row */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
@@ -425,8 +432,8 @@ function AddInspectionModal({
             </div>
           </div>
 
-          {/* Type + Category + Persons */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+          {/* Type + Category */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-[11.5px] font-semibold text-neutral-600 mb-1.5">
                 Inspection Type <span className="text-red-500">*</span>
@@ -454,18 +461,46 @@ function AddInspectionModal({
                 <option value="FARM_LAND">Farm Land</option>
               </select>
             </div>
-            <div>
-              <label className="block text-[11.5px] font-semibold text-neutral-600 mb-1.5">
-                No. of Persons <span className="text-red-500">*</span>
+          </div>
+
+          {/* Attendees */}
+          <div>
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="block text-[11.5px] font-semibold text-neutral-600">
+                Attendees <span className="text-red-500">*</span>
               </label>
-              <input
-                type="number"
-                min="1"
-                max="50"
-                className={inputCls}
-                value={form.persons}
-                onChange={set("persons")}
-              />
+              <button type="button"
+                onClick={() => setAttendees(prev => [...prev, { name: "", phone: "", email: "" }])}
+                className="text-[11px] font-semibold text-[#0E2C72] hover:text-[#0a2260] flex items-center gap-1"
+              >
+                <Plus className="w-3 h-3" /> Add Attendee
+              </button>
+            </div>
+            <div className="space-y-2">
+              {attendees.map((att, i) => (
+                <div key={i} className="grid grid-cols-[1fr_1fr_auto] gap-2 items-center">
+                  <input
+                    className={inputCls}
+                    placeholder="Name *"
+                    value={att.name}
+                    onChange={e => setAttendees(prev => prev.map((a, idx) => idx === i ? { ...a, name: e.target.value } : a))}
+                  />
+                  <input
+                    className={inputCls}
+                    placeholder="Phone (optional)"
+                    value={att.phone}
+                    onChange={e => setAttendees(prev => prev.map((a, idx) => idx === i ? { ...a, phone: e.target.value } : a))}
+                  />
+                  {attendees.length > 1 && (
+                    <button type="button"
+                      onClick={() => setAttendees(prev => prev.filter((_, idx) => idx !== i))}
+                      className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-md"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+              ))}
             </div>
           </div>
 
@@ -1267,6 +1302,7 @@ export function SiteInspection() {
                         "Date & Countdown",
                         "Type",
                         "Persons",
+                        "Converted",
                         "Status",
                         "Actions",
                       ].map((h) => (
@@ -1352,16 +1388,22 @@ export function SiteInspection() {
                             </div>
                           </td>
 
+                          {/* Converted */}
+                          <td className="px-4 py-3">
+                            {inspection.is_converted ? (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[11px] font-semibold">
+                                <CheckCircle2 className="w-3 h-3" /> Yes
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-neutral-100 text-neutral-500 text-[11px] font-semibold">
+                                No
+                              </span>
+                            )}
+                          </td>
+
                           {/* Status */}
                           <td className="px-5 py-3.5">
-                            <div className="flex flex-col gap-1">
-                              <StatusBadge status={inspection.status} />
-                              {inspection.is_converted && (
-                                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-violet-100 text-violet-700">
-                                  <UserCheck className="size-2.5" /> Converted
-                                </span>
-                              )}
-                            </div>
+                            <StatusBadge status={inspection.status} />
                           </td>
 
                           {/* Actions */}

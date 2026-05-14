@@ -343,6 +343,8 @@ export const api = {
       ),
     bookInspection: (workspaceSlug: string, propertyId: string, data: Record<string, unknown>) =>
       publicPost<any>(`/public/${workspaceSlug}/properties/${propertyId}/book-inspection/`, data),
+    workspaceInfo: (workspaceSlug: string) =>
+      publicRequest<any>(`/public/${workspaceSlug}/info/`),
   },
 
   // ── Health ────────────────────────────────────────────────────────────────
@@ -571,6 +573,12 @@ export const api = {
     billingUsage: () => request<any>("/workspaces/billing/usage/"),
     selectPlan: (data: { plan: string }) =>
       request<any>("/workspaces/billing/select/", { method: "POST", body: JSON.stringify(data) }),
+    submitPlanReceipt: (formData: FormData) =>
+      requestFile<{ detail: string }>("/workspaces/billing/submit-receipt/", formData, "POST"),
+    updateSlug: (slug: string) =>
+      request<{ slug: string; detail: string }>("/workspaces/update-slug/", {
+        method: "PATCH", body: JSON.stringify({ slug }),
+      }),
     mine: () => request<any[]>("/workspaces/mine/"),
     myMembership: () =>
       request<{ role: string; is_active: boolean; workspace_id: string; workspace_name: string }>(
