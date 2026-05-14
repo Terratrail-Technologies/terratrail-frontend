@@ -372,27 +372,58 @@ export function PropertyWizard() {
 
   const parseMapInput = (input: string): { lat: string; lng: string } | null => {
     const s = input.trim();
-    // Google Maps URL with @lat,lng
-    const atMatch = s.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
+
+    // 1. Google Maps URL with @lat,lng,zoom (e.g. maps.google.com/maps/@lat,lng,15z)
+    const atMatch = s.match(/@(-?\d+\.?\d*),(-?\d+\.?\d*)/);
     if (atMatch) return { lat: atMatch[1], lng: atMatch[2] };
-    // ?q=lat,lng or &q=lat,lng
-    const qMatch = s.match(/[?&]q=(-?\d+\.\d+),(-?\d+\.\d+)/);
+
+    // 2. ?q=lat,lng or &q=lat,lng (e.g. https://maps.google.com/?q=6.5244,3.3792)
+    const qMatch = s.match(/[?&]q=(-?\d+\.?\d*),(-?\d+\.?\d*)/);
     if (qMatch) return { lat: qMatch[1], lng: qMatch[2] };
-    // Raw "lat, lng" or "lat lng"
+
+    // 3. /maps/place/ with ll= param (e.g. &ll=lat,lng)
+    const llMatch = s.match(/[?&]ll=(-?\d+\.?\d*),(-?\d+\.?\d*)/);
+    if (llMatch) return { lat: llMatch[1], lng: llMatch[2] };
+
+    // 4. Standard coordinates — "lat, lng" or "lat lng" or "lat,lng"
     const coordMatch = s.match(/^(-?\d+\.?\d*)[,\s]+(-?\d+\.?\d*)$/);
     if (coordMatch) return { lat: coordMatch[1], lng: coordMatch[2] };
+
     return null;
   };
 
+  /** Returns true if the string looks like a Plus Code (e.g. "7FXC+XH Lagos", "849VCWC8+R9") */
+  const isPlusCode = (s: string): boolean =>
+    /^[23456789CFGHJMPQRVWX]{4,8}\+[23456789CFGHJMPQRVWX]{2,3}(\s+.+)?$/i.test(s.trim());
+
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const handleMapInputChange = (value: string) => {
     setMapInput(value);
+
+    if (debounceRef.current) clearTimeout(debounceRef.current);
     if (!value.trim()) return;
-    const parsed = parseMapInput(value);
-    if (parsed) {
-      setLatitude(parsed.lat);
-      setLongitude(parsed.lng);
-      toast.success("Coordinates set from link.");
-    }
+
+    debounceRef.current = setTimeout(() => {
+      // Try coordinate / URL parsing first
+      const parsed = parseMapInput(value);
+      if (parsed) {
+        setLatitude(parsed.lat);
+        setLongitude(parsed.lng);
+        toast.success("Coordinates extracted — map pin updated.");
+        return;
+      }
+
+      // Plus Code — open a Maps search link (we can't resolve server-side without Maps API)
+      if (isPlusCode(value)) {
+        const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(value.trim())}`;
+        toast.info(
+          "Plus Code detected. Click the 'Open in Google Maps' link to resolve it, then paste the coordinates.",
+          { duration: 5000 }
+        );
+        window.open(mapsUrl, "_blank", "noopener,noreferrer");
+      }
+    }, 600);
   };
 
   // ── Amenity CRUD ─────────────────────────────────────────────────────────
@@ -988,7 +1019,7 @@ export function PropertyWizard() {
                     </div>
                   </div>
 
-                  <div className="flex gap-2">
+                  <div className="flex flex-wrap gap-2">
                     <button type="button" onClick={handleUseLocation} disabled={geoLoading}
                       className="inline-flex items-center gap-2 px-4 py-2 bg-[#0E2C72] text-white rounded-md hover:bg-[#0a2260] transition-colors disabled:opacity-60">
                       {geoLoading ? (
@@ -1000,10 +1031,21 @@ export function PropertyWizard() {
                       {geoLoading ? "Detecting…" : "Use Current Location"}
                     </button>
                     {(latitude || longitude) && (
-                      <button type="button" onClick={() => { setLatitude(""); setLongitude(""); }}
-                        className="px-4 py-2 bg-white border border-neutral-300 text-neutral-500 rounded-md text-sm hover:bg-neutral-50">
-                        Clear
-                      </button>
+                      <>
+                        <button type="button" onClick={() => { setLatitude(""); setLongitude(""); }}
+                          className="px-4 py-2 bg-white border border-neutral-300 text-neutral-500 rounded-md text-sm hover:bg-neutral-50">
+                          Clear
+                        </button>
+                        <a
+                          href={`https://www.google.com/maps?q=${latitude},${longitude}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-[#8aaad8] text-[#0E2C72] rounded-md text-sm hover:bg-[#0E2C72]/6 transition-colors font-medium"
+                        >
+                          <MapPin className="w-4 h-4" />
+                          Open in Google Maps
+                        </a>
+                      </>
                     )}
                   </div>
 
@@ -1765,14 +1807,17 @@ export function PropertyWizard() {
 
       {/* Pricing modal */}
       {showPricingModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
-          <div className="bg-white rounded-xl max-w-lg w-full p-6 shadow-xl my-8">
-            <div className="flex items-center justify-between mb-5">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg flex flex-col max-h-[90vh]">
+            {/* Header — fixed */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-100 shrink-0">
               <h3 className="font-semibold text-neutral-900">{editingPlanId ? "Edit Pricing Plan" : "Create Pricing Plan"}</h3>
               <button onClick={() => setShowPricingModal(false)} className="p-1 hover:bg-neutral-100 rounded-md">
                 <X className="w-5 h-5" />
               </button>
             </div>
+            {/* Body — scrollable */}
+            <div className="flex-1 overflow-y-auto px-6 py-5">
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-neutral-700 mb-1.5">Plan Name <span className="text-red-500">*</span></label>
@@ -1982,11 +2027,15 @@ export function PropertyWizard() {
                 </>
               )}
             </div>
-            <div className="flex gap-2 mt-6">
+            </div>{/* end scrollable body */}
+            {/* Footer — pinned */}
+            <div className="shrink-0 px-6 py-4 border-t border-neutral-100 flex gap-3 justify-end">
               <button onClick={() => setShowPricingModal(false)}
-                className="flex-1 px-4 py-2 border border-neutral-300 text-neutral-700 rounded-md text-sm hover:bg-neutral-50">Cancel</button>
+                className="px-5 py-2 border border-neutral-300 text-neutral-700 rounded-lg text-sm hover:bg-neutral-50 font-medium">
+                Cancel
+              </button>
               <button onClick={savePricing}
-                className="flex-1 px-4 py-2 bg-[#0E2C72] text-white rounded-md text-sm hover:bg-[#0a2260]">
+                className="px-5 py-2 bg-[#0E2C72] text-white rounded-lg text-sm hover:bg-[#0a2260] font-medium">
                 {editingPlanId ? "Update Plan" : "Create Plan"}
               </button>
             </div>

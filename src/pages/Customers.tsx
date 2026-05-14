@@ -19,6 +19,7 @@ import {
   ChevronUp,
   Building2,
   CalendarPlus,
+  Trash2,
 } from "lucide-react";
 import { Skeleton } from "../components/ui/skeleton";
 import { api } from "../services/api";
@@ -28,6 +29,7 @@ import { Input } from "../components/ui/input";
 import { motion } from "motion/react";
 import { EmptyState } from "../components/ui/empty-state";
 import { toast } from "sonner";
+import { TablePagination } from "../components/ui/TablePagination";
 
 // ─── Animation variants ────────────────────────────────────────────────────────
 const container = {
@@ -633,6 +635,11 @@ export function Customers() {
   const [expandedIds, setExpandedIds]     = useState<Set<string>>(new Set());
   const [subCache, setSubCache]           = useState<Record<string, any[]>>({});
   const [loadingExpand, setLoadingExpand] = useState<Set<string>>(new Set());
+  const [page, setPage]       = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [confirmBulkDelete, setConfirmBulkDelete] = useState(false);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
 
   // ── Role guard ────────────────────────────────────────────────────────────
   if (role === "SALES_REP" || role === "CUSTOMER") {
@@ -711,6 +718,75 @@ export function Customers() {
     setLandSizeFilter("ALL");
     setSalesRepFilter("ALL");
     setCustRepFilter("ALL");
+    setPage(1);
+    setSelected(new Set());
+  };
+
+  const pageCount = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const paginated = filtered.slice((page - 1) * pageSize, page * pageSize);
+
+  // ── Bulk selection helpers ─────────────────────────────────────────────────
+  const allPageSelected = paginated.length > 0 && paginated.every((c) => selected.has(c.id));
+  const somePageSelected = paginated.some((c) => selected.has(c.id));
+
+  const toggleSelectAll = () => {
+    if (allPageSelected) {
+      setSelected((prev) => {
+        const next = new Set(prev);
+        paginated.forEach((c) => next.delete(c.id));
+        return next;
+      });
+    } else {
+      setSelected((prev) => {
+        const next = new Set(prev);
+        paginated.forEach((c) => next.add(c.id));
+        return next;
+      });
+    }
+  };
+
+  const toggleRow = (id: string) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const exportCSV = () => {
+    const rows = customers.filter((c) => selected.has(c.id));
+    const headers = ["#", "Name", "Email", "Phone", "Status", "Created"];
+    const lines = rows.map((c, i) => [
+      i + 1,
+      `"${(c.full_name ?? c.name ?? "").replace(/"/g, '""')}"`,
+      `"${(c.email ?? "").replace(/"/g, '""')}"`,
+      `"${(c.phone ?? "").replace(/"/g, '""')}"`,
+      `"${(c.primary_subscription?.status ?? "").replace(/"/g, '""')}"`,
+      `"${c.created_at ? new Date(c.created_at).toLocaleDateString("en-NG") : ""}"`,
+    ].join(","));
+    const csv = [headers.join(","), ...lines].join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = "customers.csv"; a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleBulkDelete = async () => {
+    setBulkDeleting(true);
+    const ids = Array.from(selected);
+    const results = await Promise.allSettled(ids.map((id) => api.customers.delete(id)));
+    const succeeded = ids.filter((_, i) => results[i].status === "fulfilled");
+    const failCount = ids.length - succeeded.length;
+    setCustomers((prev) => prev.filter((c) => !succeeded.includes(c.id)));
+    setSelected(new Set());
+    setConfirmBulkDelete(false);
+    setBulkDeleting(false);
+    if (failCount === 0) {
+      toast.success(`${succeeded.length} customer${succeeded.length !== 1 ? "s" : ""} deleted.`);
+    } else {
+      toast.warning(`${succeeded.length} deleted, ${failCount} failed.`);
+    }
   };
 
   const toggleExpand = useCallback(async (customerId: string) => {
@@ -826,7 +902,7 @@ export function Customers() {
               <Input
                 placeholder="Search by name, email, phone…"
                 value={search}
-                onChange={(e) => setSearch(e.target.value)}
+                onChange={(e) => { setSearch(e.target.value); setSelected(new Set()); }}
                 className="h-9 pl-9 text-[13px] bg-white border-neutral-200 focus-visible:ring-1 focus-visible:ring-[#1a3d8f]/30 focus-visible:border-[#2a52a8] rounded-lg"
               />
             </div>
@@ -838,7 +914,7 @@ export function Customers() {
                 {STATUS_FILTERS.map((sf) => (
                   <button
                     key={sf.value}
-                    onClick={() => setStatusFilter(sf.value)}
+                    onClick={() => { setStatusFilter(sf.value); setSelected(new Set()); }}
                     className={`px-2.5 py-1 rounded-full text-[11.5px] font-medium transition-colors border whitespace-nowrap ${
                       statusFilter === sf.value
                         ? "bg-[#0E2C72] text-white border-[#0E2C72]"
@@ -856,7 +932,7 @@ export function Customers() {
               {propertyOptions.length > 0 && (
                 <select
                   value={propertyFilter}
-                  onChange={(e) => setPropertyFilter(e.target.value)}
+                  onChange={(e) => { setPropertyFilter(e.target.value); setSelected(new Set()); }}
                   className="h-9 px-2.5 border border-neutral-200 bg-white rounded-lg text-[12px] text-neutral-700 focus:outline-none focus:ring-1 focus:ring-[#1a3d8f]/30"
                 >
                   <option value="ALL">All Properties</option>
@@ -866,7 +942,7 @@ export function Customers() {
               {landSizeOptions.length > 0 && (
                 <select
                   value={landSizeFilter}
-                  onChange={(e) => setLandSizeFilter(e.target.value)}
+                  onChange={(e) => { setLandSizeFilter(e.target.value); setSelected(new Set()); }}
                   className="h-9 px-2.5 border border-neutral-200 bg-white rounded-lg text-[12px] text-neutral-700 focus:outline-none focus:ring-1 focus:ring-[#1a3d8f]/30"
                 >
                   <option value="ALL">All Land Sizes</option>
@@ -876,7 +952,7 @@ export function Customers() {
               {salesRepOptions.length > 0 && (
                 <select
                   value={salesRepFilter}
-                  onChange={(e) => setSalesRepFilter(e.target.value)}
+                  onChange={(e) => { setSalesRepFilter(e.target.value); setSelected(new Set()); }}
                   className="h-9 px-2.5 border border-neutral-200 bg-white rounded-lg text-[12px] text-neutral-700 focus:outline-none focus:ring-1 focus:ring-[#1a3d8f]/30"
                 >
                   <option value="ALL">All Sales Reps</option>
@@ -886,7 +962,7 @@ export function Customers() {
               {custRepOptions.length > 0 && (
                 <select
                   value={custRepFilter}
-                  onChange={(e) => setCustRepFilter(e.target.value)}
+                  onChange={(e) => { setCustRepFilter(e.target.value); setSelected(new Set()); }}
                   className="h-9 px-2.5 border border-neutral-200 bg-white rounded-lg text-[12px] text-neutral-700 focus:outline-none focus:ring-1 focus:ring-[#1a3d8f]/30"
                 >
                   <option value="ALL">All Customer Reps</option>
@@ -1068,10 +1144,65 @@ export function Customers() {
               variants={item}
               className="hidden md:block bg-white rounded-xl border border-neutral-100 overflow-hidden shadow-[0_1px_3px_rgba(0,0,0,0.06)]"
             >
+              {/* Bulk action bar */}
+              {selected.size > 0 && (
+                <div className="bg-[#0E2C72]/5 border-b border-[#0E2C72]/20 px-4 py-2.5 flex items-center gap-3 text-sm">
+                  <span className="text-[#0E2C72] font-semibold text-[12px]">{selected.size} selected</span>
+                  <button
+                    onClick={exportCSV}
+                    className="px-3 py-1.5 rounded-lg bg-white border border-[#0E2C72]/20 text-[#0E2C72] text-[12px] font-medium hover:bg-[#0E2C72]/5 transition-colors"
+                  >
+                    Export CSV
+                  </button>
+                  {!confirmBulkDelete ? (
+                    <button
+                      onClick={() => setConfirmBulkDelete(true)}
+                      className="px-3 py-1.5 rounded-lg bg-white border border-red-200 text-red-600 text-[12px] font-medium hover:bg-red-50 transition-colors flex items-center gap-1.5"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" /> Delete Selected
+                    </button>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <span className="text-[12px] text-red-600 font-medium">Are you sure?</span>
+                      <button
+                        onClick={handleBulkDelete}
+                        disabled={bulkDeleting}
+                        className="px-3 py-1.5 rounded-lg bg-red-600 text-white text-[12px] font-medium hover:bg-red-700 disabled:opacity-60 transition-colors flex items-center gap-1.5"
+                      >
+                        {bulkDeleting ? <Loader2 className="w-3 h-3 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+                        Confirm
+                      </button>
+                      <button
+                        onClick={() => setConfirmBulkDelete(false)}
+                        className="px-3 py-1.5 rounded-lg bg-white border border-neutral-200 text-neutral-600 text-[12px] font-medium hover:bg-neutral-50 transition-colors"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  )}
+                  <button
+                    onClick={() => { setSelected(new Set()); setConfirmBulkDelete(false); }}
+                    className="ml-auto p-1 rounded-lg hover:bg-[#0E2C72]/10 text-[#0E2C72] transition-colors"
+                    title="Clear selection"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              )}
               <div className="overflow-x-auto">
                 <table className="w-full text-sm text-left">
                   <thead>
                     <tr className="border-b border-neutral-100 bg-neutral-50/70">
+                      <th className="px-4 py-3 w-8">
+                        <input
+                          type="checkbox"
+                          className="w-4 h-4 rounded border-neutral-300 text-[#0E2C72] accent-[#0E2C72]"
+                          checked={allPageSelected}
+                          ref={(el) => { if (el) el.indeterminate = !allPageSelected && somePageSelected; }}
+                          onChange={toggleSelectAll}
+                        />
+                      </th>
+                      <th className="px-4 py-3 text-left text-[11px] font-semibold text-neutral-400 uppercase tracking-wide w-10">#</th>
                       <th className="px-5 py-3 text-[10.5px] font-semibold tracking-wider text-neutral-400 uppercase whitespace-nowrap">Customer</th>
                       <th className="px-5 py-3 text-[10.5px] font-semibold tracking-wider text-neutral-400 uppercase whitespace-nowrap">Contact</th>
                       <th className="px-5 py-3 text-[10.5px] font-semibold tracking-wider text-neutral-400 uppercase whitespace-nowrap">Subscriptions</th>
@@ -1082,7 +1213,7 @@ export function Customers() {
                     </tr>
                   </thead>
                   <tbody>
-                    {filtered.map((customer) => {
+                    {paginated.map((customer, index) => {
                       const name = customer.full_name ?? customer.name ?? "Unknown";
                       const [bgCls, txtCls] = avatarColor(name);
                       const totalSubs = (customer.total_subscriptions ?? 0) ||
@@ -1101,6 +1232,16 @@ export function Customers() {
                         <Fragment key={customer.id}>
                           {/* Level 1 — customer row */}
                           <tr className={`hover:bg-neutral-50/60 transition-colors ${isExpanded ? "" : "border-b border-neutral-50"}`}>
+                            <td className="px-4 py-3 w-8">
+                              <input
+                                type="checkbox"
+                                className="w-4 h-4 rounded border-neutral-300 text-[#0E2C72] accent-[#0E2C72]"
+                                checked={selected.has(customer.id)}
+                                onChange={() => toggleRow(customer.id)}
+                                onClick={(e) => e.stopPropagation()}
+                              />
+                            </td>
+                            <td className="px-4 py-3 text-[12px] text-neutral-400 font-mono">{(page-1)*pageSize + index + 1}</td>
                             <td className="px-5 py-3.5 whitespace-nowrap">
                               <div className="flex items-center gap-3">
                                 <div className={`h-8 w-8 rounded-full ${bgCls} ${txtCls} flex items-center justify-center text-[11px] font-bold uppercase shrink-0`}>
@@ -1195,7 +1336,7 @@ export function Customers() {
                           {isExpanded && (
                             isLoadingThisExpand ? (
                               <tr className="border-b border-neutral-50">
-                                <td colSpan={7} className="px-5 py-2 bg-neutral-50/60">
+                                <td colSpan={9} className="px-5 py-2 bg-neutral-50/60">
                                   <div className="flex items-center gap-2 pl-11 text-[12px] text-neutral-400">
                                     <Loader2 className="w-3 h-3 animate-spin" /> Loading subscriptions…
                                   </div>
@@ -1203,7 +1344,7 @@ export function Customers() {
                               </tr>
                             ) : subs.length === 0 ? (
                               <tr className="border-b border-neutral-100">
-                                <td colSpan={7} className="px-5 py-2.5 bg-neutral-50/40">
+                                <td colSpan={9} className="px-5 py-2.5 bg-neutral-50/40">
                                   <p className="pl-11 text-[12px] text-neutral-400 italic">No subscriptions found.</p>
                                 </td>
                               </tr>
@@ -1216,7 +1357,7 @@ export function Customers() {
                                       key={sub.id}
                                       className={`bg-neutral-50/40 hover:bg-neutral-50/80 transition-colors ${idx === subs.length - 1 ? "border-b border-neutral-100" : "border-b border-neutral-50/70"}`}
                                     >
-                                      <td colSpan={7} className="py-0">
+                                      <td colSpan={9} className="py-0">
                                         <div className="flex items-center gap-5 pl-16 pr-5 py-2.5 border-l-2 border-[#8aaad8]/60">
                                           <div className="flex-1 min-w-0">
                                             <p className="text-[12.5px] font-semibold text-neutral-800 truncate">{sub.property_name || "—"}</p>
@@ -1271,11 +1412,14 @@ export function Customers() {
                   </tbody>
                 </table>
               </div>
-              <div className="px-5 py-2.5 border-t border-neutral-50 bg-neutral-50/40">
-                <p className="text-[11px] text-neutral-400">
-                  Showing {filtered.length} of {customers.length} customer{customers.length !== 1 ? "s" : ""}
-                </p>
-              </div>
+              <TablePagination
+                page={page}
+                pageCount={pageCount}
+                total={filtered.length}
+                pageSize={pageSize}
+                onPage={(n) => { setPage(n); setSelected(new Set()); }}
+                onPageSize={(n) => { setPageSize(n); setPage(1); setSelected(new Set()); }}
+              />
             </motion.div>
           </>
         )}

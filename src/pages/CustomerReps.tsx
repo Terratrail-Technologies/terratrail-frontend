@@ -3,10 +3,12 @@ import { useNavigate } from "react-router";
 import {
   Users, ShoppingBag, AlertCircle, Search,
   Copy, Check, UserPlus, X, TrendingUp, Building2, Eye,
-  UserX, MoreHorizontal,
+  UserX, MoreHorizontal, Trash2, Loader2,
 } from "lucide-react";
 import { api } from "../services/api";
+import { toast } from "sonner";
 import { useWorkspaceRole } from "../hooks/useWorkspaceRole";
+import { TablePagination } from "../components/ui/TablePagination";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -206,6 +208,11 @@ export function CustomerReps() {
   const [statusFilter, setStatusFilter] = useState<"ALL" | "ACTIVE" | "INACTIVE">("ALL");
   const [showInvite, setShowInvite] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [confirmBulkDelete, setConfirmBulkDelete] = useState(false);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
 
   const isAdmin = role === "OWNER" || role === "ADMIN";
 
@@ -247,6 +254,59 @@ export function CustomerReps() {
       (statusFilter === "INACTIVE" && !m.is_active);
     return matchSearch && matchStatus;
   });
+
+  const pageCount = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const paginated = filtered.slice((page - 1) * pageSize, page * pageSize);
+
+  const allPageSelected = paginated.length > 0 && paginated.every((m) => selected.has(m.id));
+  const somePageSelected = paginated.some((m) => selected.has(m.id));
+
+  const toggleSelectAll = () => {
+    if (allPageSelected) {
+      setSelected((prev) => { const next = new Set(prev); paginated.forEach((m) => next.delete(m.id)); return next; });
+    } else {
+      setSelected((prev) => { const next = new Set(prev); paginated.forEach((m) => next.add(m.id)); return next; });
+    }
+  };
+
+  const toggleRow = (id: string) => {
+    setSelected((prev) => { const next = new Set(prev); if (next.has(id)) next.delete(id); else next.add(id); return next; });
+  };
+
+  const exportCSV = () => {
+    const rows = members.filter((m) => selected.has(m.id));
+    const headers = ["#", "Name", "Email", "Phone", "Role"];
+    const lines = rows.map((m, i) => [
+      i + 1,
+      `"${(m.user_name ?? "").replace(/"/g, '""')}"`,
+      `"${(m.user_email ?? "").replace(/"/g, '""')}"`,
+      `"${(m.user_phone ?? "").replace(/"/g, '""')}"`,
+      `"${(m.role ?? "").replace(/"/g, '""')}"`,
+    ].join(","));
+    const csv = [headers.join(","), ...lines].join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = "customer-reps.csv"; a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleBulkDelete = async () => {
+    setBulkDeleting(true);
+    const ids = Array.from(selected);
+    const results = await Promise.allSettled(ids.map((id) => api.workspaces.removeMember(id)));
+    const succeeded = ids.filter((_, i) => results[i].status === "fulfilled");
+    const failCount = ids.length - succeeded.length;
+    setMembers((prev) => prev.filter((m) => !succeeded.includes(m.id)));
+    setSelected(new Set());
+    setConfirmBulkDelete(false);
+    setBulkDeleting(false);
+    if (failCount === 0) {
+      toast.success(`${succeeded.length} rep${succeeded.length !== 1 ? "s" : ""} removed.`);
+    } else {
+      toast.warning(`${succeeded.length} removed, ${failCount} failed.`);
+    }
+  };
 
   if (!roleLoading && !isAdmin) {
     return (
@@ -299,14 +359,14 @@ export function CustomerReps() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-neutral-400" />
             <input
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(e) => { setSearch(e.target.value); setSelected(new Set()); }}
               placeholder="Search by name or email..."
               className="w-full pl-9 pr-4 py-2 text-[13px] border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1a3d8f]/30 focus:border-[#2a52a8] bg-white"
             />
           </div>
           <div className="flex gap-1">
             {(["ALL", "ACTIVE", "INACTIVE"] as const).map((s) => (
-              <button key={s} onClick={() => setStatusFilter(s)}
+              <button key={s} onClick={() => { setStatusFilter(s); setSelected(new Set()); }}
                 className={`px-3 py-2 text-[12px] font-semibold rounded-lg transition-colors ${statusFilter === s ? "bg-[#0E2C72] text-white" : "bg-white border border-neutral-200 text-neutral-600 hover:border-[#0E2C72]/40"}`}>
                 {s === "ALL" ? "All" : s.charAt(0) + s.slice(1).toLowerCase()}
               </button>
@@ -368,10 +428,65 @@ export function CustomerReps() {
 
       {/* Desktop table (≥ md) */}
       <div className="hidden md:block bg-white rounded-xl border border-neutral-100 shadow-sm overflow-hidden">
+        {/* Bulk action bar */}
+        {selected.size > 0 && (
+          <div className="bg-[#0E2C72]/5 border-b border-[#0E2C72]/20 px-4 py-2.5 flex items-center gap-3 text-sm">
+            <span className="text-[#0E2C72] font-semibold text-[12px]">{selected.size} selected</span>
+            <button
+              onClick={exportCSV}
+              className="px-3 py-1.5 rounded-lg bg-white border border-[#0E2C72]/20 text-[#0E2C72] text-[12px] font-medium hover:bg-[#0E2C72]/5 transition-colors"
+            >
+              Export CSV
+            </button>
+            {!confirmBulkDelete ? (
+              <button
+                onClick={() => setConfirmBulkDelete(true)}
+                className="px-3 py-1.5 rounded-lg bg-white border border-red-200 text-red-600 text-[12px] font-medium hover:bg-red-50 transition-colors flex items-center gap-1.5"
+              >
+                <Trash2 className="w-3.5 h-3.5" /> Delete Selected
+              </button>
+            ) : (
+              <div className="flex items-center gap-2">
+                <span className="text-[12px] text-red-600 font-medium">Are you sure?</span>
+                <button
+                  onClick={handleBulkDelete}
+                  disabled={bulkDeleting}
+                  className="px-3 py-1.5 rounded-lg bg-red-600 text-white text-[12px] font-medium hover:bg-red-700 disabled:opacity-60 transition-colors flex items-center gap-1.5"
+                >
+                  {bulkDeleting ? <Loader2 className="w-3 h-3 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+                  Confirm
+                </button>
+                <button
+                  onClick={() => setConfirmBulkDelete(false)}
+                  className="px-3 py-1.5 rounded-lg bg-white border border-neutral-200 text-neutral-600 text-[12px] font-medium hover:bg-neutral-50 transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            )}
+            <button
+              onClick={() => { setSelected(new Set()); setConfirmBulkDelete(false); }}
+              className="ml-auto p-1 rounded-lg hover:bg-[#0E2C72]/10 text-[#0E2C72] transition-colors"
+              title="Clear selection"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        )}
         <div className="overflow-x-auto">
           <table className="w-full text-[13px]">
             <thead>
               <tr className="border-b border-neutral-100 bg-neutral-50">
+                <th className="px-4 py-3 w-8">
+                  <input
+                    type="checkbox"
+                    className="w-4 h-4 rounded border-neutral-300 text-[#0E2C72] accent-[#0E2C72]"
+                    checked={allPageSelected}
+                    ref={(el) => { if (el) el.indeterminate = !allPageSelected && somePageSelected; }}
+                    onChange={toggleSelectAll}
+                  />
+                </th>
+                <th className="px-4 py-3 text-left text-[11px] font-semibold text-neutral-400 uppercase tracking-wide w-10">#</th>
                 <th className="text-left px-4 py-3 text-[11px] font-bold text-neutral-500 uppercase tracking-wide">Name</th>
                 <th className="text-left px-4 py-3 text-[11px] font-bold text-neutral-500 uppercase tracking-wide">Email</th>
                 <th className="text-left px-4 py-3 text-[11px] font-bold text-neutral-500 uppercase tracking-wide">Phone</th>
@@ -387,6 +502,8 @@ export function CustomerReps() {
               {loading ? (
                 Array.from({ length: 4 }).map((_, i) => (
                   <tr key={i} className="animate-pulse">
+                    <td className="px-4 py-3"><div className="h-4 w-4 bg-neutral-100 rounded" /></td>
+                    <td className="px-4 py-3"><div className="h-3 bg-neutral-100 rounded w-6" /></td>
                     <td className="px-4 py-3"><div className="flex items-center gap-3"><div className="w-8 h-8 rounded-full bg-neutral-100" /><div className="h-3.5 bg-neutral-100 rounded w-28" /></div></td>
                     <td className="px-4 py-3"><div className="h-3 bg-neutral-100 rounded w-36" /></td>
                     <td className="px-4 py-3"><div className="h-3 bg-neutral-100 rounded w-24" /></td>
@@ -399,15 +516,25 @@ export function CustomerReps() {
                 ))
               ) : filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="px-4 py-12 text-center text-neutral-400 text-[13px]">
+                  <td colSpan={11} className="px-4 py-12 text-center text-neutral-400 text-[13px]">
                     {search || statusFilter !== "ALL" ? "No reps match your filters." : "No customer representatives yet. Invite your first rep."}
                   </td>
                 </tr>
               ) : (
-                filtered.map((m) => {
+                paginated.map((m, index) => {
                   const initials = m.user_name.split(" ").slice(0, 2).map((w) => w[0]?.toUpperCase()).join("");
                   return (
                     <tr key={m.id} className="hover:bg-neutral-50 transition-colors">
+                      <td className="px-4 py-3 w-8">
+                        <input
+                          type="checkbox"
+                          className="w-4 h-4 rounded border-neutral-300 text-[#0E2C72] accent-[#0E2C72]"
+                          checked={selected.has(m.id)}
+                          onChange={() => toggleRow(m.id)}
+                          onClick={(e) => e.stopPropagation()}
+                        />
+                      </td>
+                      <td className="px-4 py-3 text-[12px] text-neutral-400 font-mono">{(page-1)*pageSize + index + 1}</td>
                       {/* Name */}
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-3">
@@ -469,9 +596,14 @@ export function CustomerReps() {
           </table>
         </div>
         {!loading && filtered.length > 0 && (
-          <div className="px-4 py-2.5 border-t border-neutral-50 bg-neutral-50">
-            <span className="text-[11px] text-neutral-400">{filtered.length} rep{filtered.length !== 1 ? "s" : ""}</span>
-          </div>
+          <TablePagination
+            page={page}
+            pageCount={pageCount}
+            total={filtered.length}
+            pageSize={pageSize}
+            onPage={(n) => { setPage(n); setSelected(new Set()); }}
+            onPageSize={(n) => { setPageSize(n); setPage(1); setSelected(new Set()); }}
+          />
         )}
       </div>
       </div>

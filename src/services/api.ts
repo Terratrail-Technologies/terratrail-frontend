@@ -452,11 +452,29 @@ export const api = {
       requestFile<any>(`/customers/subscriptions/${id}/allocate/`, formData, "POST"),
     cancel: (id: string, reason = "") =>
       request<any>(`/customers/subscriptions/${id}/cancel/`, { method: "POST", body: JSON.stringify({ reason }) }),
+    bulkUpload: (file: File) => {
+      const fd = new FormData();
+      fd.append("file", file);
+      return requestFile<any>("/customers/subscriptions/bulk-upload/", fd, "POST");
+    },
+    bulkTemplate: (fmt: "csv" | "xlsx") =>
+      fmt === "csv"
+        ? "/templates/terratrail_subscriptions_template.csv"
+        : `${BASE_URL}/customers/subscriptions/bulk-upload/template/?format=xlsx`,
   },
 
   installments: {
     list: (params?: { subscription?: string; status?: string }) =>
       request<any>(`/customers/installments/${buildParams(params ?? {})}`).then(unwrapList),
+    bulkUpload: (file: File) => {
+      const fd = new FormData();
+      fd.append("file", file);
+      return requestFile<any>("/customers/installments/bulk-upload/", fd, "POST");
+    },
+    bulkTemplate: (fmt: "csv" | "xlsx") =>
+      fmt === "csv"
+        ? "/templates/terratrail_installments_template.csv"
+        : `${BASE_URL}/customers/installments/bulk-upload/template/?format=xlsx`,
   },
 
   // ── Payments ─────────────────────────────────────────────────────────────
@@ -469,6 +487,15 @@ export const api = {
       request<any>(`/payments/${id}/approve/`, { method: "POST", body: JSON.stringify({}) }),
     reject: (id: string, reason = "") =>
       request<any>(`/payments/${id}/reject/`, { method: "POST", body: JSON.stringify({ reason }) }),
+    bulkUpload: (file: File) => {
+      const fd = new FormData();
+      fd.append("file", file);
+      return requestFile<any>("/payments/bulk-upload/", fd, "POST");
+    },
+    bulkTemplate: (fmt: "csv" | "xlsx") =>
+      fmt === "csv"
+        ? "/templates/terratrail_payments_template.csv"
+        : `${BASE_URL}/payments/bulk-upload/template/?format=xlsx`,
   },
 
   // ── Customers ─────────────────────────────────────────────────────────────
@@ -479,6 +506,8 @@ export const api = {
       request<any>("/customers/", { method: "POST", body: JSON.stringify(data) }),
     update: (id: string, data: any) =>
       request<any>(`/customers/${id}/`, { method: "PATCH", body: JSON.stringify(data) }),
+    delete: (id: string) =>
+      request<void>(`/customers/${id}/`, { method: "DELETE" }),
     bulkUpload: (file: File) => {
       const fd = new FormData();
       fd.append("file", file);
@@ -506,6 +535,15 @@ export const api = {
         method: "PATCH",
         body: JSON.stringify({ is_converted: true, converted_customer: customerId }),
       }),
+    bulkUpload: (file: File) => {
+      const fd = new FormData();
+      fd.append("file", file);
+      return requestFile<any>("/customers/inspections/bulk-upload/", fd, "POST");
+    },
+    bulkTemplate: (fmt: "csv" | "xlsx") =>
+      fmt === "csv"
+        ? "/templates/terratrail_inspections_template.csv"
+        : `${BASE_URL}/customers/inspections/bulk-upload/template/?format=xlsx`,
   },
 
   // ── Sales Reps / Commissions ──────────────────────────────────────────────
@@ -525,6 +563,28 @@ export const api = {
           date_to: range?.to,
         })}`
       ),
+    bulkUpload: (file: File) => {
+      const fd = new FormData();
+      fd.append("file", file);
+      return requestFile<any>("/commissions/reps/bulk-upload/", fd, "POST");
+    },
+    bulkTemplate: (fmt: "csv" | "xlsx") =>
+      fmt === "csv"
+        ? "/templates/terratrail_sales_reps_template.csv"
+        : `${BASE_URL}/commissions/reps/bulk-upload/template/?format=xlsx`,
+  },
+
+  // ── Customer Reps ─────────────────────────────────────────────────────────
+  customerReps: {
+    bulkUpload: (file: File) => {
+      const fd = new FormData();
+      fd.append("file", file);
+      return requestFile<any>("/commissions/customer-reps/bulk-upload/", fd, "POST");
+    },
+    bulkTemplate: (fmt: "csv" | "xlsx") =>
+      fmt === "csv"
+        ? "/templates/terratrail_customer_reps_template.csv"
+        : `${BASE_URL}/commissions/customer-reps/bulk-upload/template/?format=xlsx`,
   },
 
   // ── Commissions ────────────────────────────────────────────────────────────
@@ -533,6 +593,9 @@ export const api = {
       request<any>(`/commissions/${buildParams(params ?? {})}`).then(unwrapList),
     markPaid: (id: string, notes = "") =>
       request<any>(`/commissions/${id}/mark-paid/`, { method: "POST", body: JSON.stringify({ notes }) }),
+    myRepStats: () => request<any>("/commissions/my-stats/"),
+    myRepCommissions: (page = 1, pageSize = 20) =>
+      request<any>(`/commissions/my-commissions/${buildParams({ page, page_size: pageSize })}`),
   },
 
   // ── Workspaces ────────────────────────────────────────────────────────────

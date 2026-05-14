@@ -82,7 +82,13 @@ interface Inspection {
   is_converted: boolean;
 }
 
-interface Attendee { name: string; phone: string; email: string; }
+interface Attendee {
+  name: string;
+  phone: string;
+  email: string;
+  id_type?: string;
+  id_number?: string;
+}
 
 interface Customer { id: string; full_name: string; email: string; phone: string; }
 
@@ -1441,7 +1447,7 @@ function LogInspectionSlideOver({ open, onClose, property, onLogged }: {
     category: "RESIDENTIAL" as "RESIDENTIAL" | "COMMERCIAL" | "FARM_LAND",
     notes: "",
   });
-  const [attendees, setAttendees] = useState<Attendee[]>([{ name: "", phone: "", email: "" }]);
+  const [attendees, setAttendees] = useState<Attendee[]>([{ name: "", phone: "", email: "", id_type: "", id_number: "" }]);
   const [availableSlots, setAvailableSlots] = useState<{ label: string; start_time: string }[]>([]);
   const [saving, setSaving] = useState(false);
   const set = (k: string, v: string) => setForm((f) => ({ ...f, [k]: v }));
@@ -1484,7 +1490,7 @@ function LogInspectionSlideOver({ open, onClose, property, onLogged }: {
       toast.success("Inspection logged.");
       onLogged();
       setForm({ name: "", phone: "", email: "", inspection_date: "", inspection_time: "", inspection_type: "PHYSICAL", category: "RESIDENTIAL", notes: "" });
-      setAttendees([{ name: "", phone: "", email: "" }]);
+      setAttendees([{ name: "", phone: "", email: "", id_type: "", id_number: "" }]);
       onClose();
     } catch (err: any) { toast.error(err.message ?? "Failed to add inspection."); }
     finally { setSaving(false); }
@@ -1510,7 +1516,7 @@ function LogInspectionSlideOver({ open, onClose, property, onLogged }: {
           <div className="flex items-center justify-between mb-1.5">
             <label className={labelCls}>Attendees <span className="text-red-500">*</span></label>
             <button type="button"
-              onClick={() => setAttendees(prev => [...prev, { name: "", phone: "", email: "" }])}
+              onClick={() => setAttendees(prev => [...prev, { name: "", phone: "", email: "", id_type: "", id_number: "" }])}
               className="text-[11px] font-semibold text-[#0E2C72] hover:text-[#0a2260] flex items-center gap-1"
             >
               <Plus className="w-3 h-3" /> Add Attendee
@@ -1518,27 +1524,52 @@ function LogInspectionSlideOver({ open, onClose, property, onLogged }: {
           </div>
           <div className="space-y-2">
             {attendees.map((att, i) => (
-              <div key={i} className="grid grid-cols-[1fr_1fr_auto] gap-2 items-center">
-                <input
-                  className={inputCls}
-                  placeholder="Name *"
-                  value={att.name}
-                  onChange={e => setAttendees(prev => prev.map((a, idx) => idx === i ? { ...a, name: e.target.value } : a))}
-                />
-                <input
-                  className={inputCls}
-                  placeholder="Phone (optional)"
-                  value={att.phone}
-                  onChange={e => setAttendees(prev => prev.map((a, idx) => idx === i ? { ...a, phone: e.target.value } : a))}
-                />
-                {attendees.length > 1 && (
-                  <button type="button"
-                    onClick={() => setAttendees(prev => prev.filter((_, idx) => idx !== i))}
-                    className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-md"
+              <div key={i} className="border border-neutral-200 rounded-lg p-3 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10.5px] font-semibold text-neutral-400 uppercase tracking-wide">Attendee {i + 1}</span>
+                  {attendees.length > 1 && (
+                    <button type="button"
+                      onClick={() => setAttendees(prev => prev.filter((_, idx) => idx !== i))}
+                      className="p-1 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <input
+                    className={inputCls}
+                    placeholder="Name *"
+                    value={att.name}
+                    onChange={e => setAttendees(prev => prev.map((a, idx) => idx === i ? { ...a, name: e.target.value } : a))}
+                  />
+                  <input
+                    className={inputCls}
+                    placeholder="Phone"
+                    value={att.phone}
+                    onChange={e => setAttendees(prev => prev.map((a, idx) => idx === i ? { ...a, phone: e.target.value } : a))}
+                  />
+                </div>
+                <div className="grid grid-cols-[1fr_1.5fr] gap-2">
+                  <select
+                    className={inputCls}
+                    value={att.id_type ?? ""}
+                    onChange={e => setAttendees(prev => prev.map((a, idx) => idx === i ? { ...a, id_type: e.target.value } : a))}
                   >
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                )}
+                    <option value="">ID Type</option>
+                    <option value="NIN">NIN</option>
+                    <option value="BVN">BVN</option>
+                    <option value="PASSPORT">Passport</option>
+                    <option value="DRIVERS_LICENSE">Driver's License</option>
+                    <option value="VOTERS_CARD">Voter's Card</option>
+                  </select>
+                  <input
+                    className={inputCls}
+                    placeholder="ID Number"
+                    value={att.id_number ?? ""}
+                    onChange={e => setAttendees(prev => prev.map((a, idx) => idx === i ? { ...a, id_number: e.target.value } : a))}
+                  />
+                </div>
               </div>
             ))}
           </div>

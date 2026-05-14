@@ -1,17 +1,18 @@
-﻿import { useState } from "react";
+﻿import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
 import { usePolling } from "../hooks/usePolling";
 import { usePageTitle } from "../hooks/usePageTitle";
 import { useWorkspaceRole } from "../hooks/useWorkspaceRole";
 import {
   Search, Plus, X, AlertCircle, Copy, Check,
-  Loader2, Eye, ChevronDown, Pencil,
-  Users, TrendingUp, Wallet, Banknote,
+  Loader2, Eye, ChevronDown, Pencil, Settings,
+  Users, TrendingUp, Wallet, Banknote, Trash2,
 } from "lucide-react";
 import { Skeleton } from "../components/ui/skeleton";
 import { api } from "../services/api";
 import { toast } from "sonner";
 import { motion } from "motion/react";
+import { TablePagination } from "../components/ui/TablePagination";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 const TIERS = ["STARTER", "SENIOR", "LEGEND"] as const;
@@ -92,6 +93,207 @@ function AccessDenied() {
   );
 }
 
+// ─── Commission Settings Modal ────────────────────────────────────────────────
+interface CommissionSettingsModalProps {
+  onClose: () => void;
+}
+
+function CommissionSettingsModal({ onClose }: CommissionSettingsModalProps) {
+  const [rates, setRates] = useState({
+    commission_starter_pct: "",
+    commission_senior_pct: "",
+    commission_legend_pct: "",
+  });
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    api.workspaces.getSettings()
+      .then((s: any) => {
+        setRates({
+          commission_starter_pct: s?.commission_starter_pct ?? "",
+          commission_senior_pct: s?.commission_senior_pct ?? "",
+          commission_legend_pct: s?.commission_legend_pct ?? "",
+        });
+      })
+      .catch(() => setError("Failed to load settings."))
+      .finally(() => setLoading(false));
+  }, []);
+
+  const f = (k: keyof typeof rates) => (e: React.ChangeEvent<HTMLInputElement>) =>
+    setRates((p) => ({ ...p, [k]: e.target.value }));
+
+  const handleSave = async () => {
+    setError("");
+    const starter = parseFloat(rates.commission_starter_pct as string);
+    const senior  = parseFloat(rates.commission_senior_pct as string);
+    const legend  = parseFloat(rates.commission_legend_pct as string);
+    if ([starter, senior, legend].some((v) => isNaN(v) || v < 0 || v > 100)) {
+      return setError("All rates must be valid numbers between 0 and 100.");
+    }
+    setSaving(true);
+    try {
+      await api.workspaces.updateSettings({
+        commission_starter_pct: starter,
+        commission_senior_pct: senior,
+        commission_legend_pct: legend,
+      });
+      toast.success("Commission rates saved.");
+      onClose();
+    } catch (e: any) {
+      setError(e?.message ?? "Failed to save settings.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const inputCls =
+    "w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#1a3d8f]/30 focus:border-[#2a52a8] bg-white transition-colors text-right";
+
+  const rows: { label: string; key: keyof typeof rates }[] = [
+    { label: "Realtor",           key: "commission_starter_pct" },
+    { label: "Senior Realtor",    key: "commission_senior_pct" },
+    { label: "Principal Realtor", key: "commission_legend_pct" },
+  ];
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 p-4">
+      <div className="bg-white rounded-t-2xl sm:rounded-xl shadow-xl w-full max-w-md my-auto">
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-200">
+          <div>
+            <h2 className="font-semibold text-neutral-900">Commission Settings</h2>
+            <p className="text-[12px] text-neutral-400 mt-0.5">Set commission rates per realtor tier</p>
+          </div>
+          <button type="button" onClick={onClose} className="p-1.5 hover:bg-neutral-100 rounded-md transition-colors">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* Body */}
+        <div className="px-6 py-5">
+          {error && (
+            <div className="flex items-center gap-2 p-3 mb-4 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+              <AlertCircle className="w-4 h-4 shrink-0" />
+              {error}
+            </div>
+          )}
+
+          {loading ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="w-5 h-5 animate-spin text-neutral-400" />
+            </div>
+          ) : (
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-neutral-100">
+                  <th className="text-left py-2 text-[11px] font-semibold text-neutral-500 uppercase tracking-wider">Tier</th>
+                  <th className="text-right py-2 text-[11px] font-semibold text-neutral-500 uppercase tracking-wider w-36">% Rate</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-neutral-50">
+                {rows.map(({ label, key }) => (
+                  <tr key={key}>
+                    <td className="py-3 font-medium text-neutral-700">{label}</td>
+                    <td className="py-3 pl-6">
+                      <div className="relative">
+                        <input
+                          type="number"
+                          min="0"
+                          max="100"
+                          step="0.01"
+                          value={rates[key]}
+                          onChange={f(key)}
+                          className={inputCls}
+                          placeholder="0"
+                        />
+                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 text-xs pointer-events-none">%</span>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-neutral-200">
+          <button type="button" onClick={onClose}
+            className="px-4 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-100 rounded-lg transition-colors">
+            Cancel
+          </button>
+          <button type="button" onClick={handleSave} disabled={saving || loading}
+            className="px-4 py-2 text-sm font-medium bg-[#0E2C72] text-white rounded-lg hover:bg-[#0a2260] disabled:opacity-50 transition-colors inline-flex items-center gap-2">
+            {saving && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+            Save
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Invite Link Modal ────────────────────────────────────────────────────────
+interface InviteLinkModalProps {
+  token: string;
+  email: string;
+  onClose: () => void;
+}
+
+function InviteLinkModal({ token, email, onClose }: InviteLinkModalProps) {
+  const [copied, setCopied] = useState(false);
+  const inviteLink = `${window.location.origin}/accept-invite/${token}`;
+
+  const copyLink = () => {
+    navigator.clipboard.writeText(inviteLink).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    });
+  };
+
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-4">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm">
+        <div className="flex items-center justify-between p-5 border-b border-neutral-100">
+          <div>
+            <h3 className="text-[15px] font-bold text-neutral-900">Invitation Sent</h3>
+            <p className="text-[12px] text-neutral-500 mt-0.5">Share the link if the email doesn't arrive</p>
+          </div>
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-neutral-100 text-neutral-400">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+        <div className="p-5 space-y-4">
+          <div className="flex items-center gap-2 p-2.5 rounded-xl bg-[#0E2C72]/6 border border-[#0E2C72]/15">
+            <Check className="w-4 h-4 text-[#0E2C72] shrink-0" />
+            <p className="text-[12px] text-[#0a2260] font-medium">
+              Invitation sent to <strong>{email}</strong>
+            </p>
+          </div>
+          <div>
+            <p className="text-[11px] font-semibold text-neutral-500 mb-1.5">Invite link</p>
+            <div className="flex items-center gap-2">
+              <input readOnly value={inviteLink}
+                className="flex-1 px-3 py-2 text-[11px] border border-neutral-200 rounded-lg bg-neutral-50 text-neutral-600 truncate" />
+              <button onClick={copyLink}
+                className="shrink-0 px-3 py-2 bg-[#0E2C72] text-white text-[12px] font-semibold rounded-lg hover:bg-[#0a2260] transition-colors flex items-center gap-1.5">
+                {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                {copied ? "Copied!" : "Copy"}
+              </button>
+            </div>
+          </div>
+          <button onClick={onClose}
+            className="w-full py-2.5 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 text-[13px] font-semibold rounded-lg transition-colors">
+            Done
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Add Rep Modal ────────────────────────────────────────────────────────────
 interface AddRepModalProps {
   onClose: () => void;
@@ -112,6 +314,7 @@ function AddRepModal({ onClose, onSaved }: AddRepModalProps) {
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [inviteToken, setInviteToken] = useState<string | null>(null);
 
   const f =
     (k: keyof typeof form) =>
@@ -128,23 +331,38 @@ function AddRepModal({ onClose, onSaved }: AddRepModalProps) {
     setSaving(true);
     try {
       await api.salesReps.create(form);
+      onSaved();
 
-      // Send workspace invite — don't block rep creation on failure
+      // Send workspace invite — capture token to show copy-link modal
       try {
-        await api.workspaces.invite({ email: form.email, role: "SALES_REP" });
-        toast.success(`Sales rep added. Invite sent to ${form.email}.`);
+        const inviteRes = await api.workspaces.invite({ email: form.email, role: "SALES_REP" });
+        if (inviteRes?.token) {
+          setInviteToken(inviteRes.token);
+        } else {
+          toast.success(`Sales rep added. Invite sent to ${form.email}.`);
+          onClose();
+        }
       } catch {
         toast.success("Sales rep added. (Invite email could not be sent — send manually via workspace invite.)");
+        onClose();
       }
-
-      onSaved();
-      onClose();
     } catch (e: any) {
       setError(e?.message ?? "Failed to add rep. Please try again.");
     } finally {
       setSaving(false);
     }
   };
+
+  // Show invite link modal after successful invite
+  if (inviteToken) {
+    return (
+      <InviteLinkModal
+        token={inviteToken}
+        email={form.email}
+        onClose={onClose}
+      />
+    );
+  }
 
   const inputCls =
     "w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#1a3d8f]/30 focus:border-[#2a52a8] bg-white transition-colors";
@@ -492,6 +710,7 @@ export function SalesReps() {
   const [loading, setLoading] = useState(true);
   const [showAdd, setShowAdd] = useState(false);
   const [editRep, setEditRep] = useState<SalesRep | null>(null);
+  const [showCommissionSettings, setShowCommissionSettings] = useState(false);
 
   // Filters
   const [search, setSearch] = useState("");
@@ -503,6 +722,15 @@ export function SalesReps() {
 
   // Deactivate in-progress
   const [togglingId, setTogglingId] = useState<string | null>(null);
+
+  // Pagination
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+
+  // Bulk selection
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [confirmBulkDelete, setConfirmBulkDelete] = useState(false);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
 
   const fetchData = async () => {
     setLoading(true);
@@ -560,6 +788,47 @@ export function SalesReps() {
     }
   }
 
+  // ── Bulk selection helpers ─────────────────────────────────────────────────
+  const toggleRow = (id: string) => {
+    setSelected((prev) => { const next = new Set(prev); if (next.has(id)) next.delete(id); else next.add(id); return next; });
+  };
+
+  const exportCSV = () => {
+    const rows = reps.filter((r) => selected.has(r.id));
+    const headers = ["#", "Name", "Email", "Phone", "Tier", "Referral Code"];
+    const lines = rows.map((r, i) => [
+      i + 1,
+      `"${(r.name ?? "").replace(/"/g, '""')}"`,
+      `"${(r.email ?? "").replace(/"/g, '""')}"`,
+      `"${(r.phone ?? "").replace(/"/g, '""')}"`,
+      `"${(r.tier ?? "").replace(/"/g, '""')}"`,
+      `"${(r.referral_code ?? "").replace(/"/g, '""')}"`,
+    ].join(","));
+    const csv = [headers.join(","), ...lines].join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = "sales-reps.csv"; a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleBulkDelete = async () => {
+    setBulkDeleting(true);
+    const ids = Array.from(selected);
+    const results = await Promise.allSettled(ids.map((id) => api.salesReps.delete(id)));
+    const succeeded = ids.filter((_, i) => results[i].status === "fulfilled");
+    const failCount = ids.length - succeeded.length;
+    setReps((prev) => prev.filter((r) => !succeeded.includes(r.id)));
+    setSelected(new Set());
+    setConfirmBulkDelete(false);
+    setBulkDeleting(false);
+    if (failCount === 0) {
+      toast.success(`${succeeded.length} rep${succeeded.length !== 1 ? "s" : ""} deleted.`);
+    } else {
+      toast.warning(`${succeeded.length} deleted, ${failCount} failed.`);
+    }
+  };
+
   // ── Derived summary values ─────────────────────────────────────────────────
   const totalPending = reps.reduce((sum, r) => sum + Number(r.total_pending ?? 0), 0);
   const totalEarned = reps.reduce((sum, r) => sum + Number(r.total_earned ?? 0), 0);
@@ -583,6 +852,20 @@ export function SalesReps() {
 
     return matchSearch && matchTier && matchStatus;
   });
+
+  const pageCount = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const paginated = filtered.slice((page - 1) * pageSize, page * pageSize);
+
+  const allPageSelected = paginated.length > 0 && paginated.every((r) => selected.has(r.id));
+  const somePageSelected = paginated.some((r) => selected.has(r.id));
+
+  const toggleSelectAll = () => {
+    if (allPageSelected) {
+      setSelected((prev) => { const next = new Set(prev); paginated.forEach((r) => next.delete(r.id)); return next; });
+    } else {
+      setSelected((prev) => { const next = new Set(prev); paginated.forEach((r) => next.add(r.id)); return next; });
+    }
+  };
 
   // ── Role guard ─────────────────────────────────────────────────────────────
   if (roleLoading) {
@@ -654,6 +937,9 @@ export function SalesReps() {
           onSaved={fetchData}
         />
       )}
+      {showCommissionSettings && (
+        <CommissionSettingsModal onClose={() => setShowCommissionSettings(false)} />
+      )}
 
       <div className="flex flex-col min-h-[calc(100vh-60px)] w-full">
         {/* Page header */}
@@ -671,6 +957,13 @@ export function SalesReps() {
               {loading && (
                 <Loader2 className="w-4 h-4 text-[#1a3d8f] animate-spin mr-1" />
               )}
+              <button
+                onClick={() => setShowCommissionSettings(true)}
+                className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-neutral-200 text-neutral-700 text-sm font-medium rounded-lg hover:bg-neutral-50 transition-colors shadow-sm"
+              >
+                <Settings className="w-4 h-4" />
+                Commission Settings
+              </button>
               <button
                 onClick={() => setShowAdd(true)}
                 className="inline-flex items-center gap-2 px-4 py-2 bg-[#0E2C72] text-white text-sm font-medium rounded-lg hover:bg-[#0a2260] transition-colors shadow-sm"
@@ -756,7 +1049,7 @@ export function SalesReps() {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400 pointer-events-none" />
               <input
                 value={search}
-                onChange={(e) => setSearch(e.target.value)}
+                onChange={(e) => { setSearch(e.target.value); setSelected(new Set()); }}
                 placeholder="Search by name, email, or referral code…"
                 className="w-full pl-9 pr-3 py-2 text-sm border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1a3d8f]/30 focus:border-[#2a52a8] bg-white transition-colors"
               />
@@ -765,7 +1058,7 @@ export function SalesReps() {
             {/* Tier filter */}
             <select
               value={tierFilter}
-              onChange={(e) => setTierFilter(e.target.value as typeof tierFilter)}
+              onChange={(e) => { setTierFilter(e.target.value as typeof tierFilter); setSelected(new Set()); }}
               className="px-3 py-2 text-sm border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1a3d8f]/30 focus:border-[#2a52a8] bg-white transition-colors"
             >
               <option value="ALL">All Tiers</option>
@@ -779,7 +1072,7 @@ export function SalesReps() {
             {/* Status filter */}
             <select
               value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value as typeof statusFilter)}
+              onChange={(e) => { setStatusFilter(e.target.value as typeof statusFilter); setSelected(new Set()); }}
               className="px-3 py-2 text-sm border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1a3d8f]/30 focus:border-[#2a52a8] bg-white transition-colors"
             >
               <option value="ALL">All Statuses</option>
@@ -861,10 +1154,66 @@ export function SalesReps() {
               </span>
             </div>
 
+            {/* Bulk action bar */}
+            {selected.size > 0 && (
+              <div className="bg-[#0E2C72]/5 border-b border-[#0E2C72]/20 px-4 py-2.5 flex items-center gap-3 text-sm">
+                <span className="text-[#0E2C72] font-semibold text-[12px]">{selected.size} selected</span>
+                <button
+                  onClick={exportCSV}
+                  className="px-3 py-1.5 rounded-lg bg-white border border-[#0E2C72]/20 text-[#0E2C72] text-[12px] font-medium hover:bg-[#0E2C72]/5 transition-colors"
+                >
+                  Export CSV
+                </button>
+                {!confirmBulkDelete ? (
+                  <button
+                    onClick={() => setConfirmBulkDelete(true)}
+                    className="px-3 py-1.5 rounded-lg bg-white border border-red-200 text-red-600 text-[12px] font-medium hover:bg-red-50 transition-colors flex items-center gap-1.5"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" /> Delete Selected
+                  </button>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <span className="text-[12px] text-red-600 font-medium">Are you sure?</span>
+                    <button
+                      onClick={handleBulkDelete}
+                      disabled={bulkDeleting}
+                      className="px-3 py-1.5 rounded-lg bg-red-600 text-white text-[12px] font-medium hover:bg-red-700 disabled:opacity-60 transition-colors flex items-center gap-1.5"
+                    >
+                      {bulkDeleting ? <Loader2 className="w-3 h-3 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+                      Confirm
+                    </button>
+                    <button
+                      onClick={() => setConfirmBulkDelete(false)}
+                      className="px-3 py-1.5 rounded-lg bg-white border border-neutral-200 text-neutral-600 text-[12px] font-medium hover:bg-neutral-50 transition-colors"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                )}
+                <button
+                  onClick={() => { setSelected(new Set()); setConfirmBulkDelete(false); }}
+                  className="ml-auto p-1 rounded-lg hover:bg-[#0E2C72]/10 text-[#0E2C72] transition-colors"
+                  title="Clear selection"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            )}
+
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead className="bg-neutral-50/70 border-b border-neutral-100">
                   <tr>
+                    <th className="px-4 py-3 w-8">
+                      <input
+                        type="checkbox"
+                        className="w-4 h-4 rounded border-neutral-300 text-[#0E2C72] accent-[#0E2C72]"
+                        checked={allPageSelected}
+                        ref={(el) => { if (el) el.indeterminate = !allPageSelected && somePageSelected; }}
+                        onChange={toggleSelectAll}
+                      />
+                    </th>
+                    <th className="px-4 py-3 text-left text-[11px] font-semibold text-neutral-400 uppercase tracking-wide w-10">#</th>
                     {[
                       "Realtor Name",
                       "Tier",
@@ -895,7 +1244,7 @@ export function SalesReps() {
                     animate="show"
                     className="divide-y divide-neutral-50"
                   >
-                    {filtered.map((rep) => {
+                    {paginated.map((rep, index) => {
                       const stats = repStats[rep.id];
                       return (
                         <motion.tr
@@ -903,6 +1252,16 @@ export function SalesReps() {
                           variants={item}
                           className="hover:bg-neutral-50/60 transition-colors group"
                         >
+                          <td className="px-4 py-3 w-8">
+                            <input
+                              type="checkbox"
+                              className="w-4 h-4 rounded border-neutral-300 text-[#0E2C72] accent-[#0E2C72]"
+                              checked={selected.has(rep.id)}
+                              onChange={() => toggleRow(rep.id)}
+                              onClick={(e) => e.stopPropagation()}
+                            />
+                          </td>
+                          <td className="px-4 py-3 text-[12px] text-neutral-400 font-mono">{(page-1)*pageSize + index + 1}</td>
                           {/* Realtor Name */}
                           <td className="px-5 py-4 whitespace-nowrap">
                             <div className="font-medium text-sm text-neutral-900 group-hover:text-[#0a2260] transition-colors">
@@ -1016,7 +1375,7 @@ export function SalesReps() {
                 ) : (
                   <tbody>
                     <tr>
-                      <td colSpan={9} className="px-6 py-16 text-center">
+                      <td colSpan={11} className="px-6 py-16 text-center">
                         {reps.length === 0 ? (
                           <div className="space-y-3">
                             <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-neutral-100 mb-2">
@@ -1052,6 +1411,16 @@ export function SalesReps() {
                 )}
               </table>
             </div>
+            {filtered.length > 0 && (
+              <TablePagination
+                page={page}
+                pageCount={pageCount}
+                total={filtered.length}
+                pageSize={pageSize}
+                onPage={(n) => { setPage(n); setSelected(new Set()); }}
+                onPageSize={(n) => { setPageSize(n); setPage(1); setSelected(new Set()); }}
+              />
+            )}
           </div>
         </div>
       </div>

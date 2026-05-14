@@ -12,13 +12,27 @@ import {
   ChevronDown,
   ChevronUp,
   Loader2,
+  CalendarSearch,
+  CreditCard,
+  Wallet,
+  UserCog,
+  UserCheck,
+  ClipboardList,
 } from "lucide-react";
 import { toast } from "sonner";
 import { api } from "../services/api";
 import { usePageTitle } from "../hooks/usePageTitle";
 import { cn } from "../components/ui/utils";
 
-type Tab = "properties" | "customers";
+type Tab =
+  | "properties"
+  | "customers"
+  | "sales_reps"
+  | "customer_reps"
+  | "site_inspections"
+  | "subscriptions"
+  | "installments"
+  | "payments";
 
 interface UploadResult {
   total_rows: number;
@@ -52,6 +66,64 @@ const CUSTOMER_FIELDS = [
   { name: "next_of_kin_phone", required: false, desc: "Next of kin phone" },
   { name: "next_of_kin_relationship", required: false, desc: "e.g. Mother, Spouse" },
   { name: "referral_source", required: false, desc: "WALK_IN · REFERRAL · SOCIAL_MEDIA · WEBSITE · AGENT · OTHER" },
+];
+
+const SALES_REP_FIELDS = [
+  { name: "name", required: true, desc: "Full name of the sales rep" },
+  { name: "email", required: true, desc: "Unique email — used for dedup" },
+  { name: "phone", required: true, desc: "Phone number" },
+  { name: "tier", required: false, desc: "STARTER · SENIOR · LEGEND (default: STARTER)" },
+  { name: "referral_code", required: false, desc: "Unique referral code — auto-generated if blank" },
+  { name: "bank_name", required: false, desc: "Bank name for commission payouts" },
+  { name: "account_name", required: false, desc: "Bank account name" },
+  { name: "account_number", required: false, desc: "10-digit bank account number" },
+];
+
+const CUSTOMER_REP_FIELDS = [
+  { name: "name", required: true, desc: "Full name of the customer rep" },
+  { name: "email", required: true, desc: "Unique email — used for dedup" },
+  { name: "phone", required: true, desc: "Phone number" },
+];
+
+const INSPECTION_FIELDS = [
+  { name: "name", required: true, desc: "Contact / visitor name" },
+  { name: "phone", required: false, desc: "Contact phone number" },
+  { name: "email", required: false, desc: "Contact email address" },
+  { name: "property_name", required: true, desc: "Property name (must exist in workspace)" },
+  { name: "inspection_date", required: true, desc: "Date of inspection (YYYY-MM-DD)" },
+  { name: "inspection_time", required: false, desc: "Time in 24h format e.g. 10:00" },
+  { name: "inspection_type", required: false, desc: "PHYSICAL · VIRTUAL (default: PHYSICAL)" },
+  { name: "category", required: false, desc: "RESIDENTIAL · COMMERCIAL · FARM_LAND (default: RESIDENTIAL)" },
+  { name: "notes", required: false, desc: "Additional notes" },
+];
+
+const SUBSCRIPTION_FIELDS = [
+  { name: "customer_email", required: true, desc: "Email of an existing customer" },
+  { name: "property_name", required: true, desc: "Property name (must exist in workspace)" },
+  { name: "plan_name", required: true, desc: "Pricing plan name (must be active on the property)" },
+  { name: "notes", required: false, desc: "Subscription notes" },
+];
+
+const INSTALLMENT_FIELDS = [
+  { name: "subscription_id", required: false, desc: "UUID of the subscription (or use customer_email + property_name)" },
+  { name: "customer_email", required: false, desc: "Customer email — used to look up subscription if subscription_id is blank" },
+  { name: "property_name", required: false, desc: "Property name — used with customer_email for lookup" },
+  { name: "due_date", required: true, desc: "Due date (YYYY-MM-DD)" },
+  { name: "amount", required: true, desc: "Installment amount (numeric, e.g. 150000)" },
+  { name: "installment_number", required: false, desc: "Sequence number — auto-assigned if blank" },
+  { name: "notes", required: false, desc: "Optional notes" },
+];
+
+const PAYMENT_FIELDS = [
+  { name: "installment_id", required: false, desc: "UUID of the installment (or use subscription_id / customer_email+property_name)" },
+  { name: "subscription_id", required: false, desc: "UUID of the subscription — used with installment_number" },
+  { name: "customer_email", required: false, desc: "Customer email — alternative lookup" },
+  { name: "property_name", required: false, desc: "Property name — used with customer_email" },
+  { name: "installment_number", required: false, desc: "Installment number — used when installment_id is blank" },
+  { name: "amount", required: true, desc: "Payment amount (numeric, e.g. 150000)" },
+  { name: "payment_date", required: false, desc: "Date of payment (YYYY-MM-DD, default today)" },
+  { name: "reference", required: false, desc: "Transaction reference — auto-generated if blank" },
+  { name: "notes", required: false, desc: "Optional notes" },
 ];
 
 function TemplateFieldsTable({ fields }: { fields: typeof PROPERTY_FIELDS }) {
@@ -349,6 +421,21 @@ function UploadPanel({
   );
 }
 
+const TABS: {
+  key: Tab;
+  label: string;
+  icon: React.ElementType;
+}[] = [
+  { key: "properties",      label: "Properties",     icon: Building2 },
+  { key: "customers",       label: "Customers",      icon: Users },
+  { key: "sales_reps",      label: "Sales Reps",     icon: UserCheck },
+  { key: "customer_reps",   label: "Customer Reps",  icon: UserCog },
+  { key: "site_inspections",label: "Inspections",    icon: CalendarSearch },
+  { key: "subscriptions",   label: "Subscriptions",  icon: ClipboardList },
+  { key: "installments",    label: "Installments",   icon: Wallet },
+  { key: "payments",        label: "Payments",       icon: CreditCard },
+];
+
 export function BulkUpload() {
   usePageTitle("Bulk Upload");
   const [tab, setTab] = useState<Tab>("properties");
@@ -360,41 +447,34 @@ export function BulkUpload() {
         <div className="mb-8">
           <h1 className="text-2xl font-bold text-neutral-900">Bulk Upload</h1>
           <p className="text-sm text-neutral-500 mt-1">
-            Import properties or customers from a CSV or Excel file. Duplicates are skipped automatically.
+            Import data from a CSV or Excel file. Duplicates are skipped automatically.
           </p>
         </div>
 
-        {/* Tabs */}
-        <div className="flex gap-1 bg-neutral-100 rounded-xl p-1 mb-6">
-          <button
-            onClick={() => setTab("properties")}
-            className={cn(
-              "flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg text-sm font-medium transition-colors",
-              tab === "properties"
-                ? "bg-white text-[#0E2C72] shadow-sm"
-                : "text-neutral-500 hover:text-neutral-700"
-            )}
-          >
-            <Building2 className="w-4 h-4" />
-            Properties
-          </button>
-          <button
-            onClick={() => setTab("customers")}
-            className={cn(
-              "flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg text-sm font-medium transition-colors",
-              tab === "customers"
-                ? "bg-white text-[#0E2C72] shadow-sm"
-                : "text-neutral-500 hover:text-neutral-700"
-            )}
-          >
-            <Users className="w-4 h-4" />
-            Customers
-          </button>
+        {/* Tabs — horizontally scrollable */}
+        <div className="overflow-x-auto pb-1 mb-6">
+          <div className="flex gap-1 bg-neutral-100 rounded-xl p-1 min-w-max">
+            {TABS.map(({ key, label, icon: Icon }) => (
+              <button
+                key={key}
+                onClick={() => setTab(key)}
+                className={cn(
+                  "flex items-center gap-1.5 py-2 px-3 rounded-lg text-sm font-medium transition-colors whitespace-nowrap",
+                  tab === key
+                    ? "bg-white text-[#0E2C72] shadow-sm"
+                    : "text-neutral-500 hover:text-neutral-700"
+                )}
+              >
+                <Icon className="w-4 h-4 flex-shrink-0" />
+                {label}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Panel */}
         <div className="bg-white rounded-2xl border border-neutral-200 p-6 sm:p-8">
-          {tab === "properties" ? (
+          {tab === "properties" && (
             <UploadPanel
               key="properties"
               type="properties"
@@ -402,13 +482,68 @@ export function BulkUpload() {
               uploadFn={(f) => api.properties.bulkUpload(f)}
               templateFn={(fmt) => api.properties.bulkTemplate(fmt)}
             />
-          ) : (
+          )}
+          {tab === "customers" && (
             <UploadPanel
               key="customers"
               type="customers"
               fields={CUSTOMER_FIELDS}
               uploadFn={(f) => api.customers.bulkUpload(f)}
               templateFn={(fmt) => api.customers.bulkTemplate(fmt)}
+            />
+          )}
+          {tab === "sales_reps" && (
+            <UploadPanel
+              key="sales_reps"
+              type="sales reps"
+              fields={SALES_REP_FIELDS}
+              uploadFn={(f) => api.salesReps.bulkUpload(f)}
+              templateFn={(fmt) => api.salesReps.bulkTemplate(fmt)}
+            />
+          )}
+          {tab === "customer_reps" && (
+            <UploadPanel
+              key="customer_reps"
+              type="customer reps"
+              fields={CUSTOMER_REP_FIELDS}
+              uploadFn={(f) => api.customerReps.bulkUpload(f)}
+              templateFn={(fmt) => api.customerReps.bulkTemplate(fmt)}
+            />
+          )}
+          {tab === "site_inspections" && (
+            <UploadPanel
+              key="site_inspections"
+              type="inspections"
+              fields={INSPECTION_FIELDS}
+              uploadFn={(f) => api.siteInspections.bulkUpload(f)}
+              templateFn={(fmt) => api.siteInspections.bulkTemplate(fmt)}
+            />
+          )}
+          {tab === "subscriptions" && (
+            <UploadPanel
+              key="subscriptions"
+              type="subscriptions"
+              fields={SUBSCRIPTION_FIELDS}
+              uploadFn={(f) => api.subscriptions.bulkUpload(f)}
+              templateFn={(fmt) => api.subscriptions.bulkTemplate(fmt)}
+            />
+          )}
+          {tab === "installments" && (
+            <UploadPanel
+              key="installments"
+              type="installments"
+              fields={INSTALLMENT_FIELDS}
+              uploadFn={(f) => api.installments.bulkUpload(f)}
+              templateFn={(fmt) => api.installments.bulkTemplate(fmt)}
+            />
+          )}
+          {tab === "payments" && (
+            <UploadPanel
+              key="payments"
+              type="payments"
+              fields={PAYMENT_FIELDS}
+              uploadFn={(f) => api.payments.bulkUpload(f)}
+              templateFn={(fmt) => api.payments.bulkTemplate(fmt)}
             />
           )}
         </div>
@@ -418,9 +553,12 @@ export function BulkUpload() {
           <p className="text-xs font-semibold text-amber-800 mb-1">Important notes</p>
           <ul className="text-xs text-amber-700 space-y-1 list-disc list-inside">
             <li>Maximum 500 rows per upload. Split larger files into batches.</li>
-            <li>Properties: duplicates are matched by name (case-insensitive). Existing records are skipped, not updated.</li>
-            <li>Customers: duplicates are matched by email address. Existing records are skipped, not updated.</li>
-            <li>Images, pricing plans, and documents must be added individually via the property wizard after import.</li>
+            <li>Properties: duplicates matched by name. Customers, Sales Reps, Customer Reps: matched by email.</li>
+            <li>Subscriptions: skipped if the same customer+property+plan combination already exists.</li>
+            <li>Installments: skipped if same subscription+due_date+amount already exists.</li>
+            <li>Payments: skipped if the transaction reference already exists.</li>
+            <li>Site Inspections: no dedup — each row creates a new inspection record.</li>
+            <li>Subscriptions require existing customers and active pricing plans. Installments and Payments require existing subscriptions.</li>
           </ul>
         </div>
       </div>
