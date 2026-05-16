@@ -5,6 +5,7 @@ import {
   ClipboardList, TrendingUp, DollarSign, Wallet, CheckCircle2,
   XCircle, Clock, Plus, Search, ChevronLeft, ChevronRight, ChevronDown, ChevronUp,
   X, Loader2, Upload, Eye, Building2, MapPin, BarChart3, Receipt, History, UserCheck,
+  Settings, Trash2, Calendar, RefreshCw,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { api, BASE_URL } from "../services/api";
@@ -21,6 +22,8 @@ interface Property {
   id: string; name: string; property_type: string; description: string;
   total_sqms: number; available_units: number; unit_measurement: string;
   status: string; featured_image: string | null;
+  assigned_customer_rep?: string | null;
+  assigned_customer_rep_name?: string | null;
   location: { address: string; city: string; state: string; country: string; latitude: string | null; longitude: string | null } | null;
   pricing_plans: PricingPlan[];
   bank_accounts: BankAccount[];
@@ -82,13 +85,6 @@ interface Inspection {
   is_converted: boolean;
 }
 
-interface Attendee {
-  name: string;
-  phone: string;
-  email: string;
-  id_type?: string;
-  id_number?: string;
-}
 
 interface Customer { id: string; full_name: string; email: string; phone: string; }
 
@@ -345,6 +341,153 @@ function PlanHistoryRow({ plan }: { plan: PricingPlan }) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// Assign Customer Rep Modal
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function AssignCustomerRepModal({
+  property,
+  onClose,
+  onAssigned,
+}: {
+  property: Property;
+  onClose: () => void;
+  onAssigned: (repId: string | null, repName: string | null) => void;
+}) {
+  const [members, setMembers]       = useState<any[]>([]);
+  const [loadingMembers, setLoadingMembers] = useState(true);
+  const [search, setSearch]         = useState("");
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [saving, setSaving]         = useState(false);
+
+  useEffect(() => {
+    api.workspaces.members()
+      .then((all: any[]) => {
+        setMembers(all.filter((m: any) => m.role === "CUSTOMER_REP"));
+      })
+      .catch(() => setMembers([]))
+      .finally(() => setLoadingMembers(false));
+  }, []);
+
+  const filtered = members.filter((m) => {
+    const q = search.toLowerCase();
+    return !q ||
+      (m.user_name ?? m.name ?? "").toLowerCase().includes(q) ||
+      (m.email ?? "").toLowerCase().includes(q);
+  });
+
+  const handleAssign = async () => {
+    setSaving(true);
+    try {
+      await api.properties.assignCustomerRep(property.id, selectedId);
+      const rep = members.find((m) => m.user_id === selectedId || m.id === selectedId);
+      const repName = rep ? (rep.user_name ?? rep.name ?? rep.email) : null;
+      toast.success(selectedId ? "Customer rep assigned." : "Customer rep unassigned.");
+      onAssigned(selectedId, repName);
+      onClose();
+    } catch (err: any) {
+      toast.error(err.message ?? "Failed to assign customer rep.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const currentRepName = property.assigned_customer_rep_name;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+      <motion.div
+        initial={{ opacity: 0, scale: 0.96 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.96 }}
+        className="bg-white rounded-2xl shadow-2xl w-full max-w-md border border-neutral-100 flex flex-col max-h-[90vh]"
+      >
+        <div className="flex items-center justify-between px-5 py-4 border-b border-neutral-100 shrink-0">
+          <h2 className="font-semibold text-neutral-900">Assign Customer Rep</h2>
+          <button onClick={onClose} className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-neutral-100">
+            <X className="w-4 h-4 text-neutral-500" />
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
+          {currentRepName && (
+            <div className="flex items-center gap-2 px-3 py-2 bg-[#0E2C72]/6 rounded-lg border border-[#8aaad8]">
+              <UserCheck className="w-3.5 h-3.5 text-[#0E2C72] shrink-0" />
+              <span className="text-[12px] text-[#0E2C72]">
+                Currently assigned: <span className="font-semibold">{currentRepName}</span>
+              </span>
+            </div>
+          )}
+
+          <div>
+            <label className={labelCls}>Search Customer Reps</label>
+            <div className="relative">
+              <Search className="absolute left-3 top-2.5 w-3.5 h-3.5 text-neutral-400" />
+              <input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Name or email…"
+                className={`${inputCls} pl-8`}
+              />
+            </div>
+          </div>
+
+          {loadingMembers ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="w-5 h-5 animate-spin text-neutral-400" />
+            </div>
+          ) : filtered.length === 0 ? (
+            <p className="text-[12px] text-neutral-400 text-center py-4">No customer reps found.</p>
+          ) : (
+            <div className="space-y-1 max-h-52 overflow-y-auto">
+              {filtered.map((m) => {
+                const uid = m.user_id ?? m.id;
+                const name = m.user_name ?? m.name ?? m.email ?? "—";
+                const email = m.email ?? "";
+                return (
+                  <button
+                    key={uid}
+                    onClick={() => setSelectedId(selectedId === uid ? null : uid)}
+                    className={`w-full text-left px-3 py-2.5 rounded-lg border transition-all ${
+                      selectedId === uid
+                        ? "border-[#0E2C72] bg-[#0E2C72]/6"
+                        : "border-neutral-100 hover:border-neutral-200 hover:bg-neutral-50"
+                    }`}
+                  >
+                    <p className="text-[13px] font-medium text-neutral-800">{name}</p>
+                    {email && <p className="text-[11px] text-neutral-400">{email}</p>}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        <div className="flex items-center justify-end gap-2.5 px-5 py-4 border-t border-neutral-100 shrink-0">
+          <Button variant="outline" onClick={onClose} className="text-[13px] h-9">Cancel</Button>
+          {property.assigned_customer_rep && (
+            <Button
+              variant="outline"
+              onClick={() => { setSelectedId(null); handleAssign(); }}
+              disabled={saving}
+              className="text-[13px] h-9 text-red-600 border-red-200 hover:bg-red-50"
+            >
+              Unassign
+            </Button>
+          )}
+          <Button
+            onClick={handleAssign}
+            disabled={saving || (!selectedId && !property.assigned_customer_rep)}
+            className="bg-[#0E2C72] hover:bg-[#0a2260] text-white text-[13px] h-9 gap-1.5"
+          >
+            {saving ? <><Loader2 className="w-3.5 h-3.5 animate-spin" />Saving…</> : "Assign"}
+          </Button>
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // Tab 1 — Overview
 // ═══════════════════════════════════════════════════════════════════════════════
 
@@ -509,6 +652,25 @@ function OverviewTab({ property, subscriptions, payments, commissions }: {
               </>
             );
           })()}
+        </div>
+      </div>
+
+      {/* Property Details */}
+      <div className="bg-white rounded-xl border border-neutral-100 p-5 shadow-sm">
+        <h3 className="text-[12px] font-semibold text-neutral-400 uppercase tracking-wider mb-4">Property Details</h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {[
+            { label: "Property Type",   value: property.property_type || "—" },
+            { label: "Available Units", value: property.available_units ?? "—" },
+            { label: "Total Area",      value: property.total_sqms ? `${property.total_sqms.toLocaleString()} ${property.unit_measurement ?? "SQM"}` : "—" },
+            { label: "Status",          value: property.status ? property.status.charAt(0) + property.status.slice(1).toLowerCase() : "—" },
+            { label: "Customer Rep",    value: property.assigned_customer_rep_name || "Unassigned" },
+          ].map(({ label, value }) => (
+            <div key={label}>
+              <p className="text-[11px] text-neutral-400 font-medium uppercase tracking-wide">{label}</p>
+              <p className={`text-[13px] font-semibold mt-0.5 ${label === "Customer Rep" && !property.assigned_customer_rep_name ? "text-neutral-400 italic" : "text-neutral-800"}`}>{value}</p>
+            </div>
+          ))}
         </div>
       </div>
 
@@ -924,6 +1086,122 @@ function AllocateSlideOver({ sub, onClose, onRefresh }: {
   );
 }
 
+// ── Assign Rep Modal (property-level) ──────────────────────────────────────────
+
+function PropertyAssignRepModal({ subscriptions, onClose, onAssigned }: {
+  subscriptions: Subscription[];
+  onClose: () => void;
+  onAssigned: () => void;
+}) {
+  const [reps, setReps] = useState<any[]>([]);
+  const [loadingReps, setLoadingReps] = useState(true);
+  const [repSearch, setRepSearch] = useState("");
+  const [selectedRepId, setSelectedRepId] = useState<string>("");
+  const [selectedSubIds, setSelectedSubIds] = useState<string[]>([]);
+  const [saving, setSaving] = useState(false);
+  const [assignError, setAssignError] = useState("");
+
+  useEffect(() => {
+    api.salesReps.list()
+      .then((data: any[]) => setReps(data))
+      .catch(() => setAssignError("Failed to load sales reps."))
+      .finally(() => setLoadingReps(false));
+  }, []);
+
+  const filteredReps = reps.filter((r) => {
+    const q = repSearch.toLowerCase();
+    return !q || (r.name ?? r.full_name ?? "").toLowerCase().includes(q);
+  });
+  const toggleSub = (id: string) =>
+    setSelectedSubIds((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]);
+
+  const handleAssign = async () => {
+    const ids = selectedSubIds.length > 0 ? selectedSubIds : subscriptions.map((s) => s.id);
+    if (!selectedRepId) { setAssignError("Please select a sales rep."); return; }
+    setSaving(true); setAssignError("");
+    try {
+      await Promise.all(ids.map((id) => api.subscriptions.assignRep(id, selectedRepId)));
+      toast.success(`Sales rep assigned to ${ids.length} subscription${ids.length !== 1 ? "s" : ""}.`);
+      onAssigned();
+    } catch (err: any) {
+      setAssignError(err.message ?? "Failed to assign sales rep.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-xl max-w-lg w-full shadow-xl max-h-[90vh] flex flex-col">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-100 shrink-0">
+          <div>
+            <h3 className="text-[15px] font-semibold text-neutral-900">Assign Sales Rep</h3>
+            <p className="text-[12px] text-neutral-400 mt-0.5">Select subscriptions and a sales rep</p>
+          </div>
+          <button onClick={onClose} className="p-1.5 hover:bg-neutral-100 rounded-lg transition-colors">
+            <X className="w-4 h-4 text-neutral-500" />
+          </button>
+        </div>
+        <div className="flex-1 overflow-y-auto p-6 space-y-4">
+          {assignError && (
+            <div className="flex items-start gap-2 p-3 rounded-lg bg-red-50 border border-red-100 text-red-700 text-[12px]">
+              <X className="w-3.5 h-3.5 shrink-0 mt-0.5" />{assignError}
+            </div>
+          )}
+          {subscriptions.length > 1 && (
+            <div>
+              <p className="text-[12px] font-semibold text-neutral-700 mb-2">Subscriptions (all if none selected)</p>
+              <div className="max-h-36 overflow-y-auto space-y-1.5 pr-1">
+                {subscriptions.map((s) => (
+                  <label key={s.id} className="flex items-center gap-2 px-3 py-2 rounded-lg border border-neutral-200 cursor-pointer hover:bg-neutral-50 text-[12.5px]">
+                    <input type="checkbox" className="accent-[#0E2C72]"
+                      checked={selectedSubIds.includes(s.id)}
+                      onChange={() => toggleSub(s.id)} />
+                    <span className="text-neutral-800 font-medium">{s.customer_name}</span>
+                    <span className="text-neutral-400 ml-auto">{s.land_size ? `${s.land_size} SQM` : ""}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          )}
+          <div>
+            <p className="text-[12px] font-semibold text-neutral-700 mb-2">Select Sales Rep</p>
+            <div className="relative mb-2">
+              <Search className="absolute left-2.5 top-2.5 size-3.5 text-neutral-400" />
+              <input value={repSearch} onChange={(e) => setRepSearch(e.target.value)} placeholder="Search…"
+                className="w-full h-9 pl-8 pr-3 rounded-lg border border-neutral-200 text-[13px] focus:outline-none focus:ring-1 focus:ring-[#2a52a8] bg-white" />
+            </div>
+            {loadingReps ? (
+              <div className="space-y-1.5">{[1,2,3].map((i) => <Skeleton key={i} className="h-10 rounded-lg" />)}</div>
+            ) : (
+              <div className="max-h-48 overflow-y-auto space-y-1.5 pr-1">
+                {filteredReps.map((rep) => {
+                  const name = rep.name ?? rep.full_name ?? rep.user_name ?? "Unknown";
+                  return (
+                    <button key={rep.id} onClick={() => setSelectedRepId(rep.id)}
+                      className={`w-full text-left px-3 py-2.5 rounded-lg border transition-all text-[12.5px] ${
+                        selectedRepId === rep.id ? "border-[#0E2C72] bg-[#0E2C72]/6 text-[#0E2C72]" : "border-neutral-200 hover:border-[#0E2C72]/40 text-neutral-800"
+                      }`}>{name}
+                    </button>
+                  );
+                })}
+                {filteredReps.length === 0 && <p className="text-[12px] text-neutral-400 text-center py-3">No sales reps found.</p>}
+              </div>
+            )}
+          </div>
+        </div>
+        <div className="flex gap-2.5 px-6 pb-6 pt-4 border-t border-neutral-100 shrink-0">
+          <button onClick={onClose} className="flex-1 px-4 py-2.5 border border-neutral-200 text-neutral-700 rounded-lg text-[13px] font-medium hover:bg-neutral-50 transition-colors">Cancel</button>
+          <button onClick={handleAssign} disabled={saving || !selectedRepId}
+            className="flex-1 px-4 py-2.5 bg-[#0E2C72] text-white rounded-lg text-[13px] font-medium hover:bg-[#0a2260] disabled:opacity-60 transition-colors flex items-center justify-center gap-2">
+            {saving ? <><Loader2 className="size-3.5 animate-spin" /> Assigning…</> : "Assign Rep"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // Tab 2 — Subscriptions
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -933,9 +1211,12 @@ function SubscriptionsTab({ property, subscriptions, loading, onRefresh, onViewC
   onRefresh: () => void; onViewCustomer: (id: string) => void;
 }) {
   const { isAdmin } = useWorkspaceRole();
+  const navigate = useNavigate();
   const [showAdd, setShowAdd]           = useState(false);
   const [viewSub, setViewSub]           = useState<Subscription | null>(null);
   const [allocateSub, setAllocateSub]   = useState<Subscription | null>(null);
+  const [showAssignRep, setShowAssignRep] = useState(false);
+  const [assignRepSub, setAssignRepSub]   = useState<Subscription | null>(null);
   const [search, setSearch]             = useState("");
   const [filterStatus, setFilterStatus] = useState("");
   const [filterLS, setFilterLS]         = useState("");
@@ -966,11 +1247,22 @@ function SubscriptionsTab({ property, subscriptions, loading, onRefresh, onViewC
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <h2 className="text-[16px] font-semibold text-neutral-800">Subscriptions</h2>
-        {isAdmin && (
-          <Button onClick={() => setShowAdd(true)} className="bg-[#0E2C72] hover:bg-[#0a2260] text-white h-8 text-[12px] gap-1.5">
-            <Plus className="size-3.5" /> Add New Subscription
-          </Button>
-        )}
+        <div className="flex items-center gap-2">
+          {isAdmin && (
+            <Button
+              variant="outline"
+              onClick={() => { setAssignRepSub(null); setShowAssignRep(true); }}
+              className="h-8 text-[12px] gap-1.5 border-neutral-200 text-neutral-700"
+            >
+              <UserCheck className="size-3.5" /> Assign Sales Rep
+            </Button>
+          )}
+          {isAdmin && (
+            <Button onClick={() => setShowAdd(true)} className="bg-[#0E2C72] hover:bg-[#0a2260] text-white h-8 text-[12px] gap-1.5">
+              <Plus className="size-3.5" /> Add New Subscription
+            </Button>
+          )}
+        </div>
       </div>
 
       <div className="grid grid-cols-3 gap-3">
@@ -1053,7 +1345,7 @@ function SubscriptionsTab({ property, subscriptions, loading, onRefresh, onViewC
                     <td className="px-4 py-3 whitespace-nowrap text-neutral-500 text-[12px]">{fmtDate(s.next_due_date)}</td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
-                        <button onClick={() => setViewSub(s)}
+                        <button onClick={() => navigate(`/subscriptions/${s.id}`)}
                           className="text-[#0E2C72] hover:text-[#0a2260] font-medium text-[12px] flex items-center gap-1">
                           <Eye className="size-3.5" /> View
                         </button>
@@ -1091,6 +1383,14 @@ function SubscriptionsTab({ property, subscriptions, loading, onRefresh, onViewC
           sub={allocateSub}
           onClose={() => setAllocateSub(null)}
           onRefresh={() => { setAllocateSub(null); onRefresh(); }}
+        />
+      )}
+
+      {showAssignRep && (
+        <PropertyAssignRepModal
+          subscriptions={assignRepSub ? [assignRepSub] : subscriptions}
+          onClose={() => { setShowAssignRep(false); setAssignRepSub(null); }}
+          onAssigned={() => { setShowAssignRep(false); setAssignRepSub(null); onRefresh(); }}
         />
       )}
     </div>
@@ -1442,55 +1742,53 @@ function LogInspectionSlideOver({ open, onClose, property, onLogged }: {
   open: boolean; onClose: () => void; property: Property; onLogged: () => void;
 }) {
   const [form, setForm] = useState({
-    name: "", phone: "", email: "", inspection_date: "",
-    inspection_time: "", inspection_type: "PHYSICAL" as "PHYSICAL" | "VIRTUAL",
+    name: "", phone: "", email: "", slot_id: "",
+    inspection_date: "", inspection_time: "",
+    inspection_type: "PHYSICAL" as "PHYSICAL" | "VIRTUAL",
     category: "RESIDENTIAL" as "RESIDENTIAL" | "COMMERCIAL" | "FARM_LAND",
     notes: "",
   });
-  const [attendees, setAttendees] = useState<Attendee[]>([{ name: "", phone: "", email: "", id_type: "", id_number: "" }]);
-  const [availableSlots, setAvailableSlots] = useState<{ label: string; start_time: string }[]>([]);
+  const [availableSlots, setAvailableSlots] = useState<any[]>([]);
+  const [slotsLoading, setSlotsLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const set = (k: string, v: string) => setForm((f) => ({ ...f, [k]: v }));
 
   useEffect(() => {
     if (!open) return;
-    api.properties.inspectionConfig.get(property.id)
-      .then((cfg: any) => {
-        if (cfg && Array.isArray(cfg.time_slots) && cfg.time_slots.length > 0) {
-          const slots = cfg.time_slots
-            .filter((s: any) => s.is_active !== false)
-            .map((s: any) => typeof s === "string"
-              ? { label: s, start_time: s }
-              : { label: s.label || s.start_time, start_time: s.start_time }
-            );
-          setAvailableSlots(slots);
-        } else {
-          setAvailableSlots([]);
-        }
-      })
-      .catch(() => setAvailableSlots([]));
+    setSlotsLoading(true);
+    api.properties.availableSlots(property.id)
+      .then((slots: any[]) => setAvailableSlots(slots ?? []))
+      .catch(() => setAvailableSlots([]))
+      .finally(() => setSlotsLoading(false));
   }, [open, property.id]);
 
+  const handleSlotChange = (slotId: string) => {
+    const slot = availableSlots.find((s: any) => s.slot_id === slotId || s.id === slotId);
+    set("slot_id", slotId);
+    if (slot) {
+      set("inspection_date", slot.date ?? "");
+      set("inspection_time", slot.time ?? "");
+    }
+  };
+
   const handleSubmit = async () => {
-    if (!form.name || !form.phone || !form.inspection_date) { toast.error("Name, phone, and date are required."); return; }
-    if (!attendees.some(a => a.name.trim())) { toast.error("Add at least one attendee."); return; }
+    if (!form.name || !form.phone || !form.slot_id) { toast.error("Name, phone, and slot are required."); return; }
     setSaving(true);
     try {
       await api.siteInspections.create({
         name: form.name, phone: form.phone, email: form.email,
+        slot_id: form.slot_id || undefined,
         inspection_date: form.inspection_date,
         inspection_time: form.inspection_time || undefined,
         inspection_type: form.inspection_type,
         category: form.category,
-        attendees: attendees.filter(a => a.name.trim()),
-        persons: Math.max(1, attendees.filter(a => a.name.trim()).length),
         notes: form.notes,
         linked_property: property.id, property_name: property.name,
       });
       toast.success("Inspection logged.");
       onLogged();
-      setForm({ name: "", phone: "", email: "", inspection_date: "", inspection_time: "", inspection_type: "PHYSICAL", category: "RESIDENTIAL", notes: "" });
-      setAttendees([{ name: "", phone: "", email: "", id_type: "", id_number: "" }]);
+      setForm({ name: "", phone: "", email: "", slot_id: "", inspection_date: "", inspection_time: "", inspection_type: "PHYSICAL", category: "RESIDENTIAL", notes: "" });
+      setAvailableSlots([]);
       onClose();
     } catch (err: any) { toast.error(err.message ?? "Failed to add inspection."); }
     finally { setSaving(false); }
@@ -1511,87 +1809,22 @@ function LogInspectionSlideOver({ open, onClose, property, onLogged }: {
           <div><label className={labelCls}>Email</label>
             <input type="email" value={form.email} onChange={(e) => set("email", e.target.value)} className={inputCls} placeholder="email@example.com" /></div>
         </div>
-        {/* Attendees */}
         <div>
-          <div className="flex items-center justify-between mb-1.5">
-            <label className={labelCls}>Attendees <span className="text-red-500">*</span></label>
-            <button type="button"
-              onClick={() => setAttendees(prev => [...prev, { name: "", phone: "", email: "", id_type: "", id_number: "" }])}
-              className="text-[11px] font-semibold text-[#0E2C72] hover:text-[#0a2260] flex items-center gap-1"
-            >
-              <Plus className="w-3 h-3" /> Add Attendee
-            </button>
-          </div>
-          <div className="space-y-2">
-            {attendees.map((att, i) => (
-              <div key={i} className="border border-neutral-200 rounded-lg p-3 space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-[10.5px] font-semibold text-neutral-400 uppercase tracking-wide">Attendee {i + 1}</span>
-                  {attendees.length > 1 && (
-                    <button type="button"
-                      onClick={() => setAttendees(prev => prev.filter((_, idx) => idx !== i))}
-                      className="p-1 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"
-                    >
-                      <X className="w-3.5 h-3.5" />
-                    </button>
-                  )}
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <input
-                    className={inputCls}
-                    placeholder="Name *"
-                    value={att.name}
-                    onChange={e => setAttendees(prev => prev.map((a, idx) => idx === i ? { ...a, name: e.target.value } : a))}
-                  />
-                  <input
-                    className={inputCls}
-                    placeholder="Phone"
-                    value={att.phone}
-                    onChange={e => setAttendees(prev => prev.map((a, idx) => idx === i ? { ...a, phone: e.target.value } : a))}
-                  />
-                </div>
-                <div className="grid grid-cols-[1fr_1.5fr] gap-2">
-                  <select
-                    className={inputCls}
-                    value={att.id_type ?? ""}
-                    onChange={e => setAttendees(prev => prev.map((a, idx) => idx === i ? { ...a, id_type: e.target.value } : a))}
-                  >
-                    <option value="">ID Type</option>
-                    <option value="NIN">NIN</option>
-                    <option value="BVN">BVN</option>
-                    <option value="PASSPORT">Passport</option>
-                    <option value="DRIVERS_LICENSE">Driver's License</option>
-                    <option value="VOTERS_CARD">Voter's Card</option>
-                  </select>
-                  <input
-                    className={inputCls}
-                    placeholder="ID Number"
-                    value={att.id_number ?? ""}
-                    onChange={e => setAttendees(prev => prev.map((a, idx) => idx === i ? { ...a, id_number: e.target.value } : a))}
-                  />
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-        <div className="grid grid-cols-2 gap-3">
-          <div><label className={labelCls}>Inspection Date <span className="text-red-500">*</span></label>
-            <input type="date" value={form.inspection_date} onChange={(e) => set("inspection_date", e.target.value)} className={inputCls} /></div>
-          <div>
-            <label className={labelCls}>
-              Time {availableSlots.length > 0 && <span className="text-neutral-400 font-normal">(schedule)</span>}
-            </label>
-            {availableSlots.length > 0 ? (
-              <select value={form.inspection_time} onChange={(e) => set("inspection_time", e.target.value)} className={inputCls}>
-                <option value="">— Select slot —</option>
-                {availableSlots.map((s) => (
-                  <option key={s.start_time} value={s.start_time}>{s.label} ({s.start_time})</option>
-                ))}
-              </select>
-            ) : (
-              <input type="time" value={form.inspection_time} onChange={(e) => set("inspection_time", e.target.value)} className={inputCls} />
-            )}
-          </div>
+          <label className={labelCls}>Available Slot <span className="text-red-500">*</span></label>
+          {slotsLoading ? (
+            <div className={`${inputCls} text-neutral-400 text-[12px]`}>Loading slots…</div>
+          ) : availableSlots.length === 0 ? (
+            <p className="text-[12px] text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+              No inspection slots configured for this property.
+            </p>
+          ) : (
+            <select value={form.slot_id} onChange={(e) => handleSlotChange(e.target.value)} className={inputCls}>
+              <option value="">— Select a slot —</option>
+              {availableSlots.map((s: any) => (
+                <option key={s.slot_id ?? s.id} value={s.slot_id ?? s.id}>{s.label}</option>
+              ))}
+            </select>
+          )}
         </div>
         <div className="grid grid-cols-2 gap-3">
           <div><label className={labelCls}>Type</label>
@@ -2033,6 +2266,401 @@ function PriceHistoryTab({ property }: { property: Property }) {
   );
 }
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// Tab 7 — Settings (Inspection Schedules)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+const SCHED_DAYS = [
+  { label: "Mon", value: "MON" }, { label: "Tue", value: "TUE" },
+  { label: "Wed", value: "WED" }, { label: "Thu", value: "THU" },
+  { label: "Fri", value: "FRI" }, { label: "Sat", value: "SAT" },
+  { label: "Sun", value: "SUN" },
+];
+
+interface InspectionConfig {
+  id: string;
+  mode: "RECURRING" | "ONE_TIME";
+  tag: string;
+  available_days: string[];
+  time: string;
+  end_date: string | null;
+  meeting_point: string;
+  virtual_link: string;
+  notes: string;
+  // ONE_TIME slots: array of { date, time }
+  slots?: { date: string; time: string }[];
+}
+
+interface ScheduleFormState {
+  mode: "RECURRING" | "ONE_TIME";
+  meeting_point: string;
+  virtual_link: string;
+  tag: string;
+  notes: string;
+  // RECURRING
+  available_days: string[];
+  time: string;
+  end_date: string;
+  // ONE_TIME
+  one_time_slots: { date: string; time: string }[];
+}
+
+const BLANK_SCHEDULE: ScheduleFormState = {
+  mode: "RECURRING",
+  meeting_point: "",
+  virtual_link: "",
+  tag: "",
+  notes: "",
+  available_days: [],
+  time: "09:00",
+  end_date: "",
+  one_time_slots: [{ date: "", time: "09:00" }],
+};
+
+function ScheduleForm({
+  initial,
+  onSave,
+  onCancel,
+  saving,
+}: {
+  initial?: ScheduleFormState;
+  onSave: (data: ScheduleFormState) => void;
+  onCancel: () => void;
+  saving: boolean;
+}) {
+  const [form, setForm] = useState<ScheduleFormState>(initial ?? { ...BLANK_SCHEDULE });
+  const set = (k: keyof ScheduleFormState, v: any) => setForm((f) => ({ ...f, [k]: v }));
+
+  const toggleDay = (d: string) =>
+    set("available_days", form.available_days.includes(d)
+      ? form.available_days.filter((x) => x !== d)
+      : [...form.available_days, d]);
+
+  const addSlot = () => set("one_time_slots", [...form.one_time_slots, { date: "", time: "09:00" }]);
+  const removeSlot = (i: number) => set("one_time_slots", form.one_time_slots.filter((_, idx) => idx !== i));
+  const updateSlot = (i: number, field: "date" | "time", v: string) =>
+    set("one_time_slots", form.one_time_slots.map((s, idx) => idx === i ? { ...s, [field]: v } : s));
+
+  const handleSave = () => {
+    if (form.mode === "RECURRING" && form.available_days.length === 0) {
+      toast.error("Select at least one available day."); return;
+    }
+    if (form.mode === "ONE_TIME" && !form.one_time_slots.some((s) => s.date)) {
+      toast.error("Add at least one date for the one-time schedule."); return;
+    }
+    onSave(form);
+  };
+
+  const ic = "w-full h-9 px-3 rounded-lg border border-neutral-200 text-[13px] focus:outline-none focus:ring-1 focus:ring-[#1a3d8f]/40 focus:border-[#2a52a8] bg-white";
+  const lc = "text-[12px] font-medium text-neutral-600 block mb-1";
+
+  return (
+    <div className="space-y-4">
+      {/* Mode */}
+      <div>
+        <label className={lc}>Schedule Mode</label>
+        <div className="flex gap-3">
+          {(["RECURRING", "ONE_TIME"] as const).map((m) => (
+            <label key={m} className={`flex-1 flex items-center gap-2 px-3 py-2.5 rounded-lg border cursor-pointer transition-colors ${form.mode === m ? "border-[#0E2C72] bg-[#0E2C72]/6" : "border-neutral-200 hover:border-[#0E2C72]/30"}`}>
+              <input type="radio" name="mode" value={m} checked={form.mode === m} onChange={() => set("mode", m)} className="sr-only" />
+              <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 ${form.mode === m ? "border-[#0E2C72]" : "border-neutral-300"}`}>
+                {form.mode === m && <div className="w-2 h-2 rounded-full bg-[#0E2C72]" />}
+              </div>
+              <span className="text-[13px] font-semibold text-neutral-700">{m === "RECURRING" ? "Recurring" : "One-Time"}</span>
+            </label>
+          ))}
+        </div>
+      </div>
+
+      {/* Meeting point + link */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div>
+          <label className={lc}>Physical Meeting Point</label>
+          <input className={ic} placeholder="e.g. Main gate, Km 15 Lekki-Epe" value={form.meeting_point} onChange={(e) => set("meeting_point", e.target.value)} />
+        </div>
+        <div>
+          <label className={lc}>Virtual Meeting Link</label>
+          <input className={ic} placeholder="https://meet.google.com/xyz" value={form.virtual_link} onChange={(e) => set("virtual_link", e.target.value)} />
+        </div>
+      </div>
+
+      {/* Tag */}
+      <div>
+        <label className={lc}>Tag <span className="text-neutral-400 font-normal">(optional)</span></label>
+        <input className={ic} placeholder="e.g. VIP, Group Tour, Standard" value={form.tag} onChange={(e) => set("tag", e.target.value)} />
+      </div>
+
+      {/* Notes */}
+      <div>
+        <label className={lc}>Additional Notes</label>
+        <textarea rows={2} className={`${ic} h-auto py-2 resize-none`} placeholder="Any special instructions…" value={form.notes} onChange={(e) => set("notes", e.target.value)} />
+      </div>
+
+      {/* RECURRING fields */}
+      {form.mode === "RECURRING" && (
+        <>
+          <div>
+            <label className={lc}>Available Days <span className="text-red-500">*</span></label>
+            <div className="flex flex-wrap gap-2">
+              {SCHED_DAYS.map(({ label: dl, value }) => (
+                <button key={value} type="button" onClick={() => toggleDay(value)}
+                  className={`px-3 py-1.5 rounded-lg text-[12px] font-semibold border transition-colors ${form.available_days.includes(value) ? "bg-[#0E2C72] text-white border-[#0E2C72]" : "bg-white border-neutral-200 text-neutral-600 hover:border-[#0E2C72]/40"}`}>
+                  {dl}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className={lc}>Time <span className="text-red-500">*</span></label>
+              <input type="time" className={ic} value={form.time} onChange={(e) => set("time", e.target.value)} />
+            </div>
+            <div>
+              <label className={lc}>End Date <span className="text-neutral-400 font-normal">(blank = indefinite)</span></label>
+              <input type="date" className={ic} value={form.end_date} min={new Date().toISOString().slice(0, 10)} onChange={(e) => set("end_date", e.target.value)} />
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* ONE_TIME fields */}
+      {form.mode === "ONE_TIME" && (
+        <div>
+          <div className="flex items-center justify-between mb-2">
+            <label className={lc}>Date & Time Slots <span className="text-red-500">*</span></label>
+            <button type="button" onClick={addSlot} className="text-[11.5px] font-semibold text-[#0E2C72] hover:text-[#0a2260] flex items-center gap-1">
+              <Plus className="w-3 h-3" /> Add Another Slot
+            </button>
+          </div>
+          <div className="space-y-2">
+            {form.one_time_slots.map((slot, i) => (
+              <div key={i} className="flex items-center gap-2">
+                <input type="date" className={`${ic} flex-1`} value={slot.date} min={new Date().toISOString().slice(0, 10)} onChange={(e) => updateSlot(i, "date", e.target.value)} />
+                <input type="time" className={`${ic} w-28`} value={slot.time} onChange={(e) => updateSlot(i, "time", e.target.value)} />
+                {form.one_time_slots.length > 1 && (
+                  <button type="button" onClick={() => removeSlot(i)} className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div className="flex gap-2 pt-1">
+        <button type="button" onClick={onCancel} className="flex-1 py-2 rounded-lg border border-neutral-200 text-[13px] font-medium text-neutral-600 hover:bg-neutral-50 transition-colors">
+          Cancel
+        </button>
+        <button type="button" onClick={handleSave} disabled={saving}
+          className="flex-1 py-2 rounded-lg bg-[#0E2C72] text-white text-[13px] font-semibold hover:bg-[#0a2260] disabled:opacity-60 transition-colors flex items-center justify-center gap-1.5">
+          {saving ? <><Loader2 className="size-3.5 animate-spin" />Saving…</> : "Save Schedule"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function InspectionSchedulesSection({ propertyId }: { propertyId: string }) {
+  const [configs, setConfigs]         = useState<InspectionConfig[]>([]);
+  const [loading, setLoading]         = useState(true);
+  const [showNew, setShowNew]         = useState(false);
+  const [editingId, setEditingId]     = useState<string | null>(null);
+  const [deletingId, setDeletingId]   = useState<string | null>(null);
+  const [saving, setSaving]           = useState(false);
+
+  const fetchConfigs = async () => {
+    setLoading(true);
+    try {
+      const data = await api.properties.inspectionConfigs(propertyId);
+      setConfigs(Array.isArray(data) ? data : []);
+    } catch { setConfigs([]); }
+    finally { setLoading(false); }
+  };
+
+  useEffect(() => { fetchConfigs(); }, [propertyId]);
+
+  const handleCreate = async (form: ScheduleFormState) => {
+    setSaving(true);
+    try {
+      await api.properties.createInspectionConfig(propertyId, buildPayload(form));
+      toast.success("Inspection schedule saved.");
+      setShowNew(false);
+      fetchConfigs();
+    } catch (err: any) { toast.error(err.message ?? "Failed to save."); }
+    finally { setSaving(false); }
+  };
+
+  const handleUpdate = async (configId: string, form: ScheduleFormState) => {
+    setSaving(true);
+    try {
+      await api.properties.updateInspectionConfig(propertyId, configId, buildPayload(form));
+      toast.success("Inspection schedule updated.");
+      setEditingId(null);
+      fetchConfigs();
+    } catch (err: any) { toast.error(err.message ?? "Failed to update."); }
+    finally { setSaving(false); }
+  };
+
+  const handleDelete = async (configId: string) => {
+    setSaving(true);
+    try {
+      await api.properties.deleteInspectionConfig(propertyId, configId);
+      toast.success("Schedule deleted.");
+      setDeletingId(null);
+      fetchConfigs();
+    } catch (err: any) { toast.error(err.message ?? "Failed to delete."); }
+    finally { setSaving(false); }
+  };
+
+  function buildPayload(form: ScheduleFormState): any {
+    return {
+      mode: form.mode,
+      tag: form.tag,
+      meeting_point: form.meeting_point,
+      virtual_link: form.virtual_link,
+      notes: form.notes,
+      available_days: form.mode === "RECURRING" ? form.available_days : [],
+      time: form.mode === "RECURRING" ? form.time : undefined,
+      end_date: form.mode === "RECURRING" && form.end_date ? form.end_date : null,
+      slots: form.mode === "ONE_TIME" ? form.one_time_slots.filter((s) => s.date) : undefined,
+    };
+  }
+
+  function configToForm(cfg: InspectionConfig): ScheduleFormState {
+    return {
+      mode: cfg.mode,
+      meeting_point: cfg.meeting_point ?? "",
+      virtual_link: cfg.virtual_link ?? "",
+      tag: cfg.tag ?? "",
+      notes: cfg.notes ?? "",
+      available_days: cfg.available_days ?? [],
+      time: cfg.time ?? "09:00",
+      end_date: cfg.end_date ?? "",
+      one_time_slots: cfg.slots?.length ? cfg.slots : [{ date: "", time: "09:00" }],
+    };
+  }
+
+  const dayAbbrevMap: Record<string, string> = { MON: "Mon", TUE: "Tue", WED: "Wed", THU: "Thu", FRI: "Fri", SAT: "Sat", SUN: "Sun" };
+
+  return (
+    <div className="bg-white rounded-xl border border-neutral-200 p-6 space-y-5">
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="text-[14px] font-semibold text-neutral-900">Inspection Schedules</h3>
+          <p className="text-[12px] text-neutral-400 mt-0.5">Configure when customers can book site inspections</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <button onClick={fetchConfigs} className="p-1.5 rounded-lg hover:bg-neutral-100 text-neutral-400 transition-colors" title="Refresh">
+            <RefreshCw className="w-3.5 h-3.5" />
+          </button>
+          {!showNew && (
+            <button onClick={() => { setShowNew(true); setEditingId(null); }}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#0E2C72] text-white text-[12px] font-semibold hover:bg-[#0a2260] transition-colors">
+              <Plus className="w-3 h-3" /> New Schedule
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Existing configs */}
+      {loading ? (
+        <div className="space-y-2">{[1, 2].map((i) => <Skeleton key={i} className="h-16 rounded-lg" />)}</div>
+      ) : configs.length === 0 && !showNew ? (
+        <div className="flex flex-col items-center justify-center py-10 gap-2 text-neutral-400 border border-dashed border-neutral-200 rounded-lg">
+          <Calendar className="size-8 opacity-40" />
+          <p className="text-[13px]">No inspection schedules yet.</p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {configs.map((cfg) => (
+            <div key={cfg.id} className="border border-neutral-200 rounded-lg overflow-hidden">
+              {editingId === cfg.id ? (
+                <div className="p-4">
+                  <p className="text-[11.5px] font-semibold text-neutral-400 uppercase tracking-wide mb-3">Edit Schedule</p>
+                  <ScheduleForm initial={configToForm(cfg)} onSave={(form) => handleUpdate(cfg.id, form)} onCancel={() => setEditingId(null)} saving={saving} />
+                </div>
+              ) : deletingId === cfg.id ? (
+                <div className="p-4 bg-red-50">
+                  <p className="text-[13px] font-semibold text-neutral-800 mb-1">Delete this schedule?</p>
+                  <p className="text-[12px] text-neutral-500 mb-3">This cannot be undone.</p>
+                  <div className="flex gap-2">
+                    <button onClick={() => setDeletingId(null)} className="flex-1 py-1.5 rounded-lg border border-neutral-200 text-[12px] font-medium text-neutral-600 hover:bg-white transition-colors">
+                      Cancel
+                    </button>
+                    <button onClick={() => handleDelete(cfg.id)} disabled={saving}
+                      className="flex-1 py-1.5 rounded-lg bg-red-500 text-white text-[12px] font-semibold hover:bg-red-600 disabled:opacity-60 transition-colors flex items-center justify-center gap-1">
+                      {saving ? <Loader2 className="size-3 animate-spin" /> : null} Delete
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="px-4 py-3 flex items-start justify-between gap-3">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2 flex-wrap mb-1">
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10.5px] font-bold ${cfg.mode === "RECURRING" ? "bg-blue-50 text-blue-700" : "bg-violet-50 text-violet-700"}`}>
+                        {cfg.mode === "RECURRING" ? "Recurring" : "One-Time"}
+                      </span>
+                      {cfg.tag && (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10.5px] font-semibold bg-neutral-100 text-neutral-600">
+                          {cfg.tag}
+                        </span>
+                      )}
+                    </div>
+                    {cfg.mode === "RECURRING" ? (
+                      <p className="text-[12.5px] text-neutral-700">
+                        {cfg.available_days?.map((d) => dayAbbrevMap[d] ?? d).join(", ") || "—"} at {cfg.time || "—"}
+                        {cfg.end_date && <span className="text-neutral-400"> · ends {cfg.end_date}</span>}
+                      </p>
+                    ) : (
+                      <p className="text-[12.5px] text-neutral-700">
+                        {cfg.slots?.length
+                          ? cfg.slots.map((s) => `${s.date} ${s.time}`).join(" · ")
+                          : "No slots configured"}
+                      </p>
+                    )}
+                    {cfg.meeting_point && (
+                      <p className="text-[11.5px] text-neutral-400 mt-0.5 flex items-center gap-1">
+                        <MapPin className="size-3 shrink-0" /> {cfg.meeting_point}
+                      </p>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <button onClick={() => { setEditingId(cfg.id); setShowNew(false); setDeletingId(null); }}
+                      className="p-1.5 rounded-lg hover:bg-neutral-100 text-neutral-400 hover:text-[#0E2C72] transition-colors">
+                      <Pencil className="w-3.5 h-3.5" />
+                    </button>
+                    <button onClick={() => { setDeletingId(cfg.id); setEditingId(null); }}
+                      className="p-1.5 rounded-lg hover:bg-red-50 text-neutral-400 hover:text-red-500 transition-colors">
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* New schedule form */}
+      {showNew && (
+        <div className="border border-[#0E2C72]/20 rounded-lg p-4 bg-[#0E2C72]/3">
+          <p className="text-[11.5px] font-semibold text-[#0E2C72] uppercase tracking-wide mb-3">New Schedule</p>
+          <ScheduleForm onSave={handleCreate} onCancel={() => setShowNew(false)} saving={saving} />
+        </div>
+      )}
+    </div>
+  );
+}
+
+function SettingsTab({ property }: { property: Property }) {
+  return (
+    <div className="space-y-6">
+      <InspectionSchedulesSection propertyId={property.id} />
+    </div>
+  );
+}
+
 const TABS = [
   { key: "overview",      label: "Overview",         icon: LayoutGrid },
   { key: "subscriptions", label: "Subscriptions",    icon: Users },
@@ -2040,6 +2668,7 @@ const TABS = [
   { key: "inspections",   label: "Site Inspections", icon: ClipboardList },
   { key: "allocation",    label: "Allocation",       icon: MapPin },
   { key: "pricehistory",  label: "Price History",    icon: History },
+  { key: "settings",      label: "Settings",         icon: Settings },
 ] as const;
 
 type TabKey = (typeof TABS)[number]["key"];
@@ -2060,6 +2689,7 @@ export function PropertyDetail() {
   const [loadingPay, setLoadingPay]       = useState(false);
   const [loadingIns, setLoadingIns]       = useState(false);
   const [tab, setTab]                     = useState<TabKey>("overview");
+  const [showAssignRep, setShowAssignRep] = useState(false);
 
   usePageTitle(property ? property.name : "Property");
 
@@ -2162,6 +2792,12 @@ export function PropertyDetail() {
               </Button>
             )}
             {isAdmin && (
+              <Button variant="outline" size="sm" className="text-[12px] h-8 gap-1.5"
+                onClick={() => setShowAssignRep(true)}>
+                <UserCheck className="w-3.5 h-3.5" /> Assign Customer Rep
+              </Button>
+            )}
+            {isAdmin && (
               <Button size="sm" className="bg-[#0E2C72] hover:bg-[#0a2260] text-white text-[12px] h-8 gap-1.5"
                 onClick={() => navigate(`/properties/${id}/edit`)}>
                 <Pencil className="w-3.5 h-3.5" /> Edit Property
@@ -2189,11 +2825,25 @@ export function PropertyDetail() {
             {tab === "inspections"   && <SiteInspectionsTab property={property} inspections={inspections} loading={loadingIns} onRefresh={loadIns} />}
             {tab === "allocation"    && <AllocationPropertyTab subscriptions={subscriptions} loading={loadingSubs} onRefresh={loadSubs} />}
             {tab === "pricehistory"  && <PriceHistoryTab property={property} />}
+            {tab === "settings"      && <SettingsTab property={property} />}
           </motion.div>
         </AnimatePresence>
 
         <div className="pb-8" />
       </div>
+
+      {/* Assign Customer Rep Modal */}
+      <AnimatePresence>
+        {showAssignRep && (
+          <AssignCustomerRepModal
+            property={property}
+            onClose={() => setShowAssignRep(false)}
+            onAssigned={(repId, repName) => {
+              setProperty((p) => p ? { ...p, assigned_customer_rep: repId, assigned_customer_rep_name: repName } : p);
+            }}
+          />
+        )}
+      </AnimatePresence>
     </PaymentTabCtx.Provider>
   );
 }

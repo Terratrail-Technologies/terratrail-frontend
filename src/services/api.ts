@@ -343,6 +343,8 @@ export const api = {
       ),
     bookInspection: (workspaceSlug: string, propertyId: string, data: Record<string, unknown>) =>
       publicPost<any>(`/public/${workspaceSlug}/properties/${propertyId}/book-inspection/`, data),
+    availableSlots: (workspaceSlug: string, propertyId: string, months = 3) =>
+      publicRequest<any[]>(`/public/${workspaceSlug}/properties/${propertyId}/available-slots/?months=${months}`),
     workspaceInfo: (workspaceSlug: string) =>
       publicRequest<any>(`/public/${workspaceSlug}/info/`),
   },
@@ -420,6 +422,18 @@ export const api = {
       request<void>(`/properties/gallery/${id}/`, { method: "DELETE" }),
     updateGalleryOrder: (id: string, order: number) =>
       request<any>(`/properties/gallery/${id}/`, { method: "PATCH", body: JSON.stringify({ order }) }),
+    availableSlots: (propertyId: string, months = 3) =>
+      request<any[]>(`/properties/${propertyId}/available-slots/?months=${months}`),
+    inspectionConfigs: (propertyId: string) =>
+      request<any[]>(`/properties/${propertyId}/inspection-configs/`),
+    createInspectionConfig: (propertyId: string, data: any) =>
+      request<any>(`/properties/${propertyId}/inspection-configs/`, { method: "POST", body: JSON.stringify(data) }),
+    updateInspectionConfig: (propertyId: string, configId: string, data: any) =>
+      request<any>(`/properties/${propertyId}/inspection-configs/${configId}/`, { method: "PATCH", body: JSON.stringify(data) }),
+    deleteInspectionConfig: (propertyId: string, configId: string) =>
+      request<void>(`/properties/${propertyId}/inspection-configs/${configId}/`, { method: "DELETE" }),
+    assignCustomerRep: (propertyId: string, userId: string | null) =>
+      request<any>(`/properties/${propertyId}/assign-customer-rep/`, { method: "PATCH", body: JSON.stringify({ user_id: userId }) }),
     publish: (id: string) =>
       request<any>(`/properties/${id}/publish/`, { method: "POST", body: JSON.stringify({}) }),
     unpublish: (id: string) =>
@@ -441,7 +455,11 @@ export const api = {
   subscriptions: {
     list: (params?: { property?: string; customer?: string; status?: string }) =>
       request<any>(`/customers/subscriptions/${buildParams(params ?? {})}`).then(unwrapList),
+    listAll: () =>
+      request<any>(`/customers/subscriptions/`).then(unwrapList),
     get: (id: string) => request<any>(`/customers/subscriptions/${id}/`),
+    assignRep: (id: string, userId: string) =>
+      request<any>(`/customers/subscriptions/${id}/`, { method: "PATCH", body: JSON.stringify({ assigned_rep: userId }) }),
     create: (data: any) =>
       request<any>("/customers/subscriptions/create/", { method: "POST", body: JSON.stringify(data) }),
     update: (id: string, data: any) =>
@@ -619,6 +637,7 @@ export const api = {
     updateSettings: (data: any) =>
       request<any>("/workspaces/settings/", { method: "PATCH", body: JSON.stringify(data) }),
     listMembers: () => request<any>("/workspaces/members/").then(unwrapList),
+    members: () => request<any>("/workspaces/members/").then(unwrapList),
     invite: (data: { email: string; role: string }) =>
       request<any>("/workspaces/invites/", { method: "POST", body: JSON.stringify(data) }),
     getInvite: (token: string) =>

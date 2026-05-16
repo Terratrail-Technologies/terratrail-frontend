@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from "react";
+﻿import React, { useState, useEffect } from "react";
 import { usePolling } from "../hooks/usePolling";
 import { usePageTitle } from "../hooks/usePageTitle";
 import { useWorkspaceRole } from "../hooks/useWorkspaceRole";
@@ -11,21 +11,15 @@ import {
   Loader2,
   MapPin,
   Calendar,
-  Users,
   CheckCircle2,
   Clock,
   XCircle,
   Eye,
   UserCheck,
+  Pencil,
+  Trash2,
 } from "lucide-react";
 
-interface Attendee {
-  name: string;
-  phone: string;
-  email: string;
-  id_type?: string;
-  id_number?: string;
-}
 import { Skeleton } from "../components/ui/skeleton";
 import { api } from "../services/api";
 import { EmptyState } from "../components/ui/empty-state";
@@ -38,14 +32,14 @@ interface SiteInspection {
   name: string;
   email: string;
   phone: string;
+  gender?: string;
   linked_property: string | null;
   property_name: string;
   inspection_date: string;
   inspection_time: string | null;
   inspection_type: "PHYSICAL" | "VIRTUAL";
-  category: "RESIDENTIAL" | "COMMERCIAL" | "FARM_LAND";
-  persons: number;
-  status: "PENDING" | "ATTENDED" | "CANCELLED";
+  slot_id?: string | null;
+  status: "PENDING" | "ATTENDED" | "CANCELLED" | "NO_SHOW";
   notes: string;
   is_converted: boolean;
   converted_customer: string | null;
@@ -76,15 +70,52 @@ const STATUS_CONFIG = {
     dot: "bg-red-500",
     icon: XCircle,
   },
+  NO_SHOW: {
+    label: "No Show",
+    bg: "bg-neutral-100",
+    text: "text-neutral-600",
+    dot: "bg-neutral-400",
+    icon: XCircle,
+  },
 } as const;
 
+function relativeTime(dateStr: string, timeStr?: string | null): string {
+  const dt = timeStr ? new Date(`${dateStr}T${timeStr}`) : new Date(`${dateStr}T00:00:00`);
+  const diffMs = dt.getTime() - Date.now();
+  const diffMins = Math.round(diffMs / 60000);
+  const diffHours = Math.round(diffMs / 3600000);
+  const diffDays = Math.ceil(diffMs / 86400000);
+
+  if (Math.abs(diffMins) < 60) {
+    if (diffMins > 0) return `In ${diffMins}m`;
+    if (diffMins === 0) return "Now";
+    return `${Math.abs(diffMins)}m ago`;
+  }
+  if (Math.abs(diffHours) < 24) {
+    if (diffHours > 0) return `In ${diffHours}h`;
+    return `${Math.abs(diffHours)}h ago`;
+  }
+  if (diffDays > 0) return `In ${diffDays}d`;
+  if (diffDays === 0) return "Today";
+  return `${Math.abs(diffDays)}d ago`;
+}
+
+function formatInspectionDateTime(dateStr: string, timeStr?: string | null): string {
+  if (!dateStr) return "—";
+  const dt = timeStr ? new Date(`${dateStr}T${timeStr}`) : new Date(`${dateStr}T12:00:00`);
+  const formatted = dt.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", year: "numeric" });
+  if (timeStr) {
+    const t = new Date(`2000-01-01T${timeStr}`);
+    const ampm = t.getHours() >= 12 ? "pm" : "am";
+    const h = t.getHours() % 12 || 12;
+    const m = String(t.getMinutes()).padStart(2, "0");
+    return `${formatted}, ${h}:${m}${ampm}`;
+  }
+  return formatted;
+}
+
 function countdown(dateStr: string): string {
-  const diff = Math.ceil(
-    (new Date(dateStr).getTime() - Date.now()) / 86400000
-  );
-  if (diff < 0) return `${Math.abs(diff)}d ago`;
-  if (diff === 0) return "Today";
-  return `In ${diff}d`;
+  return relativeTime(dateStr);
 }
 
 function StatusBadge({
@@ -108,6 +139,53 @@ function StatusBadge({
       <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot} shrink-0`} />
       {cfg.label}
     </button>
+  );
+}
+
+function AttendanceDropdown({
+  inspectionId,
+  status,
+  onUpdated,
+}: {
+  inspectionId: string;
+  status: SiteInspection["status"];
+  onUpdated: (updated: SiteInspection) => void;
+}) {
+  const [updating, setUpdating] = React.useState(false);
+  const cfg = STATUS_CONFIG[status] ?? STATUS_CONFIG.PENDING;
+
+  const handleChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const newStatus = e.target.value as SiteInspection["status"];
+    if (newStatus === status) return;
+    setUpdating(true);
+    try {
+      const updated = await api.siteInspections.update(inspectionId, { status: newStatus });
+      onUpdated(updated);
+      toast.success("Status updated.");
+    } catch (err: any) {
+      toast.error(err?.message ?? "Failed to update status.");
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  return (
+    <div className="relative inline-flex items-center">
+      {updating && <Loader2 className="absolute left-2 w-3 h-3 animate-spin text-neutral-400 z-10 pointer-events-none" />}
+      <select
+        value={status}
+        onChange={handleChange}
+        disabled={updating}
+        className={`pl-2.5 pr-6 py-1 rounded-full text-[11.5px] font-semibold border-0 outline-none cursor-pointer appearance-none ${cfg.bg} ${cfg.text} disabled:opacity-70`}
+        style={{ backgroundImage: "none" }}
+      >
+        <option value="PENDING">Pending</option>
+        <option value="ATTENDED">Attended</option>
+        <option value="NO_SHOW">No Show</option>
+        <option value="CANCELLED">Cancelled</option>
+      </select>
+      <span className={`absolute right-1.5 pointer-events-none ${cfg.text} opacity-60`} style={{ fontSize: "8px" }}>▼</span>
+    </div>
   );
 }
 
@@ -198,11 +276,13 @@ const BLANK_FORM = {
   name: "",
   phone: "",
   email: "",
+  gender: "",
+  linked_property: "",
   property_name: "",
+  slot_id: "",
   inspection_date: "",
   inspection_time: "",
   inspection_type: "PHYSICAL" as "PHYSICAL" | "VIRTUAL",
-  category: "RESIDENTIAL" as "RESIDENTIAL" | "COMMERCIAL" | "FARM_LAND",
   notes: "",
 };
 
@@ -213,12 +293,11 @@ function AddInspectionModal({
   onClose: () => void;
   onCreated: (item: SiteInspection) => void;
 }) {
-  const [form, setForm] = useState({ ...BLANK_FORM, linked_property: "" });
+  const [form, setForm] = useState({ ...BLANK_FORM });
   const [saving, setSaving] = useState(false);
   const [properties, setProperties] = useState<{ id: string; name: string }[]>([]);
-  const [availableSlots, setAvailableSlots] = useState<{ label: string; start_time: string }[]>([]);
-  const [attendees, setAttendees] = useState<Attendee[]>([{ name: "", phone: "", email: "", id_type: "", id_number: "" }]);
-
+  const [availableSlots, setAvailableSlots] = useState<any[]>([]);
+  const [slotsLoading, setSlotsLoading] = useState(false);
   useEffect(() => {
     api.properties.list().then((list: any[]) => {
       const published = list.filter(
@@ -230,21 +309,11 @@ function AddInspectionModal({
 
   useEffect(() => {
     if (!form.linked_property) { setAvailableSlots([]); return; }
-    api.properties.inspectionConfig.get(form.linked_property)
-      .then((cfg: any) => {
-        if (cfg && Array.isArray(cfg.time_slots) && cfg.time_slots.length > 0) {
-          const slots = cfg.time_slots
-            .filter((s: any) => s.is_active !== false)
-            .map((s: any) => typeof s === "string"
-              ? { label: s, start_time: s }
-              : { label: s.label || s.start_time, start_time: s.start_time }
-            );
-          setAvailableSlots(slots);
-        } else {
-          setAvailableSlots([]);
-        }
-      })
-      .catch(() => setAvailableSlots([]));
+    setSlotsLoading(true);
+    api.properties.availableSlots(form.linked_property)
+      .then((slots: any[]) => setAvailableSlots(Array.isArray(slots) ? slots : []))
+      .catch(() => setAvailableSlots([]))
+      .finally(() => setSlotsLoading(false));
   }, [form.linked_property]);
 
   const set =
@@ -256,22 +325,24 @@ function AddInspectionModal({
     ) =>
       setForm((prev) => ({ ...prev, [k]: e.target.value }));
 
+  const handleSlotChange = (slotId: string) => {
+    const slot = availableSlots.find((s) => s.slot_id === slotId || s.id === slotId);
+    setForm((prev) => ({
+      ...prev,
+      slot_id: slotId,
+      inspection_date: slot?.date ?? prev.inspection_date,
+      inspection_time: slot?.time ?? prev.inspection_time,
+    }));
+  };
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (
-      !form.name.trim() ||
-      !form.phone.trim() ||
-      !form.email.trim() ||
-      !form.property_name.trim() ||
-      !form.inspection_date
-    ) {
-      toast.error(
-        "Contact name, phone, email, property name and date are required."
-      );
+    if (!form.name.trim() || !form.phone.trim() || !form.email.trim()) {
+      toast.error("Name, phone and email are required.");
       return;
     }
-    if (!attendees.some(a => a.name.trim())) {
-      toast.error("Add at least one attendee.");
+    if (!form.linked_property) {
+      toast.error("Please select a property.");
       return;
     }
     setSaving(true);
@@ -280,17 +351,16 @@ function AddInspectionModal({
         name: form.name.trim(),
         phone: form.phone.trim(),
         email: form.email.trim(),
+        gender: form.gender || undefined,
+        linked_property: form.linked_property,
         property_name: form.property_name.trim(),
-        inspection_date: form.inspection_date,
+        slot_id: form.slot_id || undefined,
+        inspection_date: form.inspection_date || undefined,
         inspection_time: form.inspection_time || undefined,
         inspection_type: form.inspection_type,
-        category: form.category,
-        attendees: attendees.filter(a => a.name.trim()),
-        persons: Math.max(1, attendees.filter(a => a.name.trim()).length),
         notes: form.notes.trim(),
         status: "PENDING",
       };
-      if (form.linked_property) payload.linked_property = form.linked_property;
       const created = await api.siteInspections.create(payload);
       onCreated(created);
       toast.success("Inspection request created.");
@@ -326,33 +396,92 @@ function AddInspectionModal({
         </div>
 
         <form onSubmit={handleSubmit} className="p-5 space-y-4 overflow-y-auto max-h-[calc(90vh-56px)]">
-          {/* Contact row */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className="block text-[11.5px] font-semibold text-neutral-600 mb-1.5">
-                Contact Name <span className="text-red-500">*</span>
-              </label>
-              <input
-                className={inputCls}
-                placeholder="John Doe"
-                value={form.name}
-                onChange={set("name")}
-              />
-            </div>
-            <div>
-              <label className="block text-[11.5px] font-semibold text-neutral-600 mb-1.5">
-                Phone <span className="text-red-500">*</span>
-              </label>
-              <input
-                className={inputCls}
-                placeholder="+234 800 000 0000"
-                value={form.phone}
-                onChange={set("phone")}
-              />
-            </div>
+          {/* 1. Property */}
+          <div>
+            <label className="block text-[11.5px] font-semibold text-neutral-600 mb-1.5">
+              Property <span className="text-red-500">*</span>
+            </label>
+            <select
+              className={inputCls}
+              value={form.linked_property}
+              onChange={(e) => {
+                const selected = properties.find((p) => p.id === e.target.value);
+                setForm((f) => ({
+                  ...f,
+                  linked_property: e.target.value,
+                  property_name: selected?.name ?? "",
+                  slot_id: "",
+                  inspection_date: "",
+                  inspection_time: "",
+                }));
+              }}
+            >
+              <option value="">— Select a property —</option>
+              {properties.map((p) => (
+                <option key={p.id} value={p.id}>{p.name}</option>
+              ))}
+            </select>
           </div>
 
-          {/* Email */}
+          {/* 2. Available Slot */}
+          <div>
+            <label className="block text-[11.5px] font-semibold text-neutral-600 mb-1.5">
+              Available Slot
+            </label>
+            {slotsLoading ? (
+              <div className="flex items-center gap-2 py-2 text-[12px] text-neutral-400">
+                <Loader2 className="w-3.5 h-3.5 animate-spin" /> Loading slots…
+              </div>
+            ) : !form.linked_property ? (
+              <p className="text-[12px] text-neutral-400 py-1.5">Select a property first to see available slots.</p>
+            ) : availableSlots.length === 0 ? (
+              <p className="text-[12px] text-amber-600 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2">
+                No inspection slots available for this property.
+              </p>
+            ) : (
+              <select
+                className={inputCls}
+                value={form.slot_id}
+                onChange={(e) => handleSlotChange(e.target.value)}
+              >
+                <option value="">— Select a slot —</option>
+                {availableSlots.map((s: any) => (
+                  <option key={s.slot_id ?? s.id} value={s.slot_id ?? s.id}>
+                    {s.label ?? `${s.date} ${s.time}`}
+                  </option>
+                ))}
+              </select>
+            )}
+          </div>
+
+          {/* 3. Name */}
+          <div>
+            <label className="block text-[11.5px] font-semibold text-neutral-600 mb-1.5">
+              Name <span className="text-red-500">*</span>
+            </label>
+            <input
+              className={inputCls}
+              placeholder="Full name"
+              value={form.name}
+              onChange={set("name")}
+            />
+          </div>
+
+          {/* 4. Phone */}
+          <div>
+            <label className="block text-[11.5px] font-semibold text-neutral-600 mb-1.5">
+              Phone Number <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="tel"
+              className={inputCls}
+              placeholder="+234 800 000 0000"
+              value={form.phone}
+              onChange={set("phone")}
+            />
+          </div>
+
+          {/* 5. Email */}
           <div>
             <label className="block text-[11.5px] font-semibold text-neutral-600 mb-1.5">
               Email <span className="text-red-500">*</span>
@@ -366,179 +495,39 @@ function AddInspectionModal({
             />
           </div>
 
-          {/* Property — dropdown of published properties */}
+          {/* 6. Gender */}
           <div>
             <label className="block text-[11.5px] font-semibold text-neutral-600 mb-1.5">
-              Property <span className="text-red-500">*</span>
+              Gender
             </label>
-            {properties.length > 0 ? (
-              <select
-                className={inputCls}
-                value={form.linked_property}
-                onChange={(e) => {
-                  const selected = properties.find((p) => p.id === e.target.value);
-                  setForm((f) => ({
-                    ...f,
-                    linked_property: e.target.value,
-                    property_name: selected?.name ?? "",
-                  }));
-                }}
-              >
-                <option value="">— Select a property —</option>
-                {properties.map((p) => (
-                  <option key={p.id} value={p.id}>{p.name}</option>
-                ))}
-              </select>
-            ) : (
-              <input
-                className={inputCls}
-                placeholder="e.g. Tehillah Estate Phase 1"
-                value={form.property_name}
-                onChange={set("property_name")}
-              />
-            )}
+            <select className={inputCls} value={form.gender} onChange={set("gender")}>
+              <option value="">— Select —</option>
+              <option value="MALE">Male</option>
+              <option value="FEMALE">Female</option>
+              <option value="PREFER_NOT_TO_SAY">Prefer not to say</option>
+            </select>
           </div>
 
-          {/* Date + Time */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className="block text-[11.5px] font-semibold text-neutral-600 mb-1.5">
-                Preferred Date <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="date"
-                className={inputCls}
-                value={form.inspection_date}
-                onChange={set("inspection_date")}
-              />
-            </div>
-            <div>
-              <label className="block text-[11.5px] font-semibold text-neutral-600 mb-1.5">
-                Preferred Time {availableSlots.length > 0 && <span className="text-neutral-400 font-normal">(from schedule)</span>}
-              </label>
-              {availableSlots.length > 0 ? (
-                <select
-                  className={inputCls}
-                  value={form.inspection_time}
-                  onChange={set("inspection_time")}
-                >
-                  <option value="">— Select a slot —</option>
-                  {availableSlots.map((s) => (
-                    <option key={s.start_time} value={s.start_time}>{s.label} ({s.start_time})</option>
-                  ))}
-                </select>
-              ) : (
-                <input
-                  type="time"
-                  className={inputCls}
-                  value={form.inspection_time}
-                  onChange={set("inspection_time")}
-                />
-              )}
-              {form.linked_property && availableSlots.length === 0 && (
-                <p className="text-[11px] text-neutral-400 mt-1.5">No inspection time slots configured for this property.</p>
-              )}
-            </div>
-          </div>
-
-          {/* Type + Category */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className="block text-[11.5px] font-semibold text-neutral-600 mb-1.5">
-                Inspection Type <span className="text-red-500">*</span>
-              </label>
-              <select
-                className={inputCls}
-                value={form.inspection_type}
-                onChange={set("inspection_type")}
-              >
-                <option value="PHYSICAL">Physical</option>
-                <option value="VIRTUAL">Virtual</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-[11.5px] font-semibold text-neutral-600 mb-1.5">
-                Category <span className="text-red-500">*</span>
-              </label>
-              <select
-                className={inputCls}
-                value={form.category}
-                onChange={set("category")}
-              >
-                <option value="RESIDENTIAL">Residential</option>
-                <option value="COMMERCIAL">Commercial</option>
-                <option value="FARM_LAND">Farm Land</option>
-              </select>
-            </div>
-          </div>
-
-          {/* Attendees */}
+          {/* 7. Inspection Type */}
           <div>
-            <div className="flex items-center justify-between mb-1.5">
-              <label className="block text-[11.5px] font-semibold text-neutral-600">
-                Attendees <span className="text-red-500">*</span>
-              </label>
-              <button type="button"
-                onClick={() => setAttendees(prev => [...prev, { name: "", phone: "", email: "", id_type: "", id_number: "" }])}
-                className="text-[11px] font-semibold text-[#0E2C72] hover:text-[#0a2260] flex items-center gap-1"
-              >
-                <Plus className="w-3 h-3" /> Add Attendee
-              </button>
-            </div>
-            <div className="space-y-2">
-              {attendees.map((att, i) => (
-                <div key={i} className="border border-neutral-200 rounded-lg p-3 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10.5px] font-semibold text-neutral-400 uppercase tracking-wide">Attendee {i + 1}</span>
-                    {attendees.length > 1 && (
-                      <button type="button"
-                        onClick={() => setAttendees(prev => prev.filter((_, idx) => idx !== i))}
-                        className="p-1 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"
-                      >
-                        <X className="w-3.5 h-3.5" />
-                      </button>
-                    )}
+            <label className="block text-[11.5px] font-semibold text-neutral-600 mb-1.5">
+              Inspection Type <span className="text-red-500">*</span>
+            </label>
+            <div className="flex gap-3">
+              {(["PHYSICAL", "VIRTUAL"] as const).map((t) => (
+                <label key={t} className={`flex-1 flex items-center gap-2 px-3 py-2.5 rounded-lg border cursor-pointer transition-colors ${form.inspection_type === t ? "border-[#0E2C72] bg-[#0E2C72]/6" : "border-neutral-200 hover:border-[#0E2C72]/30"}`}>
+                  <input type="radio" name="inspection_type" value={t} checked={form.inspection_type === t}
+                    onChange={() => setForm((f) => ({ ...f, inspection_type: t }))} className="sr-only" />
+                  <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 ${form.inspection_type === t ? "border-[#0E2C72]" : "border-neutral-300"}`}>
+                    {form.inspection_type === t && <div className="w-2 h-2 rounded-full bg-[#0E2C72]" />}
                   </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <input
-                      className={inputCls}
-                      placeholder="Name *"
-                      value={att.name}
-                      onChange={e => setAttendees(prev => prev.map((a, idx) => idx === i ? { ...a, name: e.target.value } : a))}
-                    />
-                    <input
-                      className={inputCls}
-                      placeholder="Phone"
-                      value={att.phone}
-                      onChange={e => setAttendees(prev => prev.map((a, idx) => idx === i ? { ...a, phone: e.target.value } : a))}
-                    />
-                  </div>
-                  <div className="grid grid-cols-[1fr_1.5fr] gap-2">
-                    <select
-                      className={inputCls}
-                      value={att.id_type ?? ""}
-                      onChange={e => setAttendees(prev => prev.map((a, idx) => idx === i ? { ...a, id_type: e.target.value } : a))}
-                    >
-                      <option value="">ID Type</option>
-                      <option value="NIN">NIN</option>
-                      <option value="BVN">BVN</option>
-                      <option value="PASSPORT">Passport</option>
-                      <option value="DRIVERS_LICENSE">Driver's License</option>
-                      <option value="VOTERS_CARD">Voter's Card</option>
-                    </select>
-                    <input
-                      className={inputCls}
-                      placeholder="ID Number"
-                      value={att.id_number ?? ""}
-                      onChange={e => setAttendees(prev => prev.map((a, idx) => idx === i ? { ...a, id_number: e.target.value } : a))}
-                    />
-                  </div>
-                </div>
+                  <span className="text-[13px] font-semibold text-neutral-700">{t === "PHYSICAL" ? "Physical" : "Virtual"}</span>
+                </label>
               ))}
             </div>
           </div>
 
-          {/* Notes */}
+          {/* 8. Notes */}
           <div>
             <label className="block text-[11.5px] font-semibold text-neutral-600 mb-1.5">
               Notes
@@ -563,9 +552,9 @@ function AddInspectionModal({
             <button
               type="submit"
               disabled={saving}
-              className="flex-1 py-2.5 rounded-xl bg-[#0E2C72] text-white text-[13px] font-semibold hover:bg-[#0a2260] disabled:opacity-60 transition-colors shadow-sm"
+              className="flex-1 py-2.5 rounded-xl bg-[#0E2C72] text-white text-[13px] font-semibold hover:bg-[#0a2260] disabled:opacity-60 transition-colors shadow-sm flex items-center justify-center gap-1.5"
             >
-              {saving ? "Creating…" : "Create Request"}
+              {saving ? <><Loader2 className="w-3.5 h-3.5 animate-spin" />Creating…</> : "Create Request"}
             </button>
           </div>
         </form>
@@ -1066,7 +1055,7 @@ function InspectionConfigModal({ onClose }: { onClose: () => void }) {
 }
 
 // ── Main Page ─────────────────────────────────────────────────────────────────
-type StatusFilter = "ALL" | "PENDING" | "ATTENDED" | "CANCELLED";
+type StatusFilter = "ALL" | "PENDING" | "ATTENDED" | "CANCELLED" | "NO_SHOW";
 type TypeFilter = "ALL" | "PHYSICAL" | "VIRTUAL";
 
 export function SiteInspection() {
@@ -1089,6 +1078,8 @@ export function SiteInspection() {
     action: "ATTENDED" | "CANCELLED";
   } | null>(null);
   const [convertTarget, setConvertTarget] = useState<SiteInspection | null>(null);
+  const [deleteTarget, setDeleteTarget]   = useState<SiteInspection | null>(null);
+  const [deleting, setDeleting]           = useState(false);
 
   const fetchInspections = async () => {
     try {
@@ -1141,6 +1132,20 @@ export function SiteInspection() {
     setInspections((prev) =>
       prev.map((i) => (i.id === updated.id ? { ...i, ...updated } : i))
     );
+  }
+
+  async function handleDelete(id: string) {
+    setDeleting(true);
+    try {
+      await api.siteInspections.delete(id);
+      setInspections((prev) => prev.filter((i) => i.id !== id));
+      toast.success("Inspection deleted.");
+      setDeleteTarget(null);
+    } catch (err: any) {
+      toast.error(err?.message ?? "Failed to delete.");
+    } finally {
+      setDeleting(false);
+    }
   }
 
   // ── Summary cards ─────────────────────────────────────────────────────────
@@ -1265,7 +1270,7 @@ export function SiteInspection() {
           <div className="flex items-center gap-1.5 flex-wrap">
             <Filter className="w-3.5 h-3.5 text-neutral-400 shrink-0" />
             {(
-              ["ALL", "PENDING", "ATTENDED", "CANCELLED"] as StatusFilter[]
+              ["ALL", "PENDING", "ATTENDED", "NO_SHOW", "CANCELLED"] as StatusFilter[]
             ).map((f) => (
               <button
                 key={f}
@@ -1331,13 +1336,12 @@ export function SiteInspection() {
                   <thead className="bg-neutral-50 border-b border-neutral-100">
                     <tr>
                       {[
-                        "Contact",
+                        "Contact Details",
                         "Property",
-                        "Date & Countdown",
+                        "Date & Time",
                         "Type",
-                        "Persons",
+                        "Attendance Status",
                         "Converted",
-                        "Status",
                         "Actions",
                       ].map((h) => (
                         <th
@@ -1382,18 +1386,19 @@ export function SiteInspection() {
                             </div>
                           </td>
 
-                          {/* Date & Countdown */}
+                          {/* Date & Time */}
                           <td className="px-5 py-3.5">
-                            <div className="flex items-center gap-1.5">
-                              <Calendar className="w-3.5 h-3.5 text-neutral-300 shrink-0" />
-                              <div>
-                                <div className="text-[13px] font-medium text-neutral-800">
-                                  {inspection.inspection_date}
-                                </div>
-                                <div className="text-[11px] font-semibold text-neutral-400">
-                                  {countdown(inspection.inspection_date)}
-                                </div>
+                            <div>
+                              <div className="text-[13px] font-medium text-neutral-800 whitespace-nowrap">
+                                {formatInspectionDateTime(inspection.inspection_date, inspection.inspection_time)}
                               </div>
+                              <span className={`inline-block mt-0.5 text-[10.5px] font-semibold px-1.5 py-0.5 rounded-full ${
+                                inspection.inspection_date >= new Date().toISOString().slice(0,10)
+                                  ? "bg-[#0E2C72]/6 text-[#0E2C72]"
+                                  : "bg-neutral-100 text-neutral-500"
+                              }`}>
+                                {relativeTime(inspection.inspection_date, inspection.inspection_time)}
+                              </span>
                             </div>
                           </td>
 
@@ -1406,20 +1411,17 @@ export function SiteInspection() {
                                   : "bg-purple-50 text-purple-700"
                               }`}
                             >
-                              {inspection.inspection_type === "PHYSICAL"
-                                ? "Physical"
-                                : "Virtual"}
+                              {inspection.inspection_type === "PHYSICAL" ? "Physical" : "Virtual"}
                             </span>
                           </td>
 
-                          {/* Persons */}
+                          {/* Attendance Status — inline dropdown */}
                           <td className="px-5 py-3.5">
-                            <div className="flex items-center gap-1.5">
-                              <Users className="w-3.5 h-3.5 text-neutral-300" />
-                              <span className="text-[13px] font-semibold text-neutral-800">
-                                {inspection.persons}
-                              </span>
-                            </div>
+                            <AttendanceDropdown
+                              inspectionId={inspection.id}
+                              status={inspection.status}
+                              onUpdated={handleUpdated}
+                            />
                           </td>
 
                           {/* Converted */}
@@ -1429,15 +1431,10 @@ export function SiteInspection() {
                                 <CheckCircle2 className="w-3 h-3" /> Yes
                               </span>
                             ) : (
-                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-neutral-100 text-neutral-500 text-[11px] font-semibold">
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-50 text-red-600 text-[11px] font-semibold">
                                 No
                               </span>
                             )}
-                          </td>
-
-                          {/* Status */}
-                          <td className="px-5 py-3.5">
-                            <StatusBadge status={inspection.status} />
                           </td>
 
                           {/* Actions */}
@@ -1450,24 +1447,6 @@ export function SiteInspection() {
                               >
                                 <Eye className="w-3.5 h-3.5" />
                               </button>
-                              {isAdmin && inspection.status === "PENDING" && (
-                                <>
-                                  <button
-                                    onClick={() => setActionTarget({ inspection, action: "ATTENDED" })}
-                                    title="Mark Attended"
-                                    className="p-1.5 rounded-lg hover:bg-[#0E2C72]/6 text-neutral-400 hover:text-[#0E2C72] transition-colors"
-                                  >
-                                    <CheckCircle2 className="w-3.5 h-3.5" />
-                                  </button>
-                                  <button
-                                    onClick={() => setActionTarget({ inspection, action: "CANCELLED" })}
-                                    title="Cancel"
-                                    className="p-1.5 rounded-lg hover:bg-red-50 text-neutral-400 hover:text-red-500 transition-colors"
-                                  >
-                                    <XCircle className="w-3.5 h-3.5" />
-                                  </button>
-                                </>
-                              )}
                               {isAdmin && inspection.status === "ATTENDED" && !inspection.is_converted && (
                                 <button
                                   onClick={() => setConvertTarget(inspection)}
@@ -1475,6 +1454,15 @@ export function SiteInspection() {
                                   className="p-1.5 rounded-lg hover:bg-violet-50 text-neutral-400 hover:text-violet-600 transition-colors"
                                 >
                                   <UserCheck className="w-3.5 h-3.5" />
+                                </button>
+                              )}
+                              {isAdmin && (
+                                <button
+                                  onClick={() => setDeleteTarget(inspection)}
+                                  title="Delete"
+                                  className="p-1.5 rounded-lg hover:bg-red-50 text-neutral-400 hover:text-red-500 transition-colors"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
                                 </button>
                               )}
                             </div>
@@ -1529,32 +1517,17 @@ export function SiteInspection() {
                       </div>
                       <div className="flex items-center gap-1.5 text-neutral-600">
                         <Calendar className="w-3.5 h-3.5 text-neutral-300 shrink-0" />
-                        <span>
-                          {inspection.inspection_date}{" "}
-                          <span className="text-neutral-400 text-[11px]">
-                            ({countdown(inspection.inspection_date)})
-                          </span>
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-1.5 text-neutral-600">
-                        <Users className="w-3.5 h-3.5 text-neutral-300 shrink-0" />
-                        <span>
-                          {inspection.persons} person
-                          {inspection.persons !== 1 ? "s" : ""}
+                        <span className="text-[11.5px]">
+                          {formatInspectionDateTime(inspection.inspection_date, inspection.inspection_time)}
                         </span>
                       </div>
                       <div>
-                        <span
-                          className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold ${
-                            inspection.inspection_type === "PHYSICAL"
-                              ? "bg-blue-50 text-blue-700"
-                              : "bg-purple-50 text-purple-700"
-                          }`}
-                        >
-                          {inspection.inspection_type === "PHYSICAL"
-                            ? "Physical"
-                            : "Virtual"}
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold ${inspection.inspection_type === "PHYSICAL" ? "bg-blue-50 text-blue-700" : "bg-purple-50 text-purple-700"}`}>
+                          {inspection.inspection_type === "PHYSICAL" ? "Physical" : "Virtual"}
                         </span>
+                      </div>
+                      <div>
+                        <AttendanceDropdown inspectionId={inspection.id} status={inspection.status} onUpdated={handleUpdated} />
                       </div>
                     </div>
 
@@ -1565,28 +1538,18 @@ export function SiteInspection() {
                       >
                         <Eye className="w-3.5 h-3.5" /> View Details
                       </button>
-                      {isAdmin && inspection.status === "PENDING" && (
-                        <>
-                          <button
-                            onClick={() => setActionTarget({ inspection, action: "ATTENDED" })}
-                            className="flex-1 py-1.5 rounded-lg text-[12px] font-medium text-[#0E2C72] bg-[#0E2C72]/6 hover:bg-[#d6e0f5] transition-colors flex items-center justify-center gap-1.5"
-                          >
-                            <CheckCircle2 className="w-3.5 h-3.5" /> Attended
-                          </button>
-                          <button
-                            onClick={() => setActionTarget({ inspection, action: "CANCELLED" })}
-                            className="flex-1 py-1.5 rounded-lg text-[12px] font-medium text-red-600 bg-red-50 hover:bg-red-100 transition-colors flex items-center justify-center gap-1.5"
-                          >
-                            <XCircle className="w-3.5 h-3.5" /> Cancel
-                          </button>
-                        </>
-                      )}
                       {isAdmin && inspection.status === "ATTENDED" && !inspection.is_converted && (
                         <button
                           onClick={() => setConvertTarget(inspection)}
                           className="flex-1 py-1.5 rounded-lg text-[12px] font-medium text-violet-700 bg-violet-50 hover:bg-violet-100 transition-colors flex items-center justify-center gap-1.5"
                         >
                           <UserCheck className="w-3.5 h-3.5" /> Convert
+                        </button>
+                      )}
+                      {isAdmin && (
+                        <button onClick={() => setDeleteTarget(inspection)}
+                          className="py-1.5 px-2.5 rounded-lg text-[12px] font-medium text-red-600 bg-red-50 hover:bg-red-100 transition-colors flex items-center gap-1">
+                          <Trash2 className="w-3.5 h-3.5" />
                         </button>
                       )}
                     </div>
@@ -1632,6 +1595,33 @@ export function SiteInspection() {
             onClose={() => setConvertTarget(null)}
             onConverted={(updated) => { handleUpdated(updated); setConvertTarget(null); }}
           />
+        )}
+        {deleteTarget && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+            <motion.div initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.96 }}
+              className="w-full max-w-sm bg-white rounded-2xl shadow-xl overflow-hidden">
+              <div className="p-5">
+                <div className="w-10 h-10 rounded-full bg-red-50 flex items-center justify-center mb-4">
+                  <Trash2 className="w-5 h-5 text-red-500" />
+                </div>
+                <h3 className="text-[14px] font-semibold text-neutral-900 mb-1">Delete Inspection?</h3>
+                <p className="text-[12.5px] text-neutral-500">
+                  Delete the inspection for <strong>{deleteTarget.name}</strong>? This cannot be undone.
+                </p>
+              </div>
+              <div className="flex gap-2 px-5 pb-5">
+                <button onClick={() => setDeleteTarget(null)} disabled={deleting}
+                  className="flex-1 py-2.5 rounded-xl border border-neutral-200 text-[13px] font-medium text-neutral-600 hover:bg-neutral-50 transition-colors">
+                  Cancel
+                </button>
+                <button onClick={() => handleDelete(deleteTarget.id)} disabled={deleting}
+                  className="flex-1 py-2.5 rounded-xl bg-red-500 text-white text-[13px] font-semibold hover:bg-red-600 disabled:opacity-60 transition-colors flex items-center justify-center gap-1.5">
+                  {deleting ? <><Loader2 className="w-3.5 h-3.5 animate-spin" />Deleting…</> : "Delete"}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
         )}
       </AnimatePresence>
     </div>

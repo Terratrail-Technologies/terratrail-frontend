@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { api, type User } from "../../services/api";
 import { useCurrentUser } from "../../hooks/useCurrentUser";
 import { usePageTitle } from "../../hooks/usePageTitle";
+import { useWorkspaceRole } from "../../hooks/useWorkspaceRole";
 
 const inputCls =
   "w-full px-4 py-2 border border-neutral-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-[#1a3d8f] focus:border-transparent disabled:bg-neutral-50 disabled:text-neutral-400 disabled:cursor-not-allowed";
@@ -14,6 +15,8 @@ const selectCls =
 export function AccountSettings() {
   usePageTitle("Account Settings");
   const { user: cachedUser, initials, refresh } = useCurrentUser();
+  const { role } = useWorkspaceRole();
+  const showBankAccount = role === "SALES_REP" || role === "CUSTOMER_REP";
 
   const [form, setForm] = useState<Partial<User & { password?: string }>>({});
   const [loading, setLoading]   = useState(true);
@@ -193,8 +196,8 @@ export function AccountSettings() {
             </div>
           </div>
 
-          {/* Bank Account Details */}
-          <div className="bg-white rounded-lg border border-neutral-200 p-6">
+          {/* Bank Account Details — only for Sales Reps and Customer Reps */}
+          {showBankAccount && <div className="bg-white rounded-lg border border-neutral-200 p-6">
             <div className="flex items-center gap-2.5 mb-5">
               <Building2 className="size-4 text-neutral-400" />
               <h3 className="font-medium text-neutral-900">Bank Account Details</h3>
@@ -224,7 +227,7 @@ export function AccountSettings() {
                 {saving ? "Saving…" : "Save Bank Details"}
               </button>
             </div>
-          </div>
+          </div>}
 
           {/* Change Password */}
           <div className="bg-white rounded-lg border border-neutral-200 p-6">

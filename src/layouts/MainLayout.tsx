@@ -23,6 +23,7 @@ import {
   Loader2,
   UsersRound,
   ClipboardList,
+  ClipboardCheck,
   Globe,
   CreditCard,
   MapPin,
@@ -58,6 +59,7 @@ interface NotificationItem {
 }
 
 const SEEN_KEY = "tt_seen_events";
+const LAST_TOAST_KEY = "tt_last_toast_at";
 
 function getSeenIds(): Set<string> {
   try {
@@ -76,6 +78,17 @@ function markSeen(ids: string[]) {
     const arr = Array.from(seen).slice(-500);
     localStorage.setItem(SEEN_KEY, JSON.stringify(arr));
   } catch {}
+}
+
+function recordToastDismissal() {
+  try { localStorage.setItem(LAST_TOAST_KEY, String(Date.now())); } catch {}
+}
+
+function isToastSuppressed(): boolean {
+  try {
+    const last = parseInt(localStorage.getItem(LAST_TOAST_KEY) ?? "0");
+    return Date.now() - last < 24 * 60 * 60 * 1000;
+  } catch { return false; }
 }
 
 const TOAST_CONFIG: Record<string, { icon: string; label: string; toastFn: (title: string, desc: string, action: () => void) => void }> = {
@@ -140,12 +153,14 @@ const TOAST_CONFIG: Record<string, { icon: string; label: string; toastFn: (titl
 };
 
 function fireToastsForNew(newItems: NotificationItem[], navigate: ReturnType<typeof useNavigate>) {
+  // Suppress if user dismissed within the last 24 hours
+  if (isToastSuppressed()) return;
+
   const seen = getSeenIds();
   const fresh = newItems.filter((n) => !seen.has(n.id));
   if (fresh.length === 0) return;
 
   if (fresh.length > 3) {
-    // Batch toast when there are many new items
     toast(`${fresh.length} new notifications`, {
       description: "Open the notification bell to review them.",
       icon: "🔔",
@@ -161,6 +176,9 @@ function fireToastsForNew(newItems: NotificationItem[], navigate: ReturnType<typ
       }
     });
   }
+
+  // Record that toasts fired — suppresses re-firing until dismissed
+  recordToastDismissal();
 }
 
 function NotificationBell() {
@@ -201,11 +219,12 @@ function NotificationBell() {
       setUnread(freshCount);
       setFetched(true);
 
-      // Fire toasts only on subsequent polls (not the initial load)
-      if (!isFirstPoll.current) {
+      // On first poll (login): fire toast once if not suppressed by 24h cooldown.
+      // On subsequent polls: only update the badge — never re-fire toasts.
+      if (isFirstPoll.current) {
         fireToastsForNew(events, navigate);
+        isFirstPoll.current = false;
       }
-      isFirstPoll.current = false;
     } catch {
       setItems([]);
       setFetched(true);
@@ -220,8 +239,9 @@ function NotificationBell() {
     const wasOpen = open;
     setOpen((o) => !o);
     if (!wasOpen) {
-      // Mark all currently loaded events as seen when the dropdown opens
+      // Mark all currently loaded events as seen and record dismissal for 24h toast suppression
       markSeen(items.map((n) => n.id));
+      recordToastDismissal();
       setUnread(0);
     }
   };
@@ -349,8 +369,10 @@ function NotificationBell() {
 function NavbarUserMenu() {
   const navigate = useNavigate();
   const { displayName, initials, user } = useCurrentUser();
+  const { role } = useWorkspaceRole();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const isAdmin = role === "OWNER" || role === "ADMIN";
 
   // Close on outside click
   useEffect(() => {
@@ -400,13 +422,15 @@ function NavbarUserMenu() {
               <User className="size-3.5 text-neutral-400" />
               My Profile
             </button>
-            <button
-              onClick={() => { setOpen(false); navigate("/settings"); }}
-              className="w-full flex items-center gap-2.5 px-3 py-2 text-[12px] font-medium text-neutral-700 hover:bg-neutral-50 transition-colors"
-            >
-              <Settings className="size-3.5 text-neutral-400" />
-              Workspace Settings
-            </button>
+            {isAdmin && (
+              <button
+                onClick={() => { setOpen(false); navigate("/settings"); }}
+                className="w-full flex items-center gap-2.5 px-3 py-2 text-[12px] font-medium text-neutral-700 hover:bg-neutral-50 transition-colors"
+              >
+                <Settings className="size-3.5 text-neutral-400" />
+                Workspace Settings
+              </button>
+            )}
             <button
               onClick={() => { setOpen(false); navigate("/auth/select-workspace"); }}
               className="w-full flex items-center gap-2.5 px-3 py-2 text-[12px] font-medium text-neutral-700 hover:bg-neutral-50 transition-colors"
@@ -433,6 +457,7 @@ const ALL_NAV_ITEMS = [
   { icon: LayoutDashboard, label: "Overview",        href: "/",               roles: ["OWNER","ADMIN","SALES_REP","CUSTOMER","CUSTOMER_REP"] },
   { icon: Building2,       label: "Properties",      href: "/properties",     roles: ["OWNER","ADMIN","SALES_REP","CUSTOMER_REP"] },
   { icon: Users,           label: "Customers",       href: "/customers",      roles: ["OWNER","ADMIN","CUSTOMER_REP"] },
+  { icon: ClipboardCheck,  label: "Subscriptions",   href: "/subscriptions",  roles: ["OWNER","ADMIN","CUSTOMER_REP"] },
   { icon: UsersRound,      label: "Customer Reps",   href: "/customer-reps",  roles: ["OWNER","ADMIN"] },
   { icon: UserCheck,       label: "Sales Reps",      href: "/sales-reps",     roles: ["OWNER","ADMIN"] },
   { icon: ClipboardList,   label: "Site Inspection", href: "/site-inspection",roles: ["OWNER","ADMIN","SALES_REP","CUSTOMER_REP"] },

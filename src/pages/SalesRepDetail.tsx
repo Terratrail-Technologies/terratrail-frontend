@@ -498,7 +498,17 @@ export function SalesRepDetail() {
                   {rep.is_active ? "Active" : "Inactive"}
                 </Badge>
               </div>
-              <p className="text-[12px] text-neutral-500 mt-0.5">Ref: {rep.referral_code}</p>
+              <div className="flex items-center gap-1.5 mt-0.5">
+                <button
+                  onClick={copyCode}
+                  className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded font-mono text-[12px] font-semibold bg-[#0E2C72]/6 text-[#0E2C72] hover:bg-[#0E2C72]/12 border border-[#8aaad8]/50 transition-colors"
+                  title="Copy referral code"
+                >
+                  {rep.referral_code}
+                  {copied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3 opacity-60" />}
+                </button>
+                <span className="text-[11px] text-neutral-400">{customers.length} customer{customers.length !== 1 ? "s" : ""} referred</span>
+              </div>
             </div>
           </div>
         </div>

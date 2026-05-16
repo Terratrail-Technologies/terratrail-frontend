@@ -4,7 +4,7 @@ import {
   ArrowLeft, User, Phone, Mail, MapPin, Calendar,
   Building2, TrendingUp, DollarSign, AlertTriangle,
   CheckCircle2, Clock, XCircle, Pencil, Loader2,
-  AlertCircle, ClipboardList, X, Save,
+  AlertCircle, ClipboardList, X, Save, Search, UserCheck,
 } from "lucide-react";
 import { api } from "../services/api";
 import { useWorkspaceRole } from "../hooks/useWorkspaceRole";
@@ -295,10 +295,164 @@ function EditCustomerModal({
   );
 }
 
+// ── Assign Sales Rep Modal ────────────────────────────────────────────────────
+
+const inputClsCD = "w-full h-9 px-3 rounded-lg border border-neutral-200 text-[13px] focus:outline-none focus:ring-1 focus:ring-[#1a3d8f]/40 focus:border-[#2a52a8]";
+const labelClsCD = "text-[12px] font-medium text-neutral-600 block mb-1.5";
+
+function AssignSalesRepModal({
+  customer,
+  onClose,
+  onAssigned,
+}: {
+  customer: Customer;
+  onClose: () => void;
+  onAssigned: (repId: string | null, repName: string | null) => void;
+}) {
+  const [reps, setReps]             = useState<any[]>([]);
+  const [loadingReps, setLoadingReps] = useState(true);
+  const [search, setSearch]         = useState("");
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [saving, setSaving]         = useState(false);
+
+  useEffect(() => {
+    api.salesReps.list()
+      .then((all: any[]) => setReps(all))
+      .catch(() => setReps([]))
+      .finally(() => setLoadingReps(false));
+  }, []);
+
+  const filtered = reps.filter((r) => {
+    const q = search.toLowerCase();
+    return !q ||
+      (r.name ?? "").toLowerCase().includes(q) ||
+      (r.referral_code ?? "").toLowerCase().includes(q);
+  });
+
+  const handleAssign = async () => {
+    setSaving(true);
+    try {
+      await api.customers.update(customer.id, { assigned_rep: selectedId });
+      const rep = reps.find((r) => r.id === selectedId);
+      const repName = rep ? rep.name : null;
+      toast.success(selectedId ? "Sales rep assigned." : "Sales rep unassigned.");
+      onAssigned(selectedId, repName);
+      onClose();
+    } catch (err: any) {
+      toast.error(err.message ?? "Failed to assign sales rep.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const currentRepName = customer.sales_rep_name ?? customer.assigned_rep_name;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+      <motion.div
+        initial={{ opacity: 0, scale: 0.96 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.96 }}
+        className="bg-white rounded-2xl shadow-2xl w-full max-w-md border border-neutral-100 flex flex-col max-h-[90vh]"
+      >
+        <div className="flex items-center justify-between px-5 py-4 border-b border-neutral-100 shrink-0">
+          <h2 className="font-semibold text-neutral-900">Assign Sales Rep</h2>
+          <button onClick={onClose} className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-neutral-100">
+            <X className="w-4 h-4 text-neutral-500" />
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
+          {currentRepName && (
+            <div className="flex items-center gap-2 px-3 py-2 bg-[#0E2C72]/6 rounded-lg border border-[#8aaad8]">
+              <UserCheck className="w-3.5 h-3.5 text-[#0E2C72] shrink-0" />
+              <span className="text-[12px] text-[#0E2C72]">
+                Currently assigned: <span className="font-semibold">{currentRepName}</span>
+              </span>
+            </div>
+          )}
+
+          <div>
+            <label className={labelClsCD}>Search Sales Reps</label>
+            <div className="relative">
+              <Search className="absolute left-3 top-2.5 w-3.5 h-3.5 text-neutral-400" />
+              <input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Name or referral code…"
+                className={`${inputClsCD} pl-8`}
+              />
+            </div>
+          </div>
+
+          {loadingReps ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="w-5 h-5 animate-spin text-neutral-400" />
+            </div>
+          ) : filtered.length === 0 ? (
+            <p className="text-[12px] text-neutral-400 text-center py-4">No sales reps found.</p>
+          ) : (
+            <div className="space-y-1 max-h-52 overflow-y-auto">
+              {filtered.map((r) => (
+                <button
+                  key={r.id}
+                  onClick={() => setSelectedId(selectedId === r.id ? null : r.id)}
+                  className={`w-full text-left px-3 py-2.5 rounded-lg border transition-all ${
+                    selectedId === r.id
+                      ? "border-[#0E2C72] bg-[#0E2C72]/6"
+                      : "border-neutral-100 hover:border-neutral-200 hover:bg-neutral-50"
+                  }`}
+                >
+                  <p className="text-[13px] font-medium text-neutral-800">{r.name}</p>
+                  {r.referral_code && (
+                    <p className="text-[11px] text-neutral-400">Code: {r.referral_code}</p>
+                  )}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="flex items-center justify-end gap-2.5 px-5 py-4 border-t border-neutral-100 shrink-0">
+          <Button variant="outline" onClick={onClose} className="text-[13px] h-9">Cancel</Button>
+          {customer.assigned_rep && (
+            <Button
+              variant="outline"
+              onClick={async () => {
+                setSaving(true);
+                try {
+                  await api.customers.update(customer.id, { assigned_rep: null });
+                  toast.success("Sales rep unassigned.");
+                  onAssigned(null, null);
+                  onClose();
+                } catch (err: any) {
+                  toast.error(err.message ?? "Failed to unassign.");
+                } finally { setSaving(false); }
+              }}
+              disabled={saving}
+              className="text-[13px] h-9 text-red-600 border-red-200 hover:bg-red-50"
+            >
+              Unassign
+            </Button>
+          )}
+          <Button
+            onClick={handleAssign}
+            disabled={saving || !selectedId}
+            className="bg-[#0E2C72] hover:bg-[#0a2260] text-white text-[13px] h-9 gap-1.5"
+          >
+            {saving ? <><Loader2 className="w-3.5 h-3.5 animate-spin" />Saving…</> : "Assign"}
+          </Button>
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+
 // ── Overview Tab ──────────────────────────────────────────────────────────────
 
-function OverviewTab({ customer }: { customer: Customer }) {
+function OverviewTab({ customer, isAdmin, onAssignRep }: { customer: Customer; isAdmin?: boolean; onAssignRep?: () => void }) {
   const sub = customer.primary_subscription;
+  const salesRepValue = customer.sales_rep_name ?? customer.assigned_rep_name ?? null;
 
   return (
     <div className="space-y-6">
@@ -312,7 +466,6 @@ function OverviewTab({ customer }: { customer: Customer }) {
             { icon: Phone,    label: "Phone",       value: customer.phone || "—" },
             { icon: MapPin,   label: "Address",     value: customer.address || "—" },
             { icon: Calendar, label: "Date Added",  value: fmtDate(customer.created_at) },
-            { icon: User,     label: "Sales Rep",   value: customer.sales_rep_name || customer.assigned_rep_name || "—" },
             ...(customer.next_of_kin_name ? [
               { icon: User,  label: "Next of Kin",  value: `${customer.next_of_kin_name}${customer.next_of_kin_relationship ? ` (${customer.next_of_kin_relationship})` : ""}` },
               { icon: Phone, label: "Kin Phone",    value: customer.next_of_kin_phone || "—" },
@@ -330,6 +483,30 @@ function OverviewTab({ customer }: { customer: Customer }) {
               </div>
             </div>
           ))}
+
+          {/* Sales Rep row with assign button */}
+          <div className="flex items-start gap-3">
+            <div className="p-1.5 rounded-lg bg-neutral-100 mt-0.5 shrink-0">
+              <User className="size-3.5 text-neutral-500" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-[11px] text-neutral-400 font-medium">Sales Rep</p>
+              <div className="flex items-center gap-2">
+                <p className={`text-[13px] font-semibold ${salesRepValue ? "text-neutral-800" : "text-neutral-400 italic"}`}>
+                  {salesRepValue ?? "Unassigned"}
+                </p>
+                {isAdmin && onAssignRep && (
+                  <button
+                    onClick={onAssignRep}
+                    className="shrink-0 w-5 h-5 rounded flex items-center justify-center hover:bg-neutral-200 transition-colors"
+                    title="Assign sales rep"
+                  >
+                    <Pencil className="w-3 h-3 text-neutral-400" />
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -545,10 +722,11 @@ export function CustomerDetail() {
   const navigate = useNavigate();
   const { role, loading: roleLoading } = useWorkspaceRole();
 
-  const [customer, setCustomer] = useState<Customer | null>(null);
-  const [loading, setLoading]   = useState(true);
-  const [tab, setTab]           = useState<TabKey>("overview");
-  const [showEdit, setShowEdit] = useState(false);
+  const [customer, setCustomer]   = useState<Customer | null>(null);
+  const [loading, setLoading]     = useState(true);
+  const [tab, setTab]             = useState<TabKey>("overview");
+  const [showEdit, setShowEdit]   = useState(false);
+  const [showAssignRep, setShowAssignRep] = useState(false);
 
   const isAdmin = role === "OWNER" || role === "ADMIN";
 
@@ -624,9 +802,14 @@ export function CustomerDetail() {
         </div>
 
         {isAdmin && (
-          <Button variant="outline" size="sm" onClick={() => setShowEdit(true)} className="text-[12px] h-8 gap-1.5">
-            <Pencil className="w-3.5 h-3.5" /> Edit Customer
-          </Button>
+          <div className="flex items-center gap-2 flex-wrap">
+            <Button variant="outline" size="sm" onClick={() => setShowAssignRep(true)} className="text-[12px] h-8 gap-1.5">
+              <UserCheck className="w-3.5 h-3.5" /> Assign Sales Rep
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => setShowEdit(true)} className="text-[12px] h-8 gap-1.5">
+              <Pencil className="w-3.5 h-3.5" /> Edit Customer
+            </Button>
+          </div>
         )}
       </div>
 
@@ -660,7 +843,7 @@ export function CustomerDetail() {
       {/* Tab content */}
       <AnimatePresence mode="wait">
         <motion.div key={tab} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.18 }}>
-          {tab === "overview"      && <OverviewTab      customer={customer} />}
+          {tab === "overview"      && <OverviewTab      customer={customer} isAdmin={isAdmin} onAssignRep={() => setShowAssignRep(true)} />}
           {tab === "subscriptions" && <SubscriptionsTab customer={customer} />}
           {tab === "inspections"   && <InspectionsTab   customer={customer} />}
         </motion.div>
@@ -673,6 +856,19 @@ export function CustomerDetail() {
             customer={customer}
             onClose={() => setShowEdit(false)}
             onSaved={() => { load(); setShowEdit(false); }}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Assign Sales Rep modal */}
+      <AnimatePresence>
+        {showAssignRep && (
+          <AssignSalesRepModal
+            customer={customer}
+            onClose={() => setShowAssignRep(false)}
+            onAssigned={(repId, repName) => {
+              setCustomer((c) => c ? { ...c, assigned_rep: repId ?? undefined, assigned_rep_name: repName ?? undefined, sales_rep_name: repName ?? undefined } : c);
+            }}
           />
         )}
       </AnimatePresence>

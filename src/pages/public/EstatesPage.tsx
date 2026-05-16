@@ -64,60 +64,46 @@ function FadeIn({ children, delay = 0, className = "" }: { children: React.React
 }
 
 // ── Inspection modal ──────────────────────────────────────────────────────────
-const DAY_NAMES = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
 
-interface InspectionSlot {
-  id: string; label: string; start_time: string;
-  mode: "RECURRING" | "ONE_TIME"; date: string; is_active: boolean;
+interface AvailableSlot {
+  id: string; label: string; date: string; time: string;
+  mode: "RECURRING" | "ONE_TIME";
 }
 
 function InspectionModal({ property, workspaceSlug, onClose }: { property: Property; workspaceSlug: string; onClose: () => void }) {
-  const [form, setForm] = useState({ name: "", email: "", phone: "", date: "", timeSlot: "", persons: "1", message: "" });
+  const [form, setForm] = useState({
+    name: "", email: "", phone: "", gender: "",
+    inspection_type: "PHYSICAL" as "PHYSICAL" | "VIRTUAL",
+    slot_id: "", message: "",
+  });
   const [sent, setSent] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [config, setConfig] = useState<{
-    time_slots?: (string | InspectionSlot)[];
-    available_days?: string[];
-    max_persons?: number;
-    meeting_point?: string;
-  } | null>(null);
+  const [slots, setSlots] = useState<AvailableSlot[]>([]);
+  const [slotsLoading, setSlotsLoading] = useState(true);
   const set = (k: string, v: string) => setForm((f) => ({ ...f, [k]: v }));
 
   useEffect(() => {
-    api.public.inspectionConfig(workspaceSlug, property.id)
-      .then((cfg: any) => setConfig(cfg ?? null))
-      .catch(() => setConfig(null));
+    setSlotsLoading(true);
+    api.public.availableSlots(workspaceSlug, property.id)
+      .then((data: any) => setSlots(Array.isArray(data) ? data : []))
+      .catch(() => setSlots([]))
+      .finally(() => setSlotsLoading(false));
   }, [workspaceSlug, property.id]);
 
-  // Extract string labels from slot objects (API returns InspectionSlot objects)
-  const timeSlots: string[] = (config?.time_slots ?? [])
-    .filter((s: any) => typeof s === "string" || s?.is_active !== false)
-    .map((s: any) => typeof s === "string" ? s : String(s.label || s.start_time || ""));
-
-  const availableDays = config?.available_days ?? [];
-  const dateAllowed = form.date
-    ? (availableDays.length === 0 || availableDays.includes(DAY_NAMES[new Date(form.date + "T12:00:00").getDay()]))
-    : true;
-  const maxPersons = config?.max_persons ?? 10;
+  const selectedSlot = slots.find((s) => s.id === form.slot_id);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!dateAllowed) return;
-    if (timeSlots.length > 0 && !form.timeSlot) {
-      alert("Please select a time slot.");
-      return;
-    }
     setLoading(true);
     try {
       await api.public.bookInspection(workspaceSlug, property.id, {
-        name: form.name,
-        email: form.email,
-        phone: form.phone,
-        inspection_date: form.date || new Date().toISOString().slice(0, 10),
-        inspection_time: form.timeSlot || undefined,
-        persons: Number(form.persons),
+        name: form.name, email: form.email, phone: form.phone,
+        gender: form.gender || undefined,
+        slot_id: form.slot_id || undefined,
+        inspection_date: selectedSlot?.date,
+        inspection_time: selectedSlot?.time || undefined,
         notes: form.message,
-        inspection_type: "PHYSICAL",
+        inspection_type: form.inspection_type,
         category: "RESIDENTIAL",
       });
       setSent(true);
@@ -128,7 +114,7 @@ function InspectionModal({ property, workspaceSlug, onClose }: { property: Prope
     }
   };
 
-  const inputCls = "w-full px-3 py-2.5 text-[13px] border border-neutral-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#1a3d8f]/30 focus:border-[#2a52a8] transition-all";
+  const inputCls = "w-full px-3 py-2.5 text-[13px] border border-neutral-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#1a3d8f]/30 focus:border-[#2a52a8] transition-all bg-white";
 
   return (
     <motion.div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-sm"
@@ -165,108 +151,88 @@ function InspectionModal({ property, workspaceSlug, onClose }: { property: Prope
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="p-5 space-y-3.5">
-            {/* Meeting point info */}
-            {config?.meeting_point && (
-              <div className="flex items-start gap-2 px-3 py-2.5 bg-[#0E2C72]/6 rounded-xl border border-[#0E2C72]/15">
-                <MapPin className="size-3.5 text-[#0E2C72] mt-0.5 shrink-0" />
-                <p className="text-[12px] text-[#0E2C72] font-medium">{config.meeting_point}</p>
-              </div>
-            )}
 
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-[11px] font-semibold text-neutral-600 mb-1.5 uppercase tracking-wide">Full Name *</label>
-                <input required value={form.name} onChange={(e) => set("name", e.target.value)}
-                  className={inputCls} placeholder="John Doe" />
-              </div>
-              <div>
-                <label className="block text-[11px] font-semibold text-neutral-600 mb-1.5 uppercase tracking-wide">Phone *</label>
-                <input required value={form.phone} onChange={(e) => set("phone", e.target.value)}
-                  className={inputCls} placeholder="+234..." />
-              </div>
+            {/* Available Slot */}
+            <div>
+              <label className="block text-[11px] font-semibold text-neutral-600 mb-1.5 uppercase tracking-wide">Available Slot</label>
+              {slotsLoading ? (
+                <div className="h-10 rounded-xl bg-neutral-100 animate-pulse" />
+              ) : slots.length === 0 ? (
+                <p className="text-[12px] text-amber-600 bg-amber-50 border border-amber-100 rounded-xl px-3 py-2.5">
+                  No inspection slots available for this property.
+                </p>
+              ) : (
+                <select value={form.slot_id} onChange={(e) => set("slot_id", e.target.value)} className={inputCls}>
+                  <option value="">— Select a slot —</option>
+                  {slots.map((s) => (
+                    <option key={s.id} value={s.id}>{s.label}</option>
+                  ))}
+                </select>
+              )}
             </div>
+
+            {/* Name */}
+            <div>
+              <label className="block text-[11px] font-semibold text-neutral-600 mb-1.5 uppercase tracking-wide">Full Name *</label>
+              <input required value={form.name} onChange={(e) => set("name", e.target.value)}
+                className={inputCls} placeholder="John Doe" />
+            </div>
+
+            {/* Phone */}
+            <div>
+              <label className="block text-[11px] font-semibold text-neutral-600 mb-1.5 uppercase tracking-wide">Phone *</label>
+              <input required value={form.phone} onChange={(e) => set("phone", e.target.value)}
+                className={inputCls} placeholder="+234..." />
+            </div>
+
+            {/* Email */}
             <div>
               <label className="block text-[11px] font-semibold text-neutral-600 mb-1.5 uppercase tracking-wide">Email</label>
               <input type="email" value={form.email} onChange={(e) => set("email", e.target.value)}
                 className={inputCls} placeholder="you@example.com" />
             </div>
 
-            {/* Available days banner */}
-            {availableDays.length > 0 && (
-              <div className="flex items-center gap-2 px-3 py-2 bg-[#0E2C72]/6 rounded-xl border border-[#0E2C72]/15 text-[12px] text-[#0E2C72]">
-                <span className="font-semibold">Available:</span>
-                {availableDays.map(d => d.slice(0,3)).join(", ")}
-              </div>
-            )}
-
-            {/* Date */}
+            {/* Gender */}
             <div>
-              <label className="block text-[11px] font-semibold text-neutral-600 mb-1.5 uppercase tracking-wide">
-                Preferred Date *
-              </label>
-              <input type="date" required value={form.date}
-                onChange={(e) => { set("date", e.target.value); set("timeSlot", ""); }}
-                min={new Date().toISOString().split("T")[0]}
-                className={`${inputCls} ${form.date && !dateAllowed ? "border-red-400 ring-2 ring-red-200" : ""}`} />
-              {form.date && !dateAllowed && (
-                <p className="text-[12px] text-red-500 mt-1.5">
-                  Inspections aren't available on {DAY_NAMES[new Date(form.date + "T12:00:00").getDay()]}s.
-                  {availableDays.length > 0 && ` Choose: ${availableDays.join(", ")}.`}
-                </p>
-              )}
-            </div>
-
-            {/* Time slot — show configured slots or free-text if none configured */}
-            {timeSlots.length > 0 ? (
-              <div>
-                <label className="block text-[11px] font-semibold text-neutral-600 mb-1.5 uppercase tracking-wide">
-                  Select Time Slot *
-                </label>
-                <div className="flex flex-wrap gap-2">
-                  {timeSlots.map((slot) => (
-                    <button key={slot} type="button"
-                      onClick={() => set("timeSlot", slot)}
-                      className={`px-3 py-1.5 rounded-xl text-[12.5px] font-semibold border transition-all ${
-                        form.timeSlot === slot
-                          ? "bg-[#0E2C72] text-white border-[#0E2C72] shadow-sm"
-                          : "bg-white text-neutral-700 border-neutral-200 hover:border-[#0E2C72]/40 hover:text-[#0a2260]"
-                      }`}>
-                      {slot}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            ) : (
-              <div>
-                <label className="block text-[11px] font-semibold text-neutral-600 mb-1.5 uppercase tracking-wide">Preferred Time</label>
-                <input type="time" value={form.timeSlot} onChange={(e) => set("timeSlot", e.target.value)}
-                  className={inputCls} />
-              </div>
-            )}
-
-            {/* Persons */}
-            <div>
-              <label className="block text-[11px] font-semibold text-neutral-600 mb-1.5 uppercase tracking-wide">
-                Number of Persons {config?.max_persons ? `(max ${maxPersons})` : ""}
-              </label>
-              <select value={form.persons} onChange={(e) => set("persons", e.target.value)}
-                className={`${inputCls} bg-white`}>
-                {Array.from({ length: Math.min(maxPersons, 10) }, (_, i) => i + 1).map(n => (
-                  <option key={n} value={n}>{n} {n === 1 ? "person" : "people"}</option>
-                ))}
+              <label className="block text-[11px] font-semibold text-neutral-600 mb-1.5 uppercase tracking-wide">Gender</label>
+              <select value={form.gender} onChange={(e) => set("gender", e.target.value)} className={inputCls}>
+                <option value="">— Select gender —</option>
+                <option value="MALE">Male</option>
+                <option value="FEMALE">Female</option>
+                <option value="OTHER">Other</option>
               </select>
             </div>
 
+            {/* Inspection Type */}
             <div>
-              <label className="block text-[11px] font-semibold text-neutral-600 mb-1.5 uppercase tracking-wide">Additional Notes</label>
+              <label className="block text-[11px] font-semibold text-neutral-600 mb-2 uppercase tracking-wide">Inspection Type</label>
+              <div className="flex gap-3">
+                {(["PHYSICAL", "VIRTUAL"] as const).map((t) => (
+                  <label key={t} className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl border-2 cursor-pointer transition-all text-[13px] font-semibold ${
+                    form.inspection_type === t
+                      ? "border-[#0E2C72] bg-[#0E2C72]/6 text-[#0E2C72]"
+                      : "border-neutral-200 text-neutral-500 hover:border-[#0E2C72]/40"
+                  }`}>
+                    <input type="radio" name="inspection_type" value={t} checked={form.inspection_type === t}
+                      onChange={() => set("inspection_type", t)} className="sr-only" />
+                    {t === "PHYSICAL" ? "Physical" : "Virtual"}
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            {/* Notes */}
+            <div>
+              <label className="block text-[11px] font-semibold text-neutral-600 mb-1.5 uppercase tracking-wide">Notes (optional)</label>
               <textarea value={form.message} onChange={(e) => set("message", e.target.value)} rows={2}
                 className={`${inputCls} resize-none`}
                 placeholder="Any specific questions or requirements..." />
             </div>
-            <button type="submit" disabled={loading || !dateAllowed}
+
+            <button type="submit" disabled={loading || !form.name || !form.phone}
               className="w-full py-3 bg-[#0E2C72] text-white text-[14px] font-bold rounded-xl hover:bg-[#0a2260] active:scale-[0.98] transition-all disabled:opacity-60 flex items-center justify-center gap-2">
               {loading ? <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" /> : null}
-              {loading ? "Submitting…" : "Submit Request"}
+              {loading ? "Submitting…" : "Create Request"}
             </button>
           </form>
         )}
@@ -492,62 +458,75 @@ function PropertyDetail({ property, workspaceSlug, onBack, workspace }: { proper
 }
 
 // ── Property Card ─────────────────────────────────────────────────────────────
-function PropertyCard({ property, onClick }: { property: Property; onClick: () => void; index?: number }) {
+function PropertyCard({ property, onClick, onBookInspection }: { property: Property; onClick: () => void; onBookInspection?: () => void; index?: number }) {
   const min = minPrice(property.pricing_plans);
   const loc = property.location;
   const activePlansCount = property.pricing_plans.filter((p) => p.is_active).length;
 
   return (
-    <motion.button variants={fadeUp} onClick={onClick}
+    <motion.div variants={fadeUp}
       className="group text-left w-full bg-white rounded-2xl border border-neutral-100 overflow-hidden shadow-sm hover:shadow-xl hover:shadow-neutral-200/60 hover:-translate-y-1 hover:border-[#8aaad8]/70 transition-all duration-300">
-      {/* Image */}
-      <div className="aspect-[16/10] bg-neutral-100 overflow-hidden relative">
-        {property.featured_image ? (
-          <img src={imgSrc(property.featured_image)} alt={property.name}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-[#eef2fb] to-neutral-100">
-            <Building2 className="size-12 text-[#6b8fd4]" />
-          </div>
-        )}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-        <div className="absolute top-3 left-3">
-          <span className="px-2.5 py-0.5 rounded-full bg-[#0E2C72] text-white text-[10px] font-bold uppercase tracking-wide shadow-sm">
-            {typeLabel(property.property_type)}
-          </span>
-        </div>
-        {property.available_units > 0 && (
-          <div className="absolute top-3 right-3">
-            <span className="px-2 py-0.5 rounded-full bg-white/95 text-neutral-700 text-[10px] font-semibold shadow-sm backdrop-blur-sm">
-              {property.available_units} left
+      {/* Image — clickable */}
+      <button type="button" onClick={onClick} className="w-full text-left">
+        <div className="aspect-[16/10] bg-neutral-100 overflow-hidden relative">
+          {property.featured_image ? (
+            <img src={imgSrc(property.featured_image)} alt={property.name}
+              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-[#eef2fb] to-neutral-100">
+              <Building2 className="size-12 text-[#6b8fd4]" />
+            </div>
+          )}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+          <div className="absolute top-3 left-3">
+            <span className="px-2.5 py-0.5 rounded-full bg-[#0E2C72] text-white text-[10px] font-bold uppercase tracking-wide shadow-sm">
+              {typeLabel(property.property_type)}
             </span>
           </div>
-        )}
-      </div>
+          {property.available_units > 0 && (
+            <div className="absolute top-3 right-3">
+              <span className="px-2 py-0.5 rounded-full bg-white/95 text-neutral-700 text-[10px] font-semibold shadow-sm backdrop-blur-sm">
+                {property.available_units} left
+              </span>
+            </div>
+          )}
+        </div>
 
-      {/* Body */}
-      <div className="p-4">
-        <h3 className="text-[14px] font-bold text-neutral-900 truncate group-hover:text-[#0a2260] transition-colors mb-1">
-          {property.name}
-        </h3>
-        {loc && (
-          <p className="flex items-center gap-1 text-[12px] text-neutral-500 mb-3">
-            <MapPin className="size-3 shrink-0 text-[#1a3d8f]" />
-            <span className="truncate">{[loc.city, loc.state].filter(Boolean).join(", ")}</span>
-          </p>
-        )}
-        <div className="flex items-end justify-between pt-3 border-t border-neutral-50">
-          <div>
-            <p className="text-[10px] text-neutral-400 font-semibold uppercase tracking-wide mb-0.5">Starting from</p>
-            <p className="text-[16px] font-extrabold text-[#0E2C72]">{min ? fmt(min) : "Contact us"}</p>
-          </div>
-          <div className="text-right">
-            <p className="text-[11px] text-neutral-500">{Number(property.total_sqms).toLocaleString()} sqm</p>
-            <p className="text-[11px] text-neutral-400">{activePlansCount} plan{activePlansCount !== 1 ? "s" : ""}</p>
+        {/* Body */}
+        <div className="p-4 pb-3">
+          <h3 className="text-[14px] font-bold text-neutral-900 truncate group-hover:text-[#0a2260] transition-colors mb-1">
+            {property.name}
+          </h3>
+          {loc && (
+            <p className="flex items-center gap-1 text-[12px] text-neutral-500 mb-3">
+              <MapPin className="size-3 shrink-0 text-[#1a3d8f]" />
+              <span className="truncate">{[loc.city, loc.state].filter(Boolean).join(", ")}</span>
+            </p>
+          )}
+          <div className="flex items-end justify-between pt-3 border-t border-neutral-50">
+            <div>
+              <p className="text-[10px] text-neutral-400 font-semibold uppercase tracking-wide mb-0.5">Starting from</p>
+              <p className="text-[16px] font-extrabold text-[#0E2C72]">{min ? fmt(min) : "Contact us"}</p>
+            </div>
+            <div className="text-right">
+              <p className="text-[11px] text-neutral-500">{Number(property.total_sqms).toLocaleString()} sqm</p>
+              <p className="text-[11px] text-neutral-400">{activePlansCount} plan{activePlansCount !== 1 ? "s" : ""}</p>
+            </div>
           </div>
         </div>
+      </button>
+
+      {/* Book Inspection CTA */}
+      <div className="px-4 pb-4">
+        <button
+          type="button"
+          onClick={(e) => { e.stopPropagation(); onBookInspection ? onBookInspection() : onClick(); }}
+          className="w-full flex items-center justify-center gap-1.5 py-2 rounded-xl border border-[#0E2C72]/30 text-[#0E2C72] text-[12px] font-semibold hover:bg-[#0E2C72]/6 transition-colors"
+        >
+          <MapPin className="size-3.5" /> Book Inspection
+        </button>
       </div>
-    </motion.button>
+    </motion.div>
   );
 }
 
@@ -643,6 +622,7 @@ export default function EstatesPage() {
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState("ALL");
   const [selected, setSelected] = useState<Property | null>(null);
+  const [inspectionTarget, setInspectionTarget] = useState<Property | null>(null);
   const [workspace, setWorkspace] = useState<WorkspaceInfo | null>(null);
 
   useEffect(() => {
@@ -682,6 +662,15 @@ export default function EstatesPage() {
 
   return (
     <div className="min-h-screen bg-[#f7f9f8]">
+      <AnimatePresence>
+        {inspectionTarget && (
+          <InspectionModal
+            property={inspectionTarget}
+            workspaceSlug={workspaceSlug!}
+            onClose={() => setInspectionTarget(null)}
+          />
+        )}
+      </AnimatePresence>
       <TopBar workspace={workspace} />
       <Hero search={search} setSearch={setSearch} propertyCount={properties.length} />
 
@@ -735,7 +724,7 @@ export default function EstatesPage() {
           <motion.div variants={stagger} initial="hidden" animate="show"
             className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
             {filtered.map((p, i) => (
-              <PropertyCard key={p.id} property={p} onClick={() => setSelected(p)} index={i} />
+              <PropertyCard key={p.id} property={p} onClick={() => setSelected(p)} onBookInspection={() => setInspectionTarget(p)} index={i} />
             ))}
           </motion.div>
         )}

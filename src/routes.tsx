@@ -18,11 +18,14 @@ import { AccountSettings } from "./pages/settings/AccountSettings";
 import { NotFound } from "./pages/NotFound";
 import { ServerError } from "./pages/ServerError";
 import { ProtectedRoute } from "./components/ProtectedRoute";
+import { RoleGuard } from "./components/RoleGuard";
 import { AcceptInvite } from "./pages/AcceptInvite";
 import EstatesPage from "./pages/public/EstatesPage";
 import EstateDetailPage from "./pages/public/EstateDetailPage";
 import LandingPage from "./pages/public/LandingPage";
 import { PropertyDetail } from "./pages/PropertyDetail";
+import { Subscriptions } from "./pages/Subscriptions";
+import SubscriptionDetail from "./pages/SubscriptionDetail";
 import { PaymentsPage } from "./pages/PaymentsPage";
 import { AllocationPage } from "./pages/AllocationPage";
 import { NotificationsPage } from "./pages/NotificationsPage";
@@ -39,6 +42,9 @@ import { CreateNewPassword } from "./onboarding/pages/CreateNewPassword";
 import { WorkspaceSetup } from "./onboarding/pages/WorkspaceSetup";
 import { SelectPlan } from "./onboarding/pages/SelectPlan";
 import { SelectWorkspace } from "./onboarding/pages/SelectWorkspace";
+
+const ADMIN_ROLES = ["OWNER", "ADMIN"];
+const NON_CUSTOMER_ROLES = ["OWNER", "ADMIN", "SALES_REP", "CUSTOMER_REP"];
 
 function RouteErrorElement() {
   const error = useRouteError();
@@ -83,27 +89,52 @@ export const router = createBrowserRouter([
         Component: MainLayout,
         errorElement: <RouteErrorElement />,
         children: [
+          // ── Accessible to all authenticated roles ──────────────────────
           { index: true, Component: Overview },
-          { path: "properties", Component: Properties },
-          { path: "properties/new", Component: PropertyWizard },
-          { path: "properties/:id", Component: PropertyDetail },
-          { path: "properties/:id/edit", Component: PropertyWizard },
-          { path: "properties/:id/preview", Component: PropertyPreview },
-          { path: "customers", Component: Customers },
-          { path: "customers/:id", Component: CustomerDetail },
-          { path: "customer-reps", Component: CustomerReps },
-          { path: "customer-reps/:id", Component: CustomerRepDetail },
-          { path: "sales-reps", Component: SalesReps },
-          { path: "sales-reps/:id", Component: SalesRepDetail },
           { path: "site-inspection", Component: SiteInspection },
-          { path: "payments", Component: PaymentsPage },
-          { path: "allocation", Component: AllocationPage },
           { path: "notifications", Component: NotificationsPage },
-          { path: "data-export", Component: DataExport },
-          { path: "bulk-upload", Component: BulkUpload },
           { path: "help", Component: HelpPage },
-          { path: "settings/*", Component: WorkspaceSettings },
           { path: "account", Component: AccountSettings },
+
+          // ── Properties (not Customer role) ────────────────────────────
+          {
+            Component: () => <RoleGuard allowed={NON_CUSTOMER_ROLES} />,
+            children: [
+              { path: "properties", Component: Properties },
+              { path: "properties/new", Component: PropertyWizard },
+              { path: "properties/:id", Component: PropertyDetail },
+              { path: "properties/:id/edit", Component: PropertyWizard },
+              { path: "properties/:id/preview", Component: PropertyPreview },
+            ],
+          },
+
+          // ── Admin + Customer Rep ───────────────────────────────────────
+          {
+            Component: () => <RoleGuard allowed={["OWNER", "ADMIN", "CUSTOMER_REP"]} />,
+            children: [
+              { path: "customers", Component: Customers },
+              { path: "customers/:id", Component: CustomerDetail },
+              { path: "payments", Component: PaymentsPage },
+              { path: "subscriptions", Component: Subscriptions },
+              { path: "subscriptions/:id", Component: SubscriptionDetail },
+            ],
+          },
+
+          // ── Admin only ─────────────────────────────────────────────────
+          {
+            Component: () => <RoleGuard allowed={ADMIN_ROLES} />,
+            children: [
+              { path: "customer-reps", Component: CustomerReps },
+              { path: "customer-reps/:id", Component: CustomerRepDetail },
+              { path: "sales-reps", Component: SalesReps },
+              { path: "sales-reps/:id", Component: SalesRepDetail },
+              { path: "allocation", Component: AllocationPage },
+              { path: "data-export", Component: DataExport },
+              { path: "bulk-upload", Component: BulkUpload },
+              { path: "settings/*", Component: WorkspaceSettings },
+            ],
+          },
+
           { path: "*", Component: NotFound },
         ],
       },

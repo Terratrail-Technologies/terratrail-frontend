@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { api } from "../services/api";
 
-export type WorkspaceRole = "OWNER" | "ADMIN" | "SALES_REP" | "CUSTOMER" | null;
+export type WorkspaceRole = "OWNER" | "ADMIN" | "SALES_REP" | "CUSTOMER" | "CUSTOMER_REP" | null;
 
 let _cached: WorkspaceRole = null;
 const _listeners: Array<(r: WorkspaceRole) => void> = [];

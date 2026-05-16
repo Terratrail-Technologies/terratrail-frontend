@@ -153,88 +153,51 @@ function Gallery({ cover, images }: { cover: string | null; images: { id: string
 
 // ── Request Inspection Modal ──────────────────────────────────────────────────
 
-// Day index → name mapping (matches JS Date.getDay())
-const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-
-interface InspectionSlot {
+interface AvailableSlot {
   id: string;
   label: string;
-  start_time: string;
-  mode: "RECURRING" | "ONE_TIME";
   date: string;
-  is_active: boolean;
-}
-
-interface InspectionConfig {
-  available_days: string[];   // e.g. ["Monday","Wednesday","Friday"]
-  time_slots: (string | InspectionSlot)[];
-  max_persons: number;
-  is_active: boolean;
-}
-
-function isDateAllowed(dateStr: string, availableDays: string[]): boolean {
-  if (!availableDays || availableDays.length === 0) return true;
-  const dayName = DAY_NAMES[new Date(dateStr + "T12:00:00").getDay()];
-  return availableDays.includes(dayName);
-}
-
-function getSlotsForDate(dateStr: string, rawSlots: (string | InspectionSlot)[]): { label: string; start_time: string }[] {
-  if (!rawSlots || rawSlots.length === 0) return [];
-  const dayName = DAY_NAMES[new Date(dateStr + "T12:00:00").getDay()];
-
-  return rawSlots
-    .map((s): InspectionSlot =>
-      typeof s === "string"
-        ? { id: s, label: s, start_time: s, mode: "RECURRING", date: "", is_active: true }
-        : s
-    )
-    .filter((s) => {
-      if (!s.is_active) return false;
-      if (s.mode === "ONE_TIME") return s.date === dateStr;
-      // RECURRING — slot is valid on any configured available day
-      return true; // day-level filtering is already handled by isDateAllowed
-    })
-    .map((s) => ({ label: s.label || s.start_time, start_time: s.start_time }));
+  time: string;
+  mode: "RECURRING" | "ONE_TIME";
 }
 
 function InspectionModal({ property, workspaceSlug, onClose }: {
   property: Property; workspaceSlug: string; onClose: () => void;
 }) {
-  const [form, setForm] = useState({ name: "", email: "", phone: "", date: "", message: "" });
+  const [form, setForm] = useState({
+    name: "", email: "", phone: "", gender: "",
+    inspection_type: "PHYSICAL" as "PHYSICAL" | "VIRTUAL",
+    slot_id: "", message: "",
+  });
   const [sent, setSent] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [config, setConfig] = useState<InspectionConfig | null>(null);
-  const [timeSlot, setTimeSlot] = useState("");
+  const [slots, setSlots] = useState<AvailableSlot[]>([]);
+  const [slotsLoading, setSlotsLoading] = useState(true);
   const set = (k: string, v: string) => setForm((f) => ({ ...f, [k]: v }));
 
   useEffect(() => {
-    api.public.inspectionConfig(workspaceSlug, property.id)
-      .then((cfg: any) => setConfig(cfg ?? null))
-      .catch(() => setConfig(null));
+    setSlotsLoading(true);
+    api.public.availableSlots(workspaceSlug, property.id)
+      .then((data: any) => setSlots(Array.isArray(data) ? data : []))
+      .catch(() => setSlots([]))
+      .finally(() => setSlotsLoading(false));
   }, [workspaceSlug, property.id]);
 
-  // Reset time slot when date changes
-  const handleDateChange = (dateStr: string) => {
-    setForm((f) => ({ ...f, date: dateStr }));
-    setTimeSlot("");
-  };
-
-  const availableDays = config?.available_days ?? [];
-  const dateAllowed = form.date ? isDateAllowed(form.date, availableDays) : true;
-  const slotsForDate = form.date ? getSlotsForDate(form.date, config?.time_slots ?? []) : [];
-  const hasSlots = slotsForDate.length > 0;
+  const selectedSlot = slots.find((s) => s.id === form.slot_id);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.name || !form.phone || !form.date) return;
-    if (!dateAllowed) return;
+    if (!form.name || !form.phone) return;
     setLoading(true);
     try {
       await api.public.bookInspection(workspaceSlug, property.id, {
         name: form.name, email: form.email, phone: form.phone,
-        inspection_date: form.date, inspection_time: timeSlot || undefined,
+        gender: form.gender || undefined,
+        slot_id: form.slot_id || undefined,
+        inspection_date: selectedSlot?.date,
+        inspection_time: selectedSlot?.time || undefined,
         notes: form.message,
-        inspection_type: "PHYSICAL",
+        inspection_type: form.inspection_type,
         category: "RESIDENTIAL",
       });
       setSent(true);
@@ -250,10 +213,13 @@ function InspectionModal({ property, workspaceSlug, onClose }: {
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
       onClick={onClose}>
       <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}
-        className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center justify-between p-5 border-b border-neutral-100">
-          <h2 className="font-bold text-neutral-900">Request Site Inspection</h2>
-          <button onClick={onClose} className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-neutral-100">
+        className="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between p-5 border-b border-neutral-100 sticky top-0 bg-white z-10">
+          <div>
+            <h2 className="font-bold text-neutral-900">Book Site Inspection</h2>
+            <p className="text-[12px] text-neutral-500 mt-0.5 truncate">{property.name}</p>
+          </div>
+          <button onClick={onClose} className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-neutral-100 shrink-0">
             <X className="size-4 text-neutral-500" />
           </button>
         </div>
@@ -269,80 +235,85 @@ function InspectionModal({ property, workspaceSlug, onClose }: {
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="p-5 space-y-4">
-            {/* Show available days hint if configured */}
-            {availableDays.length > 0 && (
-              <div className="bg-[#0E2C72]/6 border border-[#0E2C72]/15 rounded-xl px-3 py-2.5 text-[12px] text-[#0E2C72]">
-                <span className="font-semibold">Available days: </span>
-                {availableDays.join(", ")}
-              </div>
-            )}
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="col-span-2">
-                <label className="text-[12px] font-medium text-neutral-600 block mb-1.5">Full Name *</label>
-                <input value={form.name} onChange={(e) => set("name", e.target.value)} required className={inputCls} />
-              </div>
-              <div>
-                <label className="text-[12px] font-medium text-neutral-600 block mb-1.5">Phone *</label>
-                <input value={form.phone} onChange={(e) => set("phone", e.target.value)} required type="tel" className={inputCls} />
-              </div>
-              <div>
-                <label className="text-[12px] font-medium text-neutral-600 block mb-1.5">Email</label>
-                <input value={form.email} onChange={(e) => set("email", e.target.value)} type="email" className={inputCls} />
-              </div>
+            {/* Available Slot */}
+            <div>
+              <label className="text-[12px] font-semibold text-neutral-600 block mb-1.5 uppercase tracking-wide">Available Slot</label>
+              {slotsLoading ? (
+                <div className="h-10 rounded-xl bg-neutral-100 animate-pulse" />
+              ) : slots.length === 0 ? (
+                <p className="text-[12px] text-amber-600 bg-amber-50 border border-amber-100 rounded-xl px-3 py-2.5">
+                  No inspection slots available for this property.
+                </p>
+              ) : (
+                <select value={form.slot_id} onChange={(e) => set("slot_id", e.target.value)} className={`${inputCls} bg-white`}>
+                  <option value="">— Select a slot —</option>
+                  {slots.map((s) => (
+                    <option key={s.id} value={s.id}>{s.label}</option>
+                  ))}
+                </select>
+              )}
+            </div>
 
-              <div className="col-span-2">
-                <label className="text-[12px] font-medium text-neutral-600 block mb-1.5">Preferred Date *</label>
-                <input
-                  value={form.date}
-                  onChange={(e) => handleDateChange(e.target.value)}
-                  required type="date"
-                  min={new Date().toISOString().slice(0, 10)}
-                  className={`${inputCls} ${form.date && !dateAllowed ? "border-red-300 ring-2 ring-red-200" : ""}`}
-                />
-                {form.date && !dateAllowed && (
-                  <p className="text-[11.5px] text-red-500 mt-1">
-                    Inspections are not available on {DAY_NAMES[new Date(form.date + "T12:00:00").getDay()]}s.
-                    Available: {availableDays.join(", ")}.
-                  </p>
-                )}
-              </div>
+            {/* Name */}
+            <div>
+              <label className="text-[12px] font-semibold text-neutral-600 block mb-1.5 uppercase tracking-wide">Full Name *</label>
+              <input value={form.name} onChange={(e) => set("name", e.target.value)} required className={inputCls} placeholder="John Doe" />
+            </div>
 
-              {/* Time slot — filtered to the selected date's day + active slots only */}
-              {form.date && dateAllowed && hasSlots && (
-                <div className="col-span-2">
-                  <label className="text-[12px] font-medium text-neutral-600 block mb-1.5">
-                    Preferred Time <span className="text-neutral-400 font-normal">(select a slot)</span>
+            {/* Phone */}
+            <div>
+              <label className="text-[12px] font-semibold text-neutral-600 block mb-1.5 uppercase tracking-wide">Phone *</label>
+              <input value={form.phone} onChange={(e) => set("phone", e.target.value)} required type="tel" className={inputCls} placeholder="+234..." />
+            </div>
+
+            {/* Email */}
+            <div>
+              <label className="text-[12px] font-semibold text-neutral-600 block mb-1.5 uppercase tracking-wide">Email</label>
+              <input value={form.email} onChange={(e) => set("email", e.target.value)} type="email" className={inputCls} placeholder="you@example.com" />
+            </div>
+
+            {/* Gender */}
+            <div>
+              <label className="text-[12px] font-semibold text-neutral-600 block mb-1.5 uppercase tracking-wide">Gender</label>
+              <select value={form.gender} onChange={(e) => set("gender", e.target.value)} className={`${inputCls} bg-white`}>
+                <option value="">— Select gender —</option>
+                <option value="MALE">Male</option>
+                <option value="FEMALE">Female</option>
+                <option value="PREFER_NOT_TO_SAY">Prefer not to say</option>
+              </select>
+            </div>
+
+            {/* Inspection Type */}
+            <div>
+              <label className="text-[12px] font-semibold text-neutral-600 block mb-2 uppercase tracking-wide">Inspection Type</label>
+              <div className="flex gap-3">
+                {(["PHYSICAL", "VIRTUAL"] as const).map((t) => (
+                  <label key={t} className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl border-2 cursor-pointer transition-all text-[13px] font-semibold ${
+                    form.inspection_type === t
+                      ? "border-[#0E2C72] bg-[#0E2C72]/6 text-[#0E2C72]"
+                      : "border-neutral-200 text-neutral-500 hover:border-[#0E2C72]/40"
+                  }`}>
+                    <input type="radio" name="inspection_type" value={t} checked={form.inspection_type === t}
+                      onChange={() => set("inspection_type", t)} className="sr-only" />
+                    {t === "PHYSICAL" ? "Physical" : "Virtual"}
                   </label>
-                  <select value={timeSlot} onChange={(e) => setTimeSlot(e.target.value)} className={inputCls}>
-                    <option value="">— Select a time slot —</option>
-                    {slotsForDate.map((s) => (
-                      <option key={s.start_time} value={s.start_time}>{s.label} ({s.start_time})</option>
-                    ))}
-                  </select>
-                </div>
-              )}
-
-              {form.date && dateAllowed && !hasSlots && config?.time_slots && config.time_slots.length > 0 && (
-                <div className="col-span-2">
-                  <p className="text-[12px] text-amber-600 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2">
-                    No time slots available for this date. Please choose another day.
-                  </p>
-                </div>
-              )}
-
-              <div className="col-span-2">
-                <label className="text-[12px] font-medium text-neutral-600 block mb-1.5">Message (optional)</label>
-                <textarea value={form.message} onChange={(e) => set("message", e.target.value)} rows={3}
-                  placeholder="Any additional notes…"
-                  className="w-full px-3 py-2 rounded-xl border border-neutral-200 text-[13px] focus:outline-none focus:ring-2 focus:ring-[#1a3d8f]/30 focus:border-[#2a52a8] resize-none" />
+                ))}
               </div>
             </div>
 
+            {/* Notes */}
+            <div>
+              <label className="text-[12px] font-semibold text-neutral-600 block mb-1.5 uppercase tracking-wide">Notes (optional)</label>
+              <textarea value={form.message} onChange={(e) => set("message", e.target.value)} rows={3}
+                placeholder="Any additional notes or questions…"
+                className="w-full px-3 py-2 rounded-xl border border-neutral-200 text-[13px] focus:outline-none focus:ring-2 focus:ring-[#1a3d8f]/30 focus:border-[#2a52a8] resize-none" />
+            </div>
+
             <button type="submit"
-              disabled={loading || !form.name || !form.phone || !form.date || !dateAllowed}
+              disabled={loading || !form.name || !form.phone}
               className="w-full py-3 rounded-xl bg-[#0E2C72] hover:bg-[#0a2260] disabled:opacity-50 text-white font-semibold text-[14px] flex items-center justify-center gap-2 transition-colors">
-              {loading ? <><Loader2 className="size-4 animate-spin" />Submitting…</> : "Submit Request"}
+              {loading ? <><Loader2 className="size-4 animate-spin" />Submitting…</> : "Create Request"}
             </button>
           </form>
         )}

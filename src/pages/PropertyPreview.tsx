@@ -469,9 +469,11 @@ export default function PropertyPreview() {
                   </div>
                   <span className="text-[13px] font-medium text-neutral-800">{docLabel(d.document_type)}</span>
                 </div>
-                <Badge className={cn("text-[11px] border-0", docStatusColor(d.status))}>
-                  {d.status === "READY" ? "Ready" : d.status === "IN_PROGRESS" ? "In Progress" : "Not Started"}
-                </Badge>
+                {d.status && d.status !== "NOT_STARTED" && (
+                  <Badge className={cn("text-[11px] border-0", docStatusColor(d.status))}>
+                    {d.status === "READY" ? "Ready" : "In Progress"}
+                  </Badge>
+                )}
               </div>
             ))}
           </div>
